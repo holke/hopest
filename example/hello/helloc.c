@@ -25,5 +25,27 @@
 int
 main (int argc, char **argv)
 {
+  int                 mpiret;
+#ifdef HOPEST_ENABLE_DEBUG
+  const int           LP_lib = SC_LP_INFO;
+  const int           LP_hopest = SC_LP_DEBUG;
+#else
+  const int           LP_lib = SC_LP_ESSENTIAL;
+  const int           LP_hopest = SC_LP_PRODUCTION;
+#endif
+
+  mpiret = sc_MPI_Init (&argc, &argv);
+  SC_CHECK_MPI (mpiret);
+
+  sc_init (MPI_COMM_WORLD, 1, 1, NULL, LP_lib);
+  p4est_init (NULL, LP_lib);
+  hopest_init (NULL, LP_hopest);
+
+  hopest_global_essentialf ("Hopest says %s\n", "hello world");
+
+  sc_finalize ();
+  mpiret = sc_MPI_Finalize ();
+  SC_CHECK_MPI (mpiret);
+
   return 0;
 }
