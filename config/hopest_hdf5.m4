@@ -1,10 +1,10 @@
 dnl
-dnl This file is part of con4m.
+dnl This file is part of hopest.
 dnl
 
-dnl CON4M_COMPILE_LINK_HYPRE(PREFIX)
+dnl HOPEST_COMPILE_LINK_HYPRE(PREFIX)
 dnl
-AC_DEFUN([CON4M_COMPILE_LINK_HYPRE],
+AC_DEFUN([HOPEST_COMPILE_LINK_HYPRE],
 [AC_LINK_IFELSE([AC_LANG_PROGRAM(dnl
 [[
   #include <mpi.h>
@@ -15,16 +15,16 @@ AC_DEFUN([CON4M_COMPILE_LINK_HYPRE],
 ]])],, [AC_MSG_ERROR([unable to link])])
 ])
 
-dnl CON4M_CHECK_HYPRE(PREFIX)
+dnl HOPEST_CHECK_HYPRE(PREFIX)
 dnl
 dnl Configure the hypre library for parallel linear algebra.
-dnl By default it is disabled and hypre is not activated in con4m.
+dnl By default it is disabled and hypre is not activated in hopest.
 dnl If --with-hypre is specified, we try to link hypre with the default
 dnl include/lib options.  If --with-hypre=<hypre install directory> is
 dnl specified, we try to use its includes/lib subdirectories.  In both
 dnl cases we abort the configuration if a test program cannot be built.
 dnl
-AC_DEFUN([CON4M_CHECK_HYPRE],
+AC_DEFUN([HOPEST_CHECK_HYPRE],
 [
 AC_MSG_CHECKING([for hypre])
 SC_ARG_WITH_PREFIX([hypre],
@@ -42,7 +42,7 @@ if test "x$$1_WITH_HYPRE" != xno ; then
     fi
     save_LIBS="$LIBS"
     LIBS="-lHYPRE $LIBS"
-    CON4M_COMPILE_LINK_HYPRE($1)
+    HOPEST_COMPILE_LINK_HYPRE($1)
   else
     AC_MSG_ERROR([hypre requires MPI])
   fi

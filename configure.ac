@@ -39,21 +39,21 @@ echo "o---------------------------------------"
 echo "| Checking libraries"
 echo "o---------------------------------------"
 
-SC_CHECK_LIBRARIES([CON4M])
-P4EST_CHECK_LIBRARIES([CON4M])
-CON4M_CHECK_LIBRARIES([CON4M])
+SC_CHECK_LIBRARIES([HOPEST])
+P4EST_CHECK_LIBRARIES([HOPEST])
+HOPEST_CHECK_LIBRARIES([HOPEST])
 
 echo "o---------------------------------------"
 echo "| Checking subpackages"
 echo "o---------------------------------------"
 
-CON4M_DIST_DENY=
-CON4M_DISTCLEAN=
-SC_AS_SUBPACKAGE([CON4M])
+HOPEST_DIST_DENY=
+HOPEST_DISTCLEAN=
+SC_AS_SUBPACKAGE([HOPEST])
 export P4EST_SC_SOURCE=../sc
-P4EST_AS_SUBPACKAGE([CON4M])
-AM_CONDITIONAL([CON4M_DIST_DENY], [test "x$CON4M_DIST_DENY" != x])
-AC_SUBST([CON4M_DISTCLEAN])
+P4EST_AS_SUBPACKAGE([HOPEST])
+AM_CONDITIONAL([HOPEST_DIST_DENY], [test "x$HOPEST_DIST_DENY" != x])
+AC_SUBST([HOPEST_DISTCLEAN])
 
 # Print summary.
 
@@ -84,6 +84,6 @@ AC_CONFIG_FILES([Makefile Makefile.hopest.pre])
 AC_OUTPUT
 
 # Final messages.
-SC_FINAL_MESSAGES([CON4M])
-P4EST_FINAL_MESSAGES([CON4M])
-CON4M_FINAL_MESSAGES([CON4M])
+SC_FINAL_MESSAGES([HOPEST])
+P4EST_FINAL_MESSAGES([HOPEST])
+HOPEST_FINAL_MESSAGES([HOPEST])
