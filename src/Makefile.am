@@ -11,7 +11,7 @@ libhopest_compiled_sources = \
          src/hopest.c src/hopest_f.f
 
 libhopest_installed_headers += src/hopest_hdf5.h
-if HOPEST_WITH_HYPRE
+if HOPEST_WITH_HDF5
 libhopest_compiled_sources += src/hopest_hdf5.c
 endif
 

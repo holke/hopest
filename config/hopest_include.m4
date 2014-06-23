@@ -54,7 +54,7 @@ dnl link to hopest to add appropriate options to LIBS.
 dnl
 AC_DEFUN([HOPEST_CHECK_LIBRARIES],
 [
-HOPEST_CHECK_HYPRE([$1])
+HOPEST_CHECK_HDF5([$1])
 ])
 
 dnl HOPEST_FINAL_MESSAGES(PREFIX)
