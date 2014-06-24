@@ -55,6 +55,15 @@ P4EST_AS_SUBPACKAGE([HOPEST])
 AM_CONDITIONAL([HOPEST_DIST_DENY], [test "x$HOPEST_DIST_DENY" != x])
 AC_SUBST([HOPEST_DISTCLEAN])
 
+echo "o---------------------------------------"
+echo "| Checking F77 support"
+echo "o---------------------------------------"
+
+AC_MSG_NOTICE([Calling F77 autoconf macros])
+AC_PROG_F77([gfortran g77 fl32 f77 fort77 xlf f90 xlf90])
+AC_F77_WRAPPERS
+AC_F77_LIBRARY_LDFLAGS
+
 # Print summary.
 
 AC_DEFINE_UNQUOTED(F77,         ["${F77}"],         [F77 compiler])

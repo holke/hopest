@@ -18,8 +18,14 @@ c You should have received a copy of the GNU General Public License
 c along with hopest; if not, write to the Free Software Foundation, Inc.,
 c 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-      program hellof
-        print *, "Hopest says hello world"
-        call hopest_fortran_and_c_message
-        call hopest_c_and_fortran_message
-      end program hellof
+      subroutine hopest_f_message ()
+        print *, "<This line was compiled with the Fortran compiler.>"
+      return
+      end
+      
+      subroutine hopest_fortran_and_c_message()
+        call hopest_f_message
+        call hopest_c_message
+      return
+      end
+      
