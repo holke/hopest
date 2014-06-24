@@ -1,3 +1,17 @@
-This is the README file for hopest.
+This is the README file for hopest
+==================================
+
+This file uses markdown syntax, which can be converted to HTML with
+[the markdown program](http://en.wikipedia.org/wiki/Markdown).
 
 hopest is free software released under the GNU GPL v2 (or later).
+
+Conventions
+-----------
+
+ 1. The code must compile before a branch can be merged
+ 1. All Fortran API functions have a C prototype defined with `F77_FUNC`
+ 1. C code is indented with `hopestindent` in the main directory
+ 1. Source code documentation in the
+    [doxygen style](http://www.stack.nl/~dimitri/doxygen/manual/index.html)
+    is encouraged.
