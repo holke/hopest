@@ -72,8 +72,8 @@ hopest_init (sc_log_handler_t log_handler, int log_threshold)
   int                 w;
 
   hopest_package_id = sc_package_register (log_handler, log_threshold,
-                                          "hopest",
-                                          "High-order mesh preprocessor");
+                                           "hopest",
+                                           "High-order mesh preprocessor");
 
   w = 24;
   hopest_global_essentialf ("This is %s\n", HOPEST_PACKAGE_STRING);

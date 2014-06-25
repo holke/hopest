@@ -26,7 +26,7 @@ void
 HOPEST_C_MESSAGE_F77 (int *i)
 {
   hopest_global_essentialf
-    (" This line was compiled with %s. Parameter is:\t%i\n", HOPEST_CC, *i);
+    ("This line was compiled with the C compiler. Parameter: %i\n", *i);
 }
 
 void

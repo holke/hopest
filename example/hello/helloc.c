@@ -39,16 +39,16 @@ main (int argc, char **argv)
   mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
 
-  sc_init (MPI_COMM_WORLD, 1, 1, NULL, LP_lib);
+  sc_init (sc_MPI_COMM_WORLD, 1, 1, NULL, LP_lib);
   p4est_init (NULL, LP_lib);
   hopest_init (NULL, LP_hopest);
 
   hopest_global_essentialf ("Hopest says %s\n", "hello world");
+
   param = 2;
-/* HOPEST_C_AND_FORTRAN_MESSAGE is a is a c function defined in hopest_fortran_test.c */
   HOPEST_C_AND_FORTRAN_MESSAGE_F77 (&param);
+
   param = 3;
-/* HOPEST_FORTRAN_AND_C_MESSAGE is a fortran function defined in hopest_c_test.f */
   HOPEST_FORTRAN_AND_C_MESSAGE_F77 (&param);
 
   sc_finalize ();
