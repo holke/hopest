@@ -46,10 +46,10 @@ main (int argc, char **argv)
   hopest_global_essentialf ("Hopest says %s\n", "hello world");
 
   param = 2;
-  HOPEST_C_AND_FORTRAN_MESSAGE_F77 (&param);
+  hopest_c_and_fortran_message (&param);
 
   param = 3;
-  HOPEST_FORTRAN_AND_C_MESSAGE_F77 (&param);
+  hopest_fortran_and_c_message (&param);
 
   sc_finalize ();
   mpiret = sc_MPI_Finalize ();

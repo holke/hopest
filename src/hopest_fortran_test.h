@@ -25,28 +25,39 @@
 
 #include <hopest.h>
 
-#define HOPEST_F_MESSAGE_F77 HOPEST_F77_FUNC_ (hopest_f_message, HOPEST_F_MESSAGE)
-#ifdef __cplusplus
-extern              "C"         /* prevent C++ name mangling */
-#endif
-void                HOPEST_F_MESSAGE_F77 (int *i);
+/* Functions written in Fortran 77 */
+#define hopest_f_message \
+  HOPEST_F77_FUNC_ (hopest_f_message, HOPEST_F_MESSAGE)
+#define hopest_fortran_and_c_message \
+  HOPEST_F77_FUNC_ (hopest_fortran_and_c_message, HOPEST_FORTRAN_AND_C_MESSAGE)
 
-#define HOPEST_C_AND_FORTRAN_MESSAGE_F77 HOPEST_F77_FUNC_ (hopest_c_and_fortran_message, HOPEST_C_AND_FORTRAN_MESSAGE)
-#ifdef __cplusplus
-extern              "C"         /* prevent C++ name mangling */
-#endif
-void                HOPEST_C_AND_FORTRAN_MESSAGE_F77 (int *i);
+/* Functions written in C */
+#define hopest_c_message \
+  HOPEST_F77_FUNC_ (hopest_c_message, HOPEST_C_MESSAGE)
+#define hopest_c_and_fortran_message \
+  HOPEST_F77_FUNC_ (hopest_c_and_fortran_message, HOPEST_C_AND_FORTRAN_MESSAGE)
 
-#define HOPEST_C_MESSAGE_F77 HOPEST_F77_FUNC_ (hopest_c_message, HOPEST_C_MESSAGE)
 #ifdef __cplusplus
 extern              "C"         /* prevent C++ name mangling */
+{
+#if 0
+}
 #endif
-void                HOPEST_C_MESSAGE (int *i);
+#endif
 
-#define HOPEST_FORTRAN_AND_C_MESSAGE_F77 HOPEST_F77_FUNC_ (hopest_fortran_and_c_message, HOPEST_FORTRAN_AND_C_MESSAGE)
-#ifdef __cplusplus
-extern              "C"         /* prevent C++ name mangling */
-#endif
+/* Functions defined in hopest_c_test.f */
+void                hopest_f_message (int *i);
 void                hopest_fortran_and_c_message (int *i);
 
+/* Functions defined in hopest_fortran_test.c */
+void                hopest_c_message (int *i);
+void                hopest_c_and_fortran_message (int *i);
+
+#ifdef __cplusplus
+#if 0
+{
 #endif
+}
+#endif
+
+#endif /* !HOPEST_FORTRAN_TEST_H */
