@@ -5,10 +5,12 @@
 
 libhopest_generated_headers = src/hopest_config.h
 libhopest_installed_headers = \
-        src/hopest.h
+        src/hopest.h \
+	src/hopest_fortran_test.h
 libhopest_internal_headers =
 libhopest_compiled_sources = \
-         src/hopest.c src/hopest_f.f
+         src/hopest.c src/hopest_f.f \
+	 src/hopest_fortran_test.c src/hopest_c_test.f
 
 libhopest_installed_headers += src/hopest_hdf5.h
 if HOPEST_WITH_HDF5

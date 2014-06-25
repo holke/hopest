@@ -23,14 +23,15 @@
 #include <hopest_fortran_test.h>
 
 void
-hopest_c_message_ ()
+HOPEST_C_MESSAGE_F77 (int *i)
 {
-  hopest_global_essentialf ("<This line was compiled with %s.>\n", HOPEST_CC);
+  hopest_global_essentialf
+    (" This line was compiled with %s. Parameter is:\t%i\n", HOPEST_CC, *i);
 }
 
 void
-hopest_c_and_fortran_message_ ()
+HOPEST_C_AND_FORTRAN_MESSAGE_F77 (int *i)
 {
-  hopest_c_message_ ();
-  HOPEST_F_MESSAGE_F77 ();
+  HOPEST_C_MESSAGE_F77 (i);
+  HOPEST_F_MESSAGE_F77 (i);
 }

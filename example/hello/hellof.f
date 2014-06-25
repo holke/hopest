@@ -20,6 +20,10 @@ c 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
       program hellof
         print *, "Hopest says hello world"
-        call hopest_fortran_and_c_message
-        call hopest_c_and_fortran_message
+c hopest_fortran_and_c_message is a fortran function 
+c defined in hopest_c_test.f
+        call hopest_fortran_and_c_message (0)
+c hopest_c_and_fortran_message is a c function 
+c defined in hopest_fortran_test.c
+        call hopest_c_and_fortran_message (1)
       end program hellof

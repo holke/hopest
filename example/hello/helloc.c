@@ -21,11 +21,13 @@
 */
 
 #include <hopest.h>
+#include <hopest_fortran_test.h>
 
 int
 main (int argc, char **argv)
 {
   int                 mpiret;
+  int                 param;
 #ifdef HOPEST_ENABLE_DEBUG
   const int           LP_lib = SC_LP_INFO;
   const int           LP_hopest = SC_LP_DEBUG;
@@ -42,6 +44,12 @@ main (int argc, char **argv)
   hopest_init (NULL, LP_hopest);
 
   hopest_global_essentialf ("Hopest says %s\n", "hello world");
+  param = 2;
+/* HOPEST_C_AND_FORTRAN_MESSAGE is a is a c function defined in hopest_fortran_test.c */
+  HOPEST_C_AND_FORTRAN_MESSAGE_F77 (&param);
+  param = 3;
+/* HOPEST_FORTRAN_AND_C_MESSAGE is a fortran function defined in hopest_c_test.f */
+  HOPEST_FORTRAN_AND_C_MESSAGE_F77 (&param);
 
   sc_finalize ();
   mpiret = sc_MPI_Finalize ();

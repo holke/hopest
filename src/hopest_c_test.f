@@ -18,14 +18,17 @@ c You should have received a copy of the GNU General Public License
 c along with hopest; if not, write to the Free Software Foundation, Inc.,
 c 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-      subroutine hopest_f_message ()
-        print *, "<This line was compiled with the Fortran compiler.>"
+      subroutine hopest_f_message (i)
+	INTEGER i
+        print *, "This line was compiled with the Fortran compiler.",
+     +		 "Parameter is: ", i
       return
       end
       
-      subroutine hopest_fortran_and_c_message()
-        call hopest_f_message
-        call hopest_c_message
+      subroutine hopest_fortran_and_c_message(i)
+	INTEGER i
+        call hopest_f_message (i)
+        call hopest_c_message (i)
       return
       end
       
