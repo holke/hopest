@@ -30,8 +30,24 @@ hopest_c_message (int *i)
 }
 
 void
+hopest_c_message_f90 (int *i)
+{
+  hopest_global_essentialf
+    ("This line was compiled with the C compiler. Parameter: %i\n", *i);
+}
+
+void
 hopest_c_and_fortran_message (int *i)
 {
   hopest_c_message (i);
   hopest_f_message (i);
+  hopest_f90_message (i);
+}
+
+void
+hopest_c_and_fortran_message_f90 (int *i)
+{
+  hopest_c_message (i);
+  hopest_f_message (i);
+  hopest_f90_message (i);
 }
