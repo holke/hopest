@@ -20,7 +20,7 @@ c 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
       subroutine hopest_f_message (i)
         INTEGER i
-        print *, "This line was compiled with the Fortran compiler.",
+        print *, "This line was compiled with the Fortran 77 compiler.",
      +           " Parameter: ", i
         return
       end
