@@ -26,10 +26,10 @@
 #include <hopest.h>
 
 /* Functions written in Fortran 77 */
-#define hopest_f_message \
-  HOPEST_F77_FUNC_ (hopest_f_message, HOPEST_F_MESSAGE)
-#define hopest_fortran_and_c_message \
-  HOPEST_F77_FUNC_ (hopest_fortran_and_c_message, HOPEST_FORTRAN_AND_C_MESSAGE)
+#define hopest_f77_message \
+  HOPEST_F77_FUNC_ (hopest_f77_message, HOPEST_F77_MESSAGE)
+#define hopest_fortran77_and_c_message \
+  HOPEST_F77_FUNC_ (hopest_fortran77_and_c_message, HOPEST_FORTRAN77_AND_C_MESSAGE)
 
 /* Functions written in Fortran 90 */
 #define hopest_f90_message \
@@ -39,10 +39,10 @@
 
 /* Functions written in C */
 /* for Fortran 77 */
-#define hopest_c_message \
-  HOPEST_F77_FUNC_ (hopest_c_message, HOPEST_C_MESSAGE)
-#define hopest_c_and_fortran_message \
-  HOPEST_F77_FUNC_ (hopest_c_and_fortran_message, HOPEST_C_AND_FORTRAN_MESSAGE)
+#define hopest_c_message_f77 \
+  HOPEST_F77_FUNC_ (hopest_c_message_f77, HOPEST_C_MESSAGE_F77)
+#define hopest_c_and_fortran_message_f77 \
+  HOPEST_F77_FUNC_ (hopest_c_and_fortran_message_f77, HOPEST_C_AND_FORTRAN_MESSAGE_F77)
 
 /* for Fortran 90 */
 #define hopest_c_message_f90 \
@@ -59,16 +59,16 @@ extern              "C"         /* prevent C++ name mangling */
 #endif
 
 /* Functions defined in hopest_c_test.f */
-void                hopest_f_message (int *i);
-void                hopest_fortran_and_c_message (int *i);
+void                hopest_f77_message (int *i);
+void                hopest_fortran77_and_c_message (int *i);
 
 /* Functions defined in hopest_c_test.f90 */
 void                hopest_f90_message (int *i);
 void                hopest_fortran90_and_c_message (int *i);
 
 /* Functions defined in hopest_fortran_test.c */
-void                hopest_c_message (int *i);
-void                hopest_c_and_fortran_message (int *i);
+void                hopest_c_message_f77 (int *i);
+void                hopest_c_and_fortran_message_f77 (int *i);
 void                hopest_c_message_f90 (int *i);
 void                hopest_c_and_fortran_message_f90 (int *i);
 

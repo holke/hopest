@@ -20,6 +20,6 @@ c 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
       program hellof
         print *, "Hopest says hello world"
-        call hopest_fortran_and_c_message (0)
-        call hopest_c_and_fortran_message (1)
+        call hopest_fortran77_and_c_message (0)
+        call hopest_c_and_fortran_message_f77 (1)
       end program hellof
