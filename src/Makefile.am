@@ -3,28 +3,39 @@
 # Makefile.am in src
 # included non-recursively from toplevel directory
 
-libhopest_generated_headers = src/hopest_config.h
+libhopest_generated_headers = \
+  src/hopest_config.h \
+  src/hopest_f.h
 libhopest_installed_headers = \
-        src/hopest.h \
-	src/hopest_fortran_test.h
+  src/hopest.h
 libhopest_internal_headers =
 libhopest_compiled_sources = \
-         src/hopest.c src/hopest_f.f \
-	 src/hopest_fortran_test.c src/hopest_c_test.f src/hopest_c_testf90.f90
-
-libhopest_installed_headers += src/hopest_hdf5.h
-if HOPEST_WITH_HDF5
-libhopest_compiled_sources += src/hopest_hdf5.c
-endif
+  src/globals/preprocessing.f90 \
+  src/globals/globals.f90 \
+  src/readintools/isovaryingstring.f90 \
+  src/readintools/readintools.f90 \
+  src/mesh/mesh_vars.f90 \
+  src/output/output_vars.f90 \
+  src/mpi/mpi.f90 \
+  src/interpolation/basis.f90 \
+  src/interpolation/changeBasis.f90 \
+  src/io_hdf5/io_hdf5.f90 \
+  src/io_hdf5/hdf5_input.f90 \
+  src/io_hdf5/hdf5_output.f90 \
+  src/output/output.f90 \
+  src/mesh/mesh_readin.f90 \
+  src/mesh/mesh.f90
 
 # this variable is used for headers that are not publicly installed
-HOPEST_CPPFLAGS =
+HOPEST_CPPFLAGS = 
+HOPEST_FCFLAGS = -xf95-cpp-input -fbackslash 
 
 lib_LTLIBRARIES += src/libhopest.la
 src_libhopest_la_SOURCES = \
 	$(libhopest_internal_headers) \
 	$(libhopest_compiled_sources)
 src_libhopest_la_CPPFLAGS = $(AM_CPPFLAGS) $(HOPEST_CPPFLAGS)
+src_libhopest_la_FCFLAGS  = $(AM_FCFLAGS) $(HOPEST_FCFLAGS)
 LDADD += @top_builddir@/src/libhopest.la @HOPEST_P4EST_LDADD@ @HOPEST_SC_LDADD@
 EXTRA_src_libhopest_la_DEPENDENCIES = @HOPEST_P4EST_LDADD@ @HOPEST_SC_LDADD@
 
