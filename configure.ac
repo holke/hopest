@@ -56,6 +56,9 @@ AM_CONDITIONAL([HOPEST_DIST_DENY], [test "x$HOPEST_DIST_DENY" != x])
 AC_SUBST([HOPEST_DISTCLEAN])
 
 # Print summary.
+FCFLAGS='-I/scratch/iagbole/Codeentwicklung/hopest/hdf5/hdf5/include'
+#LIBS = -lhdf5_fortran -lhdf5 -lz
+#LDFLAGS = "-Lhdf5/hdf5/lib"
 
 AC_DEFINE_UNQUOTED(F77,         ["${F77}"],         [F77 compiler])
 AC_DEFINE_UNQUOTED(FFLAGS,      ["${FFLAGS}"],      [F77 compiler flags])
