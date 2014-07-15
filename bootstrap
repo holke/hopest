@@ -43,31 +43,9 @@ fi
 #convert into an absolute path
 P4EST_CONFIG=`cd "$P4EST_CONFIG" && pwd`
 
-# RUNNING BOOTSTRAP FOR HDF5
-
-#override by option argument
-HDF5_VERSION=1.8.13
-HDF5_CONFIG="hdf5-$HDF5_VERSION/config"
-if test "x$2" != x ; then
-  HDF5_CONFIG="$2"
-fi
-if test ! -d "$HDF5_CONFIG" ; then
-  wget -N http://www.hdfgroup.org/ftp/HDF5/prev-releases/hdf5-$HDF5_VERSION/src/hdf5-$HDF5_VERSION.tar.bz2
-  tar -xvjf hdf5-$HDF5_VERSION.tar.bz2 1>/dev/null && cd ..
-  if test ! -d "$HDF5_CONFIG" ; then
-    echo "Error: Cannot find directory $HDF5_CONFIG"
-    echo "   If you just called ./bootstrap from a fresh clone of hopest,"
-    echo "   you may need to checkout the submodules sc and HDF5:"
-    echo "   \$ git submodule init && git submodule update"
-    exit 1
-  fi
-fi
-#convert into an absolute path
-HDF5_CONFIG=`cd "$HDF5_CONFIG" && pwd`
-
-if test -x "HDF5/bootstrap" ; then
-  echo "Running bootstrap in subdirectory HDF5"
-  (cd hdf5 && ./bootstrap "$SC_CONFIG")
+if test -x "p4est/bootstrap" ; then
+  echo "Running bootstrap in subdirectory p4est"
+  (cd p4est && ./bootstrap "$SC_CONFIG")
 fi
 
 # RUNNING BOOTSTRAP FOR HOPEST
@@ -80,7 +58,7 @@ if test ! -x "$LIBTOOLIZE" ; then LIBTOOLIZE=`which libtoolize` ; fi
 if test ! -x "$LIBTOOLIZE" ; then echo "bootstrap requires libtoolize" ; \
    exit 1 ; fi
 
-aclocal -Wall -I config -I "$SC_CONFIG" -I "$P4EST_CONFIG" -I "hdf5/config"
+aclocal -Wall -I config -I "$SC_CONFIG" -I "$P4EST_CONFIG"
 autoconf -Wall --force
 autoheader -Wall --force
 "$LIBTOOLIZE" --install --copy
