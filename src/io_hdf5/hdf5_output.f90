@@ -227,7 +227,8 @@ END IF
 ! make array extendable in case you want to append something
 IF(PRESENT(resizeDim))THEN
   IF(.NOT.PRESENT(chunkSize))&
-    CALL abort(__STAMP__,'Chunk size has to be specified when using resizable arrays.')
+    CALL abort(__STAMP__,&
+    'Chunk size has to be specified when using resizable arrays.')
   nValMax = MERGE(H5S_UNLIMITED_F,nValMax,resizeDim)
 END IF
 
