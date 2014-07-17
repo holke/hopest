@@ -355,8 +355,9 @@ DO WHILE(ASSOCIATED(Elem))
   Elem=>Elem%nextElem
 END DO
 
-IF(iNode.NE.nNodes) CALL abort(__STAMP__,&
-                               'Sanity check: nNodes not equal to number of nodes in NodeInfo!')
+IF(iNode.NE.nNodes) &
+       CALL abort(__STAMP__,&
+          'Sanity check: nNodes not equal to number of nodes in NodeInfo!')
 
 ! get mapping from node ID to continuous ID in NodeMap 
 ALLOCATE(NodeCoords(MAX(1,nNodeIDs),3))
@@ -408,8 +409,9 @@ DO WHILE(ASSOCIATED(Elem))
 END DO
 DEALLOCATE(NodeMap)
 
-IF(iNode.NE.nNodeIDs) CALL abort(__STAMP__,&
-                      'Sanity check: nNodeIDs not equal to number of nodes in NodeCoords!')
+IF(iNode.NE.nNodeIDs) & 
+         CALL abort(__STAMP__,&
+                'Sanity check: nNodeIDs not equal to number of nodes in NodeCoords!')
 
 END SUBROUTINE getMeshinfo
 

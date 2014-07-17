@@ -132,8 +132,9 @@ TYPE(tSide),POINTER            :: aSide,bSide
 IF(MESHInitIsDone) RETURN
 IF(MPIRoot)THEN
   INQUIRE (FILE=TRIM(FileString), EXIST=fileExists)
-  IF(.NOT.FileExists)  CALL abort(__STAMP__, &
-          'readMesh from data file "'//TRIM(FileString)//'" does not exist')
+  IF(.NOT.FileExists)  &
+      CALL abort(__STAMP__, &
+         'readMesh from data file "'//TRIM(FileString)//'" does not exist')
 END IF
 
 SWRITE(UNIT_stdOut,'(A)')'READ MESH FROM DATA FILE "'//TRIM(FileString)//'" ...'
@@ -208,7 +209,8 @@ DO iElem=1,nElems
   IF(NGeo.GT.1)THEN
     nCurvedNodes = ElemInfo(iElem,ELEM_LastNodeInd) - ElemInfo(iElem,ELEM_FirstNodeInd) - 14 ! corner + oriented nodes
     IF(nCurvedNodes.NE.nCurvedNodesRef) &
-      CALL abort(__STAMP__,'Wrong number of curved nodes.')
+      CALL abort(__STAMP__, &
+           'Wrong number of curved nodes.')
     ALLOCATE(aElem%CurvedNode(0:NGeo,0:NGeo,0:NGeo))
     DO k=0,NGeo; DO j=0,NGeo; DO i=0,NGeo
       iNode=iNode+1
@@ -245,7 +247,8 @@ DO iElem=1,nElems
     ElemID=SideInfo(iSide,SIDE_nbElemID) !IF nbElemID <0, this marks a mortar master side. 
                                          ! The number (-1,-2,-3) is the Type of mortar
     IF(ElemID.LT.0)THEN ! mortar Sides attached!
-      CALL abort(__STAMP__,'Only conforming meshes in readin.')
+      CALL abort(__STAMP__, &
+           'Only conforming meshes in readin.')
     END IF
    
     aSide%Elem=>aElem

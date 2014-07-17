@@ -40,12 +40,14 @@ IMPLICIT NONE
 #ifdef MPI
 CALL MPI_INIT(iError)
 IF(iError .NE. 0) &
-  CALL Abort(__STAMP__,'Error in MPI_INIT',iError)
+  CALL Abort(__STAMP__, &
+       'Error in MPI_INIT',iError)
 
 CALL MPI_COMM_RANK(MPI_COMM_WORLD, myRank     , iError)
 CALL MPI_COMM_SIZE(MPI_COMM_WORLD, nProcessors, iError)
 IF(iError .NE. 0) &
-  CALL Abort(__STAMP__,'Could not get rank and number of processors',iError)
+  CALL Abort(__STAMP__, &
+      'Could not get rank and number of processors',iError)
 MPIRoot=(myRank .EQ. 0)
 #else  /*MPI*/
 myRank      = 0 
