@@ -32,11 +32,8 @@ libhopest_compiled_sources += \
 	src/io_hdf5/io_hdf5.f90 \
 	src/io_hdf5/hdf5_input.f90 \
 	src/io_hdf5/hdf5_output.f90 \
-	src/mesh/mesh_readin.f90
-## This is currently disabled since I got the following:
-## Fatal Error: Can't open module file 'mod_mesh_readin.mod' \
-## for reading at (1): No such file or directory
-##      src/mesh/mesh.f90
+	src/mesh/mesh_readin.f90 \
+        src/mesh/mesh.f90
 endif
 
 # this variable is used for headers that are not publicly installed

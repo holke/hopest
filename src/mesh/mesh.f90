@@ -47,7 +47,8 @@ IMPLICIT NONE
 ! LOCAL VARIABLES
 !===================================================================================================================================
 IF(MeshInitIsDone)&
-  CALL abort(__STAMP__,'InitMesh not ready to be called or already called.')
+  CALL abort(__STAMP__,&
+  'InitMesh not ready to be called or already called.')
 
 SWRITE(UNIT_StdOut,'(132("-"))')
 SWRITE(UNIT_stdOut,'(A)') ' INIT MESH...'
