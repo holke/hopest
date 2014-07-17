@@ -37,7 +37,8 @@ Makefile.hopest.mk : Makefile.hopest.pre
 
 # install hopest m4 macros in the correct directory
 hopestaclocaldir = $(datadir)/aclocal
-dist_hopestaclocal_DATA = config/hopest_include.m4
+dist_hopestaclocal_DATA = \
+        config/hopest_include.m4 config/hopest_hdf5.m4
 
 # setup test environment
 if HOPEST_MPIRUN
