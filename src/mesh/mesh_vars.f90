@@ -1,4 +1,4 @@
-#include "../hopest_f.h"
+#include "hopest_f.h"
 MODULE MOD_Mesh_Vars
 !===================================================================================================================================
 ! Contains global variables provided by the mesh routines

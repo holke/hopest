@@ -1,4 +1,4 @@
-#include "../hopest_f.h"
+#include "hopest_f.h"
 
 MODULE MOD_Mesh_ReadIn
 !===================================================================================================================================
@@ -132,8 +132,7 @@ TYPE(tSide),POINTER            :: aSide,bSide
 IF(MESHInitIsDone) RETURN
 IF(MPIRoot)THEN
   INQUIRE (FILE=TRIM(FileString), EXIST=fileExists)
-  IF(.NOT.FileExists) &
-  CALL abort(__STAMP__, &
+  IF(.NOT.FileExists)  CALL abort(__STAMP__, &
           'readMesh from data file "'//TRIM(FileString)//'" does not exist')
 END IF
 
@@ -200,6 +199,7 @@ DO iElem=1,nElems
     NodeID=ABS(NodeInfo(iNode))     !global, unique NodeID
     IF(.NOT.ASSOCIATED(Nodes(NodeID)%np))THEN
       ALLOCATE(Nodes(NodeID)%np) 
+      NULLIFY(Nodes(NodeID)%np%firstEdge) 
       Nodes(NodeID)%np%ind=NodeID 
     END IF
     aElem%Node(jNode)%np=>Nodes(NodeID)%np
@@ -208,8 +208,7 @@ DO iElem=1,nElems
   IF(NGeo.GT.1)THEN
     nCurvedNodes = ElemInfo(iElem,ELEM_LastNodeInd) - ElemInfo(iElem,ELEM_FirstNodeInd) - 14 ! corner + oriented nodes
     IF(nCurvedNodes.NE.nCurvedNodesRef) &
-      CALL abort(__STAMP__,&
-      'Wrong number of curved nodes.')
+      CALL abort(__STAMP__,'Wrong number of curved nodes.')
     ALLOCATE(aElem%CurvedNode(0:NGeo,0:NGeo,0:NGeo))
     DO k=0,NGeo; DO j=0,NGeo; DO i=0,NGeo
       iNode=iNode+1
@@ -246,8 +245,7 @@ DO iElem=1,nElems
     ElemID=SideInfo(iSide,SIDE_nbElemID) !IF nbElemID <0, this marks a mortar master side. 
                                          ! The number (-1,-2,-3) is the Type of mortar
     IF(ElemID.LT.0)THEN ! mortar Sides attached!
-      CALL abort(__STAMP__,&
-           'Only conforming meshes in readin.')
+      CALL abort(__STAMP__,'Only conforming meshes in readin.')
     END IF
    
     aSide%Elem=>aElem
@@ -366,14 +364,14 @@ CALL buildEdges()
 
 
 WRITE(*,*)'-------------------------------------------------------'
-WRITE(*,'(A22,I8)')'NGeo:',NGeo
-WRITE(*,'(A22,I8)')'useCurveds:',useCurveds
-WRITE(*,'(A22,I8)')'nElems:',nElems
-WRITE(*,'(A22,I8)')'nEdges:',nEdges
-WRITE(*,'(A22,I8)')'nNodes:',nNodes
-WRITE(*,'(A22,I8)')'nSides:',nSides
-WRITE(*,'(A22,I8)')'nBCSides:',nBCSides
-WRITE(*,'(A22,I8)')'nPeriodicSides:',nPeriodicSides
+WRITE(*,'(A22,I8)' )'NGeo:',NGeo
+WRITE(*,'(A22,X7L)')'useCurveds:',useCurveds
+WRITE(*,'(A22,I8)' )'nElems:',nElems
+WRITE(*,'(A22,I8)' )'nEdges:',nEdges
+WRITE(*,'(A22,I8)' )'nNodes:',nNodes
+WRITE(*,'(A22,I8)' )'nSides:',nSides
+WRITE(*,'(A22,I8)' )'nBCSides:',nBCSides
+WRITE(*,'(A22,I8)' )'nPeriodicSides:',nPeriodicSides
 WRITE(*,*)'-------------------------------------------------------'
 
 END SUBROUTINE ReadMesh
