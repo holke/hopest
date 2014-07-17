@@ -46,7 +46,8 @@ CHARACTER(LEN=10)              :: StrTime
 CHARACTER(LEN=255)             :: LogFile
 !===================================================================================================================================
 IF(OutputInitIsDone)THEN
-  CALL abort(__STAMP__,'InitOutput not ready to be called or already called.')
+  CALL abort(__STAMP__,&
+       'InitOutput not ready to be called or already called.')
 END IF
 SWRITE(UNIT_StdOut,'(132("-"))')
 SWRITE(UNIT_stdOut,'(A)') ' INIT OUTPUT...'

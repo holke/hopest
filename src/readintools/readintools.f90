@@ -165,7 +165,8 @@ IF (CntStr.EQ.0) THEN
     CntStr=Proposal
   ELSE
     SWRITE(UNIT_StdOut,*) 'Inifile missing necessary keyword item : ',TRIM(TmpKey)
-    CALL abort(__STAMP__,'Code stopped!',999,999.)
+    CALL abort(__STAMP__,&
+         'Code stopped!',999,999.)
   END IF
 END IF
 END FUNCTION CNTSTR
@@ -446,7 +447,8 @@ IF (MPIRoot) THEN
        ACCESS = 'SEQUENTIAL',&
        IOSTAT = stat)
   IF(stat.NE.0) THEN
-    CALL abort(__STAMP__,"Could not open ini file.")
+    CALL abort(__STAMP__,&
+    "Could not open ini file.")
   ELSE
     nLines=0
     stat=0
