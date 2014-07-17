@@ -67,6 +67,7 @@ AC_DEFINE_UNQUOTED(CC,          ["${CC}"],          [C compiler])
 AC_DEFINE_UNQUOTED(CFLAGS,      ["${CFLAGS}"],      [C compiler flags])
 AC_DEFINE_UNQUOTED(LDFLAGS,     ["${LDFLAGS}"],     [Linker flags])
 AC_DEFINE_UNQUOTED(LIBS,        ["${LIBS}"],        [Libraries])
+AC_DEFINE_UNQUOTED(FLIBS,       ["${FLIBS}"],       [Fortran Libraries])
 
 echo "o----------------------------------"
 echo "| Results for hopest are"
@@ -81,6 +82,7 @@ echo "| CC:          $CC"
 echo "| CFLAGS:      $CFLAGS"
 echo "| LDFLAGS:     $LDFLAGS"
 echo "| LIBS:        $LIBS"
+echo "| FLIBS:       $FLIBS"
 echo "o----------------------------------"
 
 # Create output files.
