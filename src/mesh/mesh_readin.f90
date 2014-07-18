@@ -105,6 +105,8 @@ SUBROUTINE ReadMesh(FileString)
 ! MODULES
 USE MOD_Globals
 USE MOD_Mesh_Vars
+!test
+USE MOD_p4estBinding
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -128,6 +130,12 @@ LOGICAL                        :: fileExists
 LOGICAL                        :: doConnection
 TYPE(tElem),POINTER            :: aElem
 TYPE(tSide),POINTER            :: aSide,bSide
+TYPE(tNode),POINTER            :: aNode
+! p4est interface
+INTEGER                        :: num_vertices
+INTEGER                        :: num_trees
+INTEGER,ALLOCATABLE            :: tree_to_vertex(:,:)
+REAL,ALLOCATABLE               :: vertices(:,:)
 !===================================================================================================================================
 IF(MESHInitIsDone) RETURN
 IF(MPIRoot)THEN
@@ -136,6 +144,7 @@ IF(MPIRoot)THEN
       CALL abort(__STAMP__, &
          'readMesh from data file "'//TRIM(FileString)//'" does not exist')
 END IF
+
 
 SWRITE(UNIT_stdOut,'(A)')'READ MESH FROM DATA FILE "'//TRIM(FileString)//'" ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
@@ -377,6 +386,38 @@ WRITE(*,'(A22,I8)' )'nBCSides:',nBCSides
 WRITE(*,'(A22,I8)' )'nPeriodicSides:',nPeriodicSides
 WRITE(*,*)'-------------------------------------------------------'
 
+DO iNode=1,nNodes
+  Nodes(iNode)%np%tmp=-1
+END DO
+num_vertices=0
+DO iElem=1,nElems
+  aElem=>Elems(iElem)%ep
+  DO iNode=1,8
+    aNode=>aElem%Node(iNode)%np
+    IF(aNode%tmp.EQ.-1)THEN
+      num_vertices=num_vertices+1
+      aElem%Node(iNode)%np%tmp=num_vertices
+    END IF
+  END DO
+END DO !iElem
+
+ALLOCATE(Vertices(3,num_vertices))
+DO iNode=1,nNodes
+  aNode=>Nodes(iNode)%np
+  IF(aNode%tmp.GT.0)THEN
+    Vertices(:,aNode%tmp)=aNode%x
+  END IF
+END DO
+num_trees=nElems
+ALLOCATE(tree_to_vertex(8,num_trees))
+DO iElem=1,nElems
+  aElem=>Elems(iElem)%ep
+  DO iNode=1,8
+    tree_to_vertex(iNode,iElem)=aElem%Node(H2P_VertexMap(iNode)+1)%np%tmp-1
+  END DO
+END DO
+
+CALL p4est_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex)
 END SUBROUTINE ReadMesh
 
 

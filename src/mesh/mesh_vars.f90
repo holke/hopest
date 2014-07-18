@@ -89,6 +89,7 @@ END TYPE tEdge
 TYPE tNode
   TYPE(tEdge),POINTER          :: firstEdge     ! only used to assign edges 
   INTEGER                      :: ind=0         ! global unique node index
+  INTEGER                      :: tmp=0
   REAL                         :: x(3)=0.
 END TYPE tNode
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -96,18 +97,20 @@ TYPE(tElemPtr),POINTER         :: Elems(:)
 TYPE(tNodePtr),POINTER         :: Nodes(:)
 TYPE(tEdgePtr),POINTER         :: Edges(:)
 !-----------------------------------------------------------------------------------------------------------------------------------
-INTEGER,PARAMETER              :: EdgeToElemNode(1:2,1:12) = RESHAPE((/ 1, 2,&  ! CGNS corner nodes mapped 
-                                                                        4, 3,&  ! to p4est edges
-                                                                        5, 6,&
-                                                                        8, 7,&
-                                                                        1, 4,&
-                                                                        2, 3,&
-                                                                        5, 8,&
-                                                                        6, 7,&
-                                                                        1, 5,&
-                                                                        2, 6,&
-                                                                        4, 8,&
-                                                                        3, 7 /),(/2,12/))
+INTEGER,PARAMETER   :: EdgeToElemNode(1:2,1:12) = RESHAPE((/ 1, 2,&  ! CGNS corner nodes mapped 
+                                                             4, 3,&  ! to p4est edges
+                                                             5, 6,&
+                                                             8, 7,&
+                                                             1, 4,&
+                                                             2, 3,&
+                                                             5, 8,&
+                                                             6, 7,&
+                                                             1, 5,&
+                                                             2, 6,&
+                                                             4, 8,&
+                                                             3, 7 /),(/2,12/))
+INTEGER,PARAMETER   :: H2P_VertexMap(1:8) =  (/0,1,3,2,4,5,7,6/)  !mapping from local node order (CGNS) to p4est node order 
+INTEGER,PARAMETER   :: P2H_VertexMap(0:7) =  (/1,2,4,3,5,6,8,7/)  !mapping from local node order (CGNS) to p4est node order 
 !-----------------------------------------------------------------------------------------------------------------------------------
 #ifdef MPI
 #endif /*MPI*/
