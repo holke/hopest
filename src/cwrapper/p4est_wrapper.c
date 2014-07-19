@@ -9,8 +9,7 @@
 #include <p4est_to_p8est.h>
 
 
-
-//extern"C"{
+// extern"C"{
 void test( double *areal, int *bint)
 {
   P4EST_GLOBAL_PRODUCTIONF ("test areal= %f bint= %i \n",  *areal,  *bint);
@@ -34,27 +33,20 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 void p4est_connectivity_treevertex (p4est_topidx_t * num_vertices_in,
                                p4est_topidx_t * num_trees_in        ,
                                double         *vertices             ,
-                               p4est_topidx_t * tree_to_vertex      )
+                               p4est_topidx_t * tree_to_vertex      ,
+                               int *p4est_out )
+                               //p4est_t *p4est )
 {
   p4est_topidx_t      tree;
   int                 face;
-  static int          refine_level = 3;
   p4est_topidx_t      num_vertices = *num_vertices_in;
   p4est_topidx_t      num_trees = *num_trees_in;
 
   p4est_connectivity_t *conn = NULL;
 
-
-
-
-  int                 balance;
-  int                 level;
   sc_MPI_Comm         mpicomm;
   p4est_t            *p4est;
 
-  p4est_mesh_t       *mesh;
-  p4est_ghost_t      *ghost;
-  p4est_connect_type_t mesh_btype;
 
 
   /* Initialize MPI; see sc_mpi.h.
@@ -102,10 +94,38 @@ void p4est_connectivity_treevertex (p4est_topidx_t * num_vertices_in,
     ("New connectivity with %lld trees and %lld vertices\n",
      (long long) conn->num_trees, (long long) conn->num_vertices);
 
+
   //return conn;
+
   /* Create a forest that is not refined; it consists of the root octant. */
   p4est = p4est_new (mpicomm, conn, 0, NULL, NULL);
 
+  *p4est_out = p4est;
+  P4EST_GLOBAL_PRODUCTIONF
+    ("DEBUG p4est %d  p4est_out %d \n", p4est,*p4est_out);
+
+}
+
+void p4est_refine_mesh ( int        *p4est_in,
+                         int        *mesh_out ) 
+{
+  p4est_t            *p4est;
+  p4est_mesh_t       *mesh;
+  p4est_ghost_t      *ghost;
+  p4est_connect_type_t mesh_btype;
+  int                 level;
+  int                 balance;
+  static int          refine_level = 3;
+
+  P4EST_GLOBAL_PRODUCTIONF
+    ("DEBUG p4est_in %d  \n", *p4est_in);
+  p4est = *p4est_in;
+
+  P4EST_GLOBAL_PRODUCTIONF
+    ("DEBUG:  %d \n",0);
+  P4EST_GLOBAL_PRODUCTIONF
+    ("DEBUG: New connectivity with %lld trees and %lld vertices\n",
+     (long long) p4est->connectivity->num_trees, (long long) p4est->connectivity->num_vertices);
   /* Refine the forest iteratively, load balancing at each iteration.
    * This is important when starting with an unrefined forest */
   for (level = 0; level < refine_level; ++level) {
@@ -134,7 +154,7 @@ void p4est_connectivity_treevertex (p4est_topidx_t * num_vertices_in,
   /* create ghost layer and mesh */
   // ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FACE);
   // mesh = p4est_mesh_new (p4est, ghost, mesh_btype);
-
+  // *mesh_out=mesh;
 
  
   

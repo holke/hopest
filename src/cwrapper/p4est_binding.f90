@@ -5,29 +5,29 @@ MODULE MOD_P4estBinding
 ! Fortran <-> C++ wrapper routine for the P4est Routines
 !===================================================================================================================================
 ! MODULES
+!USE MOD_P4estBindingTypes
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 
-
 INTERFACE 
 
-  SUBROUTINE test(areal,bint) BIND(C) 
-    USE, INTRINSIC :: ISO_C_BINDING  
-    IMPLICIT NONE
-    REAL( KIND = C_DOUBLE )       :: areal 
-    INTEGER( KIND = C_INT)        :: bint 
-    !INTEGER( kind = c_int),value  :: bint   ! call by value, wenn kein rückgabewert
-  END SUBROUTINE 
-
-  SUBROUTINE p4est_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex) BIND(C)
+  SUBROUTINE p4est_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex,p4est) BIND(C)
     USE, INTRINSIC :: ISO_C_BINDING  
     IMPLICIT NONE
     INTEGER( KIND = C_INT)     :: num_vertices 
     INTEGER( KIND = C_INT)     :: num_trees 
     REAL( KIND = C_DOUBLE )    :: Vertices(3*num_vertices)
     INTEGER( KIND = C_INT)     :: tree_to_vertex(8*num_trees) 
+    !TYPE(C_PTR)                :: p4est 
+    INTEGER( KIND = C_INT)     :: p4est 
   END SUBROUTINE p4est_connectivity_treevertex 
 
+  SUBROUTINE p4est_refine_mesh(p4est,mesh) BIND(C)
+    USE, INTRINSIC :: ISO_C_BINDING  
+    IMPLICIT NONE
+    INTEGER( KIND = C_INT)     :: p4est 
+    INTEGER( KIND = C_INT)     :: mesh 
+  END SUBROUTINE p4est_refine_mesh 
   !SUBROUTINE ... BIND(C)
   !  USE, INTRINSIC :: ISO_C_BINDING  
   !END SUBROUTINE ...

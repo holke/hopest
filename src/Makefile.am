@@ -14,6 +14,7 @@ libhopest_compiled_sources = \
 	src/hopest_fortran_test.c \
 	src/hopest_c_test.f \
 	src/hopest_c_testf90.f90 \
+	src/cwrapper/p4est_binding_types.f90 \
 	src/cwrapper/p4est_binding.f90 \
 	src/cwrapper/p4est_wrapper.c \
 	src/globals/globals.f90 \

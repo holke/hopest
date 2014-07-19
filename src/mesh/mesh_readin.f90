@@ -107,6 +107,7 @@ USE MOD_Globals
 USE MOD_Mesh_Vars
 !test
 USE MOD_p4estBinding
+USE MOD_p4estBindingTypes
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -136,6 +137,7 @@ INTEGER                        :: num_vertices
 INTEGER                        :: num_trees
 INTEGER,ALLOCATABLE            :: tree_to_vertex(:,:)
 REAL,ALLOCATABLE               :: vertices(:,:)
+TYPE(t_p4est_ptr) :: p4est_ptr              ! c pointer derived data type, see MOD_P4estBindingTypes
 !===================================================================================================================================
 IF(MESHInitIsDone) RETURN
 IF(MPIRoot)THEN
@@ -417,7 +419,9 @@ DO iElem=1,nElems
   END DO
 END DO
 
-CALL p4est_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex)
+CALL p4est_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex,p4est_ptr%p4est)
+WRITE(*,*)'DEBUG p4est_ptr%p4est',p4est_ptr%p4est
+CALL p4est_refine_mesh(p4est_ptr%p4est,p4est_ptr%mesh)
 END SUBROUTINE ReadMesh
 
 
