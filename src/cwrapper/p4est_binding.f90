@@ -21,10 +21,12 @@ INTERFACE
     INTEGER( KIND = C_INT)     :: p4est 
   END SUBROUTINE p4est_connectivity_treevertex 
 
-  SUBROUTINE p4est_refine_mesh(p4est,mesh) BIND(C)
+  SUBROUTINE p4est_refine_mesh(p4est,refine_level,refine_elem,mesh) BIND(C)
     USE, INTRINSIC :: ISO_C_BINDING  
     IMPLICIT NONE
     INTEGER( KIND = C_INT)     :: p4est 
+    INTEGER( KIND = C_INT)     :: refine_level 
+    INTEGER( KIND = C_INT)     :: refine_elem 
     INTEGER( KIND = C_INT)     :: mesh 
   END SUBROUTINE p4est_refine_mesh 
   !SUBROUTINE ... BIND(C)

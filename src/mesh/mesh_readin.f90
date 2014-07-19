@@ -418,7 +418,7 @@ DO iElem=1,nElems
 END DO
 
 CALL p4est_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex,p4est_ptr%p4est)
-CALL p4est_refine_mesh(p4est_ptr%p4est,p4est_ptr%mesh)
+CALL p4est_refine_mesh(p4est_ptr%p4est,2,-1,p4est_ptr%mesh)
 END SUBROUTINE ReadMesh
 
 

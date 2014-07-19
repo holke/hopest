@@ -9,15 +9,14 @@
 #include <p4est_to_p8est.h>
 
 
-// extern"C"{
 void test( double *areal, int *bint)
 {
   P4EST_GLOBAL_PRODUCTIONF ("test areal= %f bint= %i \n",  *areal,  *bint);
 }
 
 static int
-refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-           p4est_quadrant_t * quadrant)
+refine_one (p4est_t * p4est, p4est_topidx_t which_tree,
+           p4est_quadrant_t * quadrant) 
 {
   if(which_tree == 0)  // | for naca which_tree == 147 | which_tree == 148 ) 
   {
@@ -29,6 +28,12 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   }
 }
 
+static int
+refine_all (p4est_t * p4est, p4est_topidx_t which_tree,
+           p4est_quadrant_t * quadrant)
+{
+  return 1;
+}
 
 void p4est_connectivity_treevertex (p4est_topidx_t * num_vertices_in,
                                p4est_topidx_t * num_trees_in        ,
@@ -104,6 +109,8 @@ void p4est_connectivity_treevertex (p4est_topidx_t * num_vertices_in,
 }
 
 void p4est_refine_mesh ( int        *p4est_in,
+                         int        *refine_level,
+                         int        *refine_elem,
                          int        *mesh_out ) 
 {
   p4est_t            *p4est;
@@ -112,20 +119,27 @@ void p4est_refine_mesh ( int        *p4est_in,
   p4est_connect_type_t mesh_btype;
   int                 level;
   int                 balance;
-  static int          refine_level = 3;
 
   // input integer as pointer adress
   p4est = *p4est_in;
 
   P4EST_GLOBAL_PRODUCTIONF
-    ("DEBUG:  %d \n",0);
+    ("DEBUG: refine_level  %d \n",*refine_level);
+    ("DEBUG: refine_elem  %d \n",*refine_elem);
   P4EST_GLOBAL_PRODUCTIONF
     ("DEBUG: New connectivity with %lld trees and %lld vertices\n",
      (long long) p4est->connectivity->num_trees, (long long) p4est->connectivity->num_vertices);
   /* Refine the forest iteratively, load balancing at each iteration.
    * This is important when starting with an unrefined forest */
-  for (level = 0; level < refine_level; ++level) {
-    p4est_refine (p4est, 0, refine_fn, NULL);
+  for (level = 0; level < *refine_level; ++level) {
+    if(*refine_elem < 0 )
+    {
+      p4est_refine (p4est, 0, refine_all, NULL);
+    }
+    else
+    {
+      p4est_refine (p4est, 0, refine_one, NULL);
+    }
     /* Refinement has lead to up to 8x more elements; redistribute them. */
     p4est_partition (p4est, 0, NULL);
   }
@@ -156,4 +170,3 @@ void p4est_refine_mesh ( int        *p4est_in,
  
   
 }
-//}
