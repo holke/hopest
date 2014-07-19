@@ -18,7 +18,6 @@ INTERFACE
     INTEGER( KIND = C_INT)     :: num_trees 
     REAL( KIND = C_DOUBLE )    :: Vertices(3*num_vertices)
     INTEGER( KIND = C_INT)     :: tree_to_vertex(8*num_trees) 
-    !TYPE(C_PTR)                :: p4est 
     INTEGER( KIND = C_INT)     :: p4est 
   END SUBROUTINE p4est_connectivity_treevertex 
 

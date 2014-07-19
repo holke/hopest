@@ -4,6 +4,7 @@ MODULE MOD_Mesh_Vars
 ! Contains global variables provided by the mesh routines
 !===================================================================================================================================
 ! MODULES
+USE MOD_p4estBindingTypes
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 PUBLIC
@@ -96,6 +97,10 @@ END TYPE tNode
 TYPE(tElemPtr),POINTER         :: Elems(:)
 TYPE(tNodePtr),POINTER         :: Nodes(:)
 TYPE(tEdgePtr),POINTER         :: Edges(:)
+!-----------------------------------------------------------------------------------------------------------------------------------
+! P4EST related data structures 
+!-----------------------------------------------------------------------------------------------------------------------------------
+TYPE(t_p4est_ptr) :: p4est_ptr              ! c pointer derived data type, see MOD_P4estBindingTypes
 !-----------------------------------------------------------------------------------------------------------------------------------
 INTEGER,PARAMETER   :: EdgeToElemNode(1:2,1:12) = RESHAPE((/ 1, 2,&  ! CGNS corner nodes mapped 
                                                              4, 3,&  ! to p4est edges
