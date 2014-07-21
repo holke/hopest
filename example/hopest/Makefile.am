@@ -11,6 +11,7 @@ if HOPEST_WITH_HDF5
 example_hopest_hopest_SOURCES = example/hopest/hopest.f90
 endif
 
-example_hopest_hopest_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS)
+example_hopest_hopest_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) $(HOPEST_CPPFLAGS)
 
 AM_CPPFLAGS += -I@top_srcdir@/src @HOPEST_SC_CPPFLAGS@ @HOPEST_P4EST_CPPFLAGS@
+
