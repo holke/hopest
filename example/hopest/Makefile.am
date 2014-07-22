@@ -13,5 +13,3 @@ endif
 
 example_hopest_hopest_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) $(HOPEST_CPPFLAGS)
 
-AM_CPPFLAGS += -I@top_srcdir@/src @HOPEST_SC_CPPFLAGS@ @HOPEST_P4EST_CPPFLAGS@
-
