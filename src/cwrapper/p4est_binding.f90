@@ -18,16 +18,16 @@ INTERFACE
     INTEGER( KIND = C_INT)     :: num_trees 
     REAL( KIND = C_DOUBLE )    :: Vertices(3*num_vertices)
     INTEGER( KIND = C_INT)     :: tree_to_vertex(8*num_trees) 
-    INTEGER( KIND = C_INT)     :: p4est 
+    TYPE(c_ptr)                :: p4est
   END SUBROUTINE p4est_connectivity_treevertex 
 
   SUBROUTINE p4est_refine_mesh(p4est,refine_level,refine_elem,mesh) BIND(C)
     USE, INTRINSIC :: ISO_C_BINDING  
     IMPLICIT NONE
-    INTEGER( KIND = C_INT)     :: p4est 
+    TYPE(c_ptr)                :: p4est
     INTEGER( KIND = C_INT)     :: refine_level 
     INTEGER( KIND = C_INT)     :: refine_elem 
-    INTEGER( KIND = C_INT)     :: mesh 
+    TYPE(c_ptr)                :: mesh
   END SUBROUTINE p4est_refine_mesh 
   !SUBROUTINE ... BIND(C)
   !  USE, INTRINSIC :: ISO_C_BINDING  

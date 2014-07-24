@@ -39,7 +39,7 @@ void p4est_connectivity_treevertex (p4est_topidx_t * num_vertices_in,
                                p4est_topidx_t * num_trees_in        ,
                                double         *vertices             ,
                                p4est_topidx_t * tree_to_vertex      ,
-                               int *p4est_out )
+                               void **p4est_out )
 {
   p4est_topidx_t      tree;
   int                 face;
@@ -104,14 +104,14 @@ void p4est_connectivity_treevertex (p4est_topidx_t * num_vertices_in,
   p4est = p4est_new (mpicomm, conn, 0, NULL, NULL);
 
   //return p4est as pointer adress ;
-  *p4est_out = p4est;
+  *p4est_out = (void *)p4est;
 
 }
 
-void p4est_refine_mesh ( int        *p4est_in,
+void p4est_refine_mesh ( void        **p4est_in,
                          int        *refine_level,
                          int        *refine_elem,
-                         int        *mesh_out ) 
+                         void        **mesh_out )
 {
   p4est_t            *p4est;
   p4est_mesh_t       *mesh;
@@ -121,7 +121,7 @@ void p4est_refine_mesh ( int        *p4est_in,
   int                 balance;
 
   // input integer as pointer adress
-  p4est = *(p4est_t **) p4est_in;
+  p4est = (p4est_t *)* p4est_in;
 
   P4EST_GLOBAL_PRODUCTIONF
     ("DEBUG: refine_level  %d \n",*refine_level);
@@ -166,7 +166,7 @@ void p4est_refine_mesh ( int        *p4est_in,
   // ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FACE);
   // mesh = p4est_mesh_new (p4est, ghost, mesh_btype);
   //return mesh as pointer adress;
-  // *mesh_out=mesh;
+  // *mesh_out=(void *)mesh;
 
  
   
