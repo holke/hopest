@@ -121,10 +121,11 @@ void p4est_refine_mesh ( int        *p4est_in,
   int                 balance;
 
   // input integer as pointer adress
-  p4est = *p4est_in;
+  p4est = *(p4est_t **) p4est_in;
 
   P4EST_GLOBAL_PRODUCTIONF
     ("DEBUG: refine_level  %d \n",*refine_level);
+  P4EST_GLOBAL_PRODUCTIONF
     ("DEBUG: refine_elem  %d \n",*refine_elem);
   P4EST_GLOBAL_PRODUCTIONF
     ("DEBUG: New connectivity with %lld trees and %lld vertices\n",
