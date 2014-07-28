@@ -105,7 +105,6 @@ SUBROUTINE ReadMesh(FileString)
 ! MODULES
 USE MOD_Globals
 USE MOD_Mesh_Vars
-!test
 USE MOD_p4estBinding
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
@@ -416,9 +415,9 @@ DO iElem=1,nElems
     tree_to_vertex(iNode,iElem)=aElem%Node(H2P_VertexMap(iNode)+1)%np%tmp-1
   END DO
 END DO
-
 CALL p4est_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex,p4est_ptr%p4est)
-CALL p4est_refine_mesh(p4est_ptr%p4est,2,-1,p4est_ptr%mesh)
+
+DEALLOCATE(Vertices,tree_to_vertex)
 END SUBROUTINE ReadMesh
 
 

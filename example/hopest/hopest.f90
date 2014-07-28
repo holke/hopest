@@ -10,7 +10,6 @@ USE MOD_ReadInTools,  ONLY:IgnoredStrings
 USE MOD_Mesh,         ONLY:InitMesh,FinalizeMesh
 USE MOD_IO_HDF5,      ONLY:InitIO
 USE MOD_MPI,          ONLY:InitMPI
-
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------

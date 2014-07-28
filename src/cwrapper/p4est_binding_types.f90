@@ -10,8 +10,8 @@ USE, INTRINSIC :: ISO_C_BINDING
 IMPLICIT NONE
 
 TYPE, BIND(C) :: t_p4est_ptr
-  TYPE(c_ptr)                :: p4est
-  TYPE(c_ptr)                :: mesh
+  TYPE(C_PTR)                :: p4est
+  TYPE(C_PTR)                :: mesh
 END TYPE t_p4est_ptr
 
 
