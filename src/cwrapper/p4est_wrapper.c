@@ -5,20 +5,17 @@
 #include <p8est_bits.h>
 #include <p8est_vtk.h>
 #include <p8est_mesh.h>
+#include <p8est.h>
 // 3D mode
 #include <p4est_to_p8est.h>
 
-
-void test( double *areal, int *bint)
-{
-  P4EST_GLOBAL_PRODUCTIONF ("test areal= %f bint= %i \n",  *areal,  *bint);
-}
 
 static int
 refine_one (p4est_t * p4est, p4est_topidx_t which_tree,
            p4est_quadrant_t * quadrant) 
 {
-  if(which_tree == 0)  // | for naca which_tree == 147 | which_tree == 148 ) 
+  if(which_tree == 0)  
+  //if( which_tree == 147 | which_tree == 148 ) 
   {
     return 1;
   }
@@ -35,21 +32,23 @@ refine_all (p4est_t * p4est, p4est_topidx_t which_tree,
   return 1;
 }
 
-void p4est_connectivity_treevertex (p4est_topidx_t * num_vertices_in,
-                               p4est_topidx_t * num_trees_in        ,
-                               double         *vertices             ,
-                               p4est_topidx_t * tree_to_vertex      ,
-                               void **p4est_out )
+
+void p4est_connectivity_treevertex (p4est_topidx_t num_vertices,
+                                    p4est_topidx_t num_trees        ,
+                                    double         *vertices            ,
+                                    p4est_topidx_t *tree_to_vertex      ,
+                                    p4est_t       **p4est_out )
 {
+  p4est_t            *p4est;
   p4est_topidx_t      tree;
   int                 face;
-  p4est_topidx_t      num_vertices = *num_vertices_in;
-  p4est_topidx_t      num_trees = *num_trees_in;
+  // p4est_topidx_t      num_vertices = *num_vertices_in;
+  // p4est_topidx_t      num_trees = *num_trees_in;
 
   p4est_connectivity_t *conn = NULL;
+  // p4est_connectivity_t *tmp_conn = NULL;
 
   sc_MPI_Comm         mpicomm;
-  p4est_t            *p4est;
 
 
 
@@ -73,8 +72,15 @@ void p4est_connectivity_treevertex (p4est_topidx_t * num_vertices_in,
   conn = p4est_connectivity_new (num_vertices, num_trees,
                                  0, 0,
                                  0, 0);
-  conn->vertices = vertices;
-  conn->tree_to_vertex = tree_to_vertex;
+  int i;
+  for (i=0; i < 3*num_vertices; ++i){
+    conn->vertices[i] = vertices[i];
+  }
+  
+  for (i=0; i < 8*num_trees; ++i){
+      conn->tree_to_vertex[i] = tree_to_vertex[i];
+  }
+  //conn->tree_to_vertex = tree_to_vertex;
 
   /*
    * Fill tree_to_tree and tree_to_face to make sure we have a valid
@@ -99,19 +105,19 @@ void p4est_connectivity_treevertex (p4est_topidx_t * num_vertices_in,
      (long long) conn->num_trees, (long long) conn->num_vertices);
 
 
+  // tmp_conn = p8est_connectivity_new_rotcubes ();
 
   /* Create a forest that is not refined; it consists of the root octant. */
   p4est = p4est_new (mpicomm, conn, 0, NULL, NULL);
-
-  //return p4est as pointer adress ;
-  *p4est_out = (void *)p4est;
+  //return p4est as pointer adress;
+  *p4est_out=(p4est_t *)p4est;
 
 }
 
-void p4est_refine_mesh ( void        **p4est_in,
-                         int        *refine_level,
-                         int        *refine_elem,
-                         void        **mesh_out )
+void p4est_refine_mesh ( p4est_t        **p4est_in,
+                         int              refine_level,
+                         int              refine_elem,
+                         p4est_mesh_t   **mesh_out )
 {
   p4est_t            *p4est;
   p4est_mesh_t       *mesh;
@@ -120,20 +126,20 @@ void p4est_refine_mesh ( void        **p4est_in,
   int                 level;
   int                 balance;
 
-  // input integer as pointer adress
-  p4est = (p4est_t *)* p4est_in;
+  // dereference double pointer
+  p4est = * p4est_in;
 
   P4EST_GLOBAL_PRODUCTIONF
-    ("DEBUG: refine_level  %d \n",*refine_level);
+    ("DEBUG: refine_level  %d \n",refine_level);
   P4EST_GLOBAL_PRODUCTIONF
-    ("DEBUG: refine_elem  %d \n",*refine_elem);
+    ("DEBUG: refine_elem  %d \n",refine_elem);
   P4EST_GLOBAL_PRODUCTIONF
     ("DEBUG: New connectivity with %lld trees and %lld vertices\n",
      (long long) p4est->connectivity->num_trees, (long long) p4est->connectivity->num_vertices);
   /* Refine the forest iteratively, load balancing at each iteration.
    * This is important when starting with an unrefined forest */
-  for (level = 0; level < *refine_level; ++level) {
-    if(*refine_elem < 0 )
+  for (level = 0; level < refine_level; ++level) {
+    if(refine_elem < 0 )
     {
       p4est_refine (p4est, 0, refine_all, NULL);
     }
@@ -152,22 +158,41 @@ void p4est_refine_mesh ( void        **p4est_in,
    * Note that this balance step is not strictly necessary since we are using
    * uniform refinement but may be required for other types of refinement.
    */
+  P4EST_GLOBAL_PRODUCTIONF
+    ("DEBUG: before first vtk %i  \n",p4est);
+
   p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_afterrefine");
+  P4EST_GLOBAL_PRODUCTIONF
+    ("DEBUG: after first vtk %d  \n",0);
+
   balance = 1;
   if (balance) {
-    p4est_balance (p4est, P4EST_CONNECT_FACE, NULL);
+    p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
     p4est_partition (p4est, 0, NULL);
   }
+  P4EST_GLOBAL_PRODUCTIONF
+    ("DEBUG: before vtk %d  \n",0);
 
   /* Write the forest to disk for visualization, one file per processor. */
   p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_afterbalance");
 
-  /* create ghost layer and mesh */
-  // ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FACE);
-  // mesh = p4est_mesh_new (p4est, ghost, mesh_btype);
-  //return mesh as pointer adress;
-  // *mesh_out=(void *)mesh;
+  P4EST_GLOBAL_PRODUCTIONF
+    ("DEBUG: before ghosts %d  \n",0);
 
+  /* create ghost layer and mesh */
+  ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
+  mesh = p4est_mesh_new (p4est, ghost, mesh_btype);
+  //return mesh as pointer adress;
+  *mesh_out=(p4est_mesh_t *)mesh;
+
+  P4EST_GLOBAL_PRODUCTIONF
+    ("DEBUG: REFINE FINISHED %d  \n",0);
  
   
 }
+void p4est_save_all ( const char  **filename,
+                      p4est_t     **p4est)
+{
+  p4est_save(*filename,*p4est,0);
+}
+

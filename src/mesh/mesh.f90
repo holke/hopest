@@ -34,6 +34,8 @@ SUBROUTINE InitMesh()
 ! MODULES
 USE MOD_Globals
 USE MOD_Mesh_Vars
+USE MOD_Output_Vars, ONLY:Projectname
+USE MOD_p4estBinding
 !-----------------------------------------------------------------------------------------------------------------------------------
 USE MOD_Mesh_ReadIn,        ONLY:readMesh
 USE MOD_ReadInTools,        ONLY:GETLOGICAL,GETINT,GETINTARRAY,CNTSTR,GETSTR
@@ -45,6 +47,7 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
+CHARACTER,ALLOCATABLE,TARGET   :: filenameChar(:)
 !===================================================================================================================================
 IF(MeshInitIsDone)&
   CALL abort(__STAMP__,&
@@ -55,7 +58,14 @@ SWRITE(UNIT_stdOut,'(A)') ' INIT MESH...'
 
 ! prepare pointer structure (get nElems, etc.)
 MeshFile = GETSTR('MeshFile')
+ProjectName=Meshfile(1:INDEX(Meshfile,'.h5')-1)
+
 CALL readMesh(MeshFile) !set nElems
+
+CALL p4est_refine_mesh(p4est_ptr%p4est,2,-1,p4est_ptr%mesh)
+
+FilenameChar=StringToArray(TRIM(TRIM(ProjectName)//'.p4est\0'))
+CALL p4est_save_all(C_LOC(FilenameChar),p4est_ptr%p4est)
 
 ! dealloacte pointers
 SWRITE(UNIT_stdOut,'(A)') "NOW CALLING deleteMeshPointer..."
