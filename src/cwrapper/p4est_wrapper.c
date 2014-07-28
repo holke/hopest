@@ -34,22 +34,16 @@ refine_all (p4est_t * p4est, p4est_topidx_t which_tree,
 
 
 void p4est_connectivity_treevertex (p4est_topidx_t num_vertices,
-                                    p4est_topidx_t num_trees        ,
-                                    double         *vertices            ,
-                                    p4est_topidx_t *tree_to_vertex      ,
-                                    p4est_t       **p4est_out )
+                                    p4est_topidx_t num_trees,
+                                    double         *vertices,
+                                    p4est_topidx_t *tree_to_vertex,
+                                    p4est_t        **p4est_out )
 {
-  p4est_t            *p4est;
-  p4est_topidx_t      tree;
-  int                 face;
-  // p4est_topidx_t      num_vertices = *num_vertices_in;
-  // p4est_topidx_t      num_trees = *num_trees_in;
-
+  p4est_t              *p4est;
+  p4est_topidx_t        tree;
+  int                   face,i;
   p4est_connectivity_t *conn = NULL;
-  // p4est_connectivity_t *tmp_conn = NULL;
-
-  sc_MPI_Comm         mpicomm;
-
+  sc_MPI_Comm           mpicomm;
 
 
   /* Initialize MPI; see sc_mpi.h.
@@ -63,24 +57,17 @@ void p4est_connectivity_treevertex (p4est_topidx_t num_vertices,
   sc_init (mpicomm, 1, 1, NULL, SC_LP_ESSENTIAL);
   p4est_init (NULL, SC_LP_PRODUCTION);
 
-
-
   P4EST_GLOBAL_PRODUCTIONF ("creating connectivity from tree to vertex only...%d %d \n",num_vertices,num_trees);
-
-
 
   conn = p4est_connectivity_new (num_vertices, num_trees,
                                  0, 0,
                                  0, 0);
-  int i;
   for (i=0; i < 3*num_vertices; ++i){
     conn->vertices[i] = vertices[i];
   }
-  
   for (i=0; i < 8*num_trees; ++i){
-      conn->tree_to_vertex[i] = tree_to_vertex[i];
+    conn->tree_to_vertex[i] = tree_to_vertex[i];
   }
-  //conn->tree_to_vertex = tree_to_vertex;
 
   /*
    * Fill tree_to_tree and tree_to_face to make sure we have a valid
@@ -99,35 +86,26 @@ void p4est_connectivity_treevertex (p4est_topidx_t num_vertices,
 
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 
-
   P4EST_GLOBAL_PRODUCTIONF
     ("New connectivity with %lld trees and %lld vertices\n",
      (long long) conn->num_trees, (long long) conn->num_vertices);
 
-
-  // tmp_conn = p8est_connectivity_new_rotcubes ();
-
   /* Create a forest that is not refined; it consists of the root octant. */
   p4est = p4est_new (mpicomm, conn, 0, NULL, NULL);
-  //return p4est as pointer adress;
-  *p4est_out=(p4est_t *)p4est;
+  *p4est_out=*(&p4est);
 
 }
 
-void p4est_refine_mesh ( p4est_t        **p4est_in,
-                         int              refine_level,
-                         int              refine_elem,
+void p4est_refine_mesh ( p4est_t        *p4est,
+                         int             refine_level,
+                         int             refine_elem,
                          p4est_mesh_t   **mesh_out )
 {
-  p4est_t            *p4est;
   p4est_mesh_t       *mesh;
   p4est_ghost_t      *ghost;
   p4est_connect_type_t mesh_btype;
   int                 level;
   int                 balance;
-
-  // dereference double pointer
-  p4est = * p4est_in;
 
   P4EST_GLOBAL_PRODUCTIONF
     ("DEBUG: refine_level  %d \n",refine_level);
@@ -187,12 +165,11 @@ void p4est_refine_mesh ( p4est_t        **p4est_in,
 
   P4EST_GLOBAL_PRODUCTIONF
     ("DEBUG: REFINE FINISHED %d  \n",0);
- 
   
 }
-void p4est_save_all ( const char  **filename,
-                      p4est_t     **p4est)
-{
-  p4est_save(*filename,*p4est,0);
-}
 
+void p4est_save_all ( char    filename[],
+                      p4est_t *p4est)
+{
+  p4est_save(filename,p4est,0);
+}

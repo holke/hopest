@@ -47,7 +47,6 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-CHARACTER,ALLOCATABLE,TARGET   :: filenameChar(:)
 !===================================================================================================================================
 IF(MeshInitIsDone)&
   CALL abort(__STAMP__,&
@@ -63,9 +62,7 @@ ProjectName=Meshfile(1:INDEX(Meshfile,'.h5')-1)
 CALL readMesh(MeshFile) !set nElems
 
 CALL p4est_refine_mesh(p4est_ptr%p4est,2,-1,p4est_ptr%mesh)
-
-FilenameChar=StringToArray(TRIM(TRIM(ProjectName)//'.p4est\0'))
-CALL p4est_save_all(C_LOC(FilenameChar),p4est_ptr%p4est)
+CALL p4est_save_all(TRIM(ProjectName)//'.p4est'//C_NULL_CHAR,p4est_ptr%p4est)
 
 ! dealloacte pointers
 SWRITE(UNIT_stdOut,'(A)') "NOW CALLING deleteMeshPointer..."

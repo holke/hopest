@@ -9,7 +9,7 @@ USE, INTRINSIC :: ISO_C_BINDING
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 
-TYPE, BIND(C) :: t_p4est_ptr
+TYPE :: t_p4est_ptr
   TYPE(C_PTR)                :: p4est
   TYPE(C_PTR)                :: mesh
 END TYPE t_p4est_ptr
