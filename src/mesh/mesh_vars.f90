@@ -23,7 +23,7 @@ INTEGER,ALLOCATABLE :: BoundaryType(:,:)
 INTEGER          :: nGlobalElems=0      ! number of elements in mesh
 INTEGER          :: nElems=0            ! number of local elements
 INTEGER          :: nEdges=0            ! number of unique edges
-INTEGER          :: nSides=0            ! =nInnerSides+nBCSides+nMPISides
+INTEGER          :: nSides=0            ! =nInnerSides+nBCSides
 INTEGER          :: nMortarSides=0      ! 
 INTEGER          :: nBCSides=0          ! BCSide index range: sideID \in [1:nBCSides]
 INTEGER          :: nNodes=0            ! SIZE of Nodes pointer array, number of unique nodes
@@ -118,8 +118,6 @@ INTEGER,PARAMETER   :: EdgeToElemNode(1:2,1:12) = RESHAPE((/ 1, 2,&  ! CGNS corn
 INTEGER,PARAMETER   :: H2P_VertexMap(1:8) =  (/0,1,3,2,4,5,7,6/)  !mapping from local node order (CGNS) to p4est node order 
 INTEGER,PARAMETER   :: P2H_VertexMap(0:7) =  (/1,2,4,3,5,6,8,7/)  !mapping from local node order (CGNS) to p4est node order 
 !-----------------------------------------------------------------------------------------------------------------------------------
-#ifdef MPI
-#endif /*MPI*/
 !-----------------------------------------------------------------------------------------------------------------------------------
 LOGICAL          :: MeshInitIsDone =.FALSE.
 !===================================================================================================================================
@@ -334,7 +332,6 @@ IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 INTEGER             :: iElem,iLocSide,iNode,nAssocNodes
-INTEGER             :: iMortar
 TYPE(tElem),POINTER :: aElem
 TYPE(tSide),POINTER :: aSide
 !===================================================================================================================================

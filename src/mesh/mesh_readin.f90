@@ -113,12 +113,10 @@ INTEGER,ALLOCATABLE            :: tree_to_vertex(:,:)
 REAL,ALLOCATABLE               :: vertices(:,:)
 !===================================================================================================================================
 IF(MESHInitIsDone) RETURN
-IF(MPIRoot)THEN
-  INQUIRE (FILE=TRIM(FileString), EXIST=fileExists)
-  IF(.NOT.FileExists)  &
-      CALL abort(__STAMP__, &
-         'readMesh from data file "'//TRIM(FileString)//'" does not exist')
-END IF
+INQUIRE (FILE=TRIM(FileString), EXIST=fileExists)
+IF(.NOT.FileExists)  &
+    CALL abort(__STAMP__, &
+       'readMesh from data file "'//TRIM(FileString)//'" does not exist')
 
 
 SWRITE(UNIT_stdOut,'(A)')'READ MESH FROM DATA FILE "'//TRIM(FileString)//'" ...'
@@ -170,7 +168,12 @@ ALLOCATE(NodeInfo(1:nNodeIDs))
 CALL ReadArray('NodeInfo',1,(/nNodeIDs/),0,1,IntegerArray=NodeInfo)
 
 
-nCurvedNodes=(NGeo+1)**3
+IF(NGeo.GT.1)THEN
+  nCurvedNodes=(NGeo+1)**3
+ELSE
+  nCurvedNodes=0
+END IF
+
 ALLOCATE(Nodes(1:nNodes)) ! pointer list, entry is known by NodeCoords
 DO iNode=1,nNodes
   NULLIFY(Nodes(iNode)%np)

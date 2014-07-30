@@ -15,11 +15,11 @@ PRIVATE
 INTEGER(HID_T)                 :: File_ID
 INTEGER(HSIZE_T),POINTER       :: HSize(:)
 INTEGER,ALLOCATABLE            :: ElemInfo(:,:),SideInfo(:,:),NodeInfo(:)
-REAL,ALLOCATABLE               :: NodeCoords(:,:),ElemBary(:,:)
-INTEGER,ALLOCATABLE            :: NodeMap(:)
+REAL,ALLOCATABLE               :: NodeCoords(:,:)
 REAL,ALLOCATABLE               :: ElemWeight(:)
 INTEGER                        :: ElemCounter(11,2)
 INTEGER                        :: nSideIDs,nNodeIDs
+INTEGER                        :: nTotalSides,nTotalNodes
 ! Private Part ---------------------------------------------------------------------------------------------------------------------
 ! Public Part ----------------------------------------------------------------------------------------------------------------------
 
@@ -55,9 +55,10 @@ TYPE(tSide),POINTER            :: Side
 INTEGER                        :: iElem,i
 INTEGER                        :: NodeID,iNode
 INTEGER                        :: SideID,iLocSide
+REAL,ALLOCATABLE               :: ElemBary(:,:)
 !===================================================================================================================================
 WRITE(*,'(132("~"))')
-WRITE(*,'(A)')' WRITE DATA TO HDF5 FILE...'
+WRITE(*,'(A)')' WRITE MESH TO HDF5 FILE... ' // TRIM(FileString) 
 ! Create the file collectively.
 CALL OpenHDF5File(FileString,create=.TRUE.,single=.TRUE.)  
 
@@ -67,11 +68,9 @@ DO iElem=1,nElems
   DO iNode=1,8
     Elem%Node(iNode)%np%ind=0
   END DO
-  IF(useCurveds)THEN
-    DO iNode=1,nCurvedNodes
-      Elem%curvedNode(iNode)%np%ind=0
-    END DO
-  END IF !usecurveds
+  DO iNode=1,nCurvedNodes
+    Elem%curvedNode(iNode)%np%ind=0
+  END DO
   DO iLocSide=1,6
     Side=>Elem%Side(iLocSide)%sp
     Side%ind=0
@@ -81,9 +80,9 @@ END DO !iElem=1,nElems
 ! count Elements , unique sides and nodes are marked with ind=0
 nNodeIDs=0 !number of unique nodeIDs
 nSideIDs=0 !number of unique side IDs (side and side%connection have the same sideID)
-nElems=0   !number of elements
-nSides=0   !number of all sides
-nNodes=0   !number of all nodes
+nTotalSides=0   !number of all sides
+nTotalNodes=0   !number of all nodes
+
 
 DO iElem=1,nElems
   Elem=>Elems(iElem)%ep
@@ -94,13 +93,11 @@ DO iElem=1,nElems
     Elem%Node(iNode)%np%ind=-88888  ! mark no MPI side
   END DO
 
-  IF(useCurveds)THEN
-    DO iNode=1,nCurvedNodes
-      IF(Elem%CurvedNode(iNode)%np%ind.NE.0) CYCLE
-      nNodeIDs=nNodeIDs+1
-      Elem%CurvedNode(iNode)%np%ind=-88888
-    END DO
-  END IF !useCurveds
+  DO iNode=1,nCurvedNodes
+    IF(Elem%CurvedNode(iNode)%np%ind.NE.0) CYCLE
+    nNodeIDs=nNodeIDs+1
+    Elem%CurvedNode(iNode)%np%ind=-88888
+  END DO
 
   ! Count sides
   DO iLocSide=1,6
@@ -113,8 +110,8 @@ DO iElem=1,nElems
       END IF
     END IF
   END DO
-  nNodes = nNodes+8+6+nCurvedNodes ! corner + oriented + curved
-  nSides = nSides+6
+  nTotalNodes = nTotalNodes+8+6+nCurvedNodes ! corner + oriented + curved
+  nTotalSides = nTotalSides+6
 END DO
 
 !set unique nodes and Side Indices
@@ -166,12 +163,12 @@ CALL WriteArrayToHDF5(File_ID,'ElemBarycenters',nElems,2,(/nElems,3/),0,RealArra
 DEALLOCATE(ElemBary)
 
 
-!WRITE SideInfo,into (1,nSides)   
-CALL WriteArrayToHDF5(File_ID,'SideInfo',nSides,2,(/nSides,SIDE_InfoSize/),0,IntegerArray=SideInfo)
+!WRITE SideInfo,into (1,nTotalSides)   
+CALL WriteArrayToHDF5(File_ID,'SideInfo',nTotalSides,2,(/nTotalSides,SIDE_InfoSize/),0,IntegerArray=SideInfo)
 DEALLOCATE(SideInfo)
 
-!WRITE NodeInfo,into (1,nNodes) 
-CALL WriteArrayToHDF5(File_ID,'NodeInfo',nNodes,1,(/nNodes/),0,IntegerArray=NodeInfo)
+!WRITE NodeInfo,into (1,nTotalNodes) 
+CALL WriteArrayToHDF5(File_ID,'NodeInfo',nTotalNodes,1,(/nTotalNodes/),0,IntegerArray=NodeInfo)
 DEALLOCATE(NodeInfo)
 
 ! WRITE NodeCoords (have to be sorted according to nodemap)
@@ -284,7 +281,7 @@ END DO !iElem
 
 
 !fill SideInfo
-ALLOCATE(SideInfo(1:nSides,SIDE_InfoSize)) 
+ALLOCATE(SideInfo(1:nTotalSides,SIDE_InfoSize)) 
 SideInfo=0 
 iSide=0
 DO iElem=1,nElems
@@ -312,7 +309,7 @@ END DO !iElem=1,nElems
 
 
 !fill NodeInfo
-ALLOCATE(NodeInfo(1:nNodes))
+ALLOCATE(NodeInfo(1:nTotalNodes))
 NodeInfo=-1
 NodeID=0
 DO iElem=1,nElems
@@ -336,21 +333,12 @@ DO iElem=1,nElems
   END DO !iLocSide=1,6
 END DO !iElem=1,nElems
 
-IF(NodeID.NE.nNodes) &
+IF(NodeID.NE.nTotalNodes) &
        CALL abort(__STAMP__,&
           'Sanity check: nNodes not equal to number of nodes in NodeInfo!')
 
-! get mapping from node ID to continuous ID in NodeMap 
-ALLOCATE(NodeCoords(MAX(1,nNodeIDs),3))
-IF(nNodeIDs.GT.0)THEN
-  CALL getNodeMap()  !nodes have to be written
-ELSE !no node coords have to be written
-  ALLOCATE(NodeMap(1))
-  NodeMap=-999
-END IF
-NodeInfo=ABS(NodeInfo) ! negative sign was used for NodeMap 
+ALLOCATE(NodeCoords(nNodeIDs,3))
 NodeCoords=-999.
-IF(nNodeIDs.LE.1) RETURN
 
 !fill NodeCoords and Sanity check of curvednodes
 DO iElem=1,nElems
@@ -368,8 +356,7 @@ DO iElem=1,nElems
   Elem=>Elems(iElem)%ep
   DO iNode=1,8
     IF(Elem%Node(iNode)%np%tmp.GT.0)THEN
-      iNodeP=INVMAP(Elem%Node(iNode)%np%ind,nNodeIDs,NodeMap)  ! index in local Nodes pointer array
-      IF(iNodeP.LE.0) STOP 'Problem in INVMAP' 
+      iNodeP=Elem%Node(iNode)%np%ind
       NodeCoords(iNodeP,:)=Elem%Node(iNode)%np%x
       NodeID=NodeID+1
       Elem%Node(iNode)%np%tmp=0
@@ -378,15 +365,13 @@ DO iElem=1,nElems
   ! CURVED  
   DO iNode=1,nCurvedNodes
     IF(Elem%CurvedNode(iNode)%np%tmp.GT.0)THEN
-      iNodeP=INVMAP(Elem%CurvedNode(iNode)%np%ind,nNodeIDs,NodeMap)  ! index in local Nodes pointer array
-      IF(iNodeP.LE.0) STOP 'Problem in INVMAP' 
+      iNodeP=Elem%CurvedNode(iNode)%np%ind
       NodeCoords(iNodeP,:)=Elem%CurvedNode(iNode)%np%x
       NodeID=NodeID+1
       Elem%CurvedNode(iNode)%np%tmp=0
     END IF                  
   END DO
 END DO !iElem=1,nElems
-DEALLOCATE(NodeMap)
 
 IF(NodeID.NE.nNodeIDs) & 
          CALL abort(__STAMP__,&
@@ -394,174 +379,5 @@ IF(NodeID.NE.nNodeIDs) &
 
 END SUBROUTINE getMeshinfo
 
-
-SUBROUTINE GetNodeMap()
-!===================================================================================================================================
-! take NodeInfo array, sort it, eliminate mulitple IDs and return the Mapping 1->NodeID1, 2->NodeID2, ... 
-! this is useful if the NodeID list of the mesh are not contiguous, essentially occuring when using domain decomposition (MPI)
-!===================================================================================================================================
-! MODULES
-USE MOD_mesh_vars,ONLY:nNodes
-! IMPLICIT VARIABLE HANDLING
-IMPLICIT NONE
-!-----------------------------------------------------------------------------------------------------------------------------------
-! INPUT VARIABLES
-!-----------------------------------------------------------------------------------------------------------------------------------
-! OUTPUT VARIABLES
-!-----------------------------------------------------------------------------------------------------------------------------------
-! LOCAL VARIABLES
-INTEGER                            :: temp(nNodeIDs+1),i,nullpos
-!===================================================================================================================================
-temp(1)=0
-temp(2:nNodeIDs+1)=NodeInfo
-!sort
-CALL Qsort1Int(temp)
-nullpos=INVMAP(0,nNodeIDs+1,temp)
-!count unique entries
-nNodes=1
-DO i=nullpos+2,nNodeIDs+1
-  IF(temp(i).NE.temp(i-1)) nNodes = nNodes+1
-END DO
-!associate unique entries
-ALLOCATE(NodeMap(nNodes))
-nNodes=1
-NodeMap(1)=temp(nullpos+1)
-DO i=nullpos+2,nNodeIDs+1
-  IF(temp(i).NE.temp(i-1)) THEN
-    nNodes = nNodes+1
-    NodeMap(nNodes)=temp(i)
-  END IF
-END DO
-END SUBROUTINE GetNodeMap 
-
-
-FUNCTION INVMAP(ID,nIDs,ArrID)
-!===================================================================================================================================
-! find the inverse Mapping p.e. NodeID-> entry in NodeMap (a sorted array of unique NodeIDs), using bisection 
-! if Index is not in the range, -1 will be returned, if it is in the range, but is not found, 0 will be returned!!
-!===================================================================================================================================
-! MODULES
-! IMPLICIT VARIABLE HANDLING
-IMPLICIT NONE
-!-----------------------------------------------------------------------------------------------------------------------------------
-! INPUT VARIABLES
-INTEGER, INTENT(IN)                :: ID            ! ID to search for
-INTEGER, INTENT(IN)                :: nIDs          ! size of ArrID
-INTEGER, INTENT(IN)                :: ArrID(nIDs)   ! 1D array of IDs
-!-----------------------------------------------------------------------------------------------------------------------------------
-! OUTPUT VARIABLES
-INTEGER                            :: INVMAP               ! index of ID in NodeMap array
-!-----------------------------------------------------------------------------------------------------------------------------------
-! LOCAL VARIABLES
-INTEGER                            :: i,maxSteps,low,up,mid
-!===================================================================================================================================
-INVMAP=0
-maxSteps=INT(LOG(REAL(nIDs))*1.4426950408889634556)+1    !1/LOG(2.)=1.4426950408889634556
-low=1
-up=nIDs
-IF((ID.LT.ArrID(low)).OR.(ID.GT.ArrID(up))) THEN
-  !WRITE(*,*)'WARNING, Node Index Not in local range -> set to -1'
-  INVMAP=-1  ! not in the range!
-  RETURN
-END IF 
-IF(ID.EQ.ArrID(low))THEN
-  INVMAP=low
-ELSEIF(ID.EQ.ArrID(up))THEN
-  INVMAP=up
-ELSE
-  !bisection
-  DO i=1,maxSteps
-    mid=(up-low)/2+low
-    IF(ID .EQ. ArrID(mid))THEN
-      INVMAP=mid                     !index found!
-      EXIT
-    ELSEIF(ID .GT. ArrID(mid))THEN ! seek in upper half
-      low=mid
-    ELSE
-      up=mid
-    END IF
-  END DO
-END IF
-END FUNCTION INVMAP 
-
-
-
-RECURSIVE SUBROUTINE Qsort1Int(A)
-!===================================================================================================================================
-! QuickSort for integer array A
-!===================================================================================================================================
-! MODULES
-! IMPLICIT VARIABLE HANDLING
-IMPLICIT NONE
-!-----------------------------------------------------------------------------------------------------------------------------------
-! INPUT VARIABLES
-!-----------------------------------------------------------------------------------------------------------------------------------
-! INPUT/OUTPUT VARIABLES
-INTEGER,INTENT(INOUT)            :: A(:)
-!-----------------------------------------------------------------------------------------------------------------------------------
-! OUTPUT VARIABLES
-!-----------------------------------------------------------------------------------------------------------------------------------
-! LOCAL VARIABLES
-INTEGER                          :: marker
-!===================================================================================================================================
-IF(SIZE(A).GT.1) THEN
-  CALL Partition1Int(A,marker)
-  CALL Qsort1Int(A(:marker-1))
-  CALL Qsort1Int(A(marker:))
-END IF
-RETURN
-END SUBROUTINE Qsort1Int       
-
-
-
-SUBROUTINE Partition1Int(A,marker)
-!===================================================================================================================================
-! Neeeded by QuickSort
-!===================================================================================================================================
-! MODULES
-! IMPLICIT VARIABLE HANDLING
-IMPLICIT NONE
-!-----------------------------------------------------------------------------------------------------------------------------------
-! INPUT VARIABLES
-!-----------------------------------------------------------------------------------------------------------------------------------
-! INPUT/OUTPUT VARIABLES
-INTEGER,INTENT(INOUT)            :: A(:)
-!-----------------------------------------------------------------------------------------------------------------------------------
-! OUTPUT VARIABLES
-INTEGER,INTENT(OUT)              :: marker
-!-----------------------------------------------------------------------------------------------------------------------------------
-! LOCAL VARIABLES
-INTEGER                          :: i,j
-INTEGER                          :: temp,x
-!===================================================================================================================================
-x= A(1)
-i= 0
-j= SIZE(A)+1
-DO
-  j=j-1
-  DO
-    IF(A(j).LE.x) EXIT
-    j=j-1
-  END DO
-  i=i+1
-  DO
-    IF(A(i).GE.x) EXIT
-    i=i+1
-  END DO
-  IF(i.LT.j)THEN
-    ! exchange A(i) and A(j)
-    temp=A(i)
-    A(i)=A(j)
-    A(j)=temp
-  ELSEIF(i.EQ.j)THEN
-    marker=i+1
-    RETURN
-  ELSE
-    marker=i
-    RETURN
-  ENDIF                      
-END DO                        
-RETURN                        
-END SUBROUTINE Partition1Int     
 
 END MODULE MOD_Output_HDF5
