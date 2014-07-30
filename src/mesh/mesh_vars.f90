@@ -28,6 +28,7 @@ INTEGER          :: nMortarSides=0      !
 INTEGER          :: nBCSides=0          ! BCSide index range: sideID \in [1:nBCSides]
 INTEGER          :: nNodes=0            ! SIZE of Nodes pointer array, number of unique nodes
 INTEGER          :: nBCs=0              ! number of BCs in mesh
+INTEGER          :: nCurvedNodes=0      ! number of curved nodes per element = (Ngeo+1)^3
 !-----------------------------------------------------------------------------------------------------------------------------------
 CHARACTER(LEN=255),ALLOCATABLE   :: BoundaryName(:)
 CHARACTER(LEN=255)               :: MeshFile        ! name of hdf5 meshfile (write with ending .h5!)
@@ -59,7 +60,7 @@ TYPE tElem
   TYPE(tNodePtr)               :: Node(8)
   TYPE(tSidePtr)               :: Side(6)
   TYPE(tEdgePtr)               :: Edge(12)
-  TYPE(tNodePtr),POINTER       :: CurvedNode(:,:,:)
+  TYPE(tNodePtr),POINTER       :: CurvedNode(:)
 END TYPE tElem
 
 TYPE tSide

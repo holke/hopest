@@ -26,18 +26,16 @@ libhopest_compiled_sources = \
 	src/mpi/mpi.f90 \
 	src/interpolation/basis.f90 \
 	src/readintools/readintools.f90 \
-	src/output/output.f90
-
-libhopest_installed_headers += src/hopest_hdf5.h
-if HOPEST_WITH_HDF5
-libhopest_compiled_sources += \
-        src/hopest_hdf5.c \
+  src/hopest_hdf5.c \
 	src/io_hdf5/io_hdf5.f90 \
 	src/io_hdf5/hdf5_input.f90 \
 	src/io_hdf5/hdf5_output.f90 \
+	src/output/output_hdf5.f90 \
+	src/output/output.f90 \ 
 	src/mesh/mesh_readin.f90 \
-        src/mesh/mesh.f90
-endif
+  src/mesh/mesh.f90
+
+libhopest_installed_headers += src/hopest_hdf5.h
 
 # this variable is used for headers that are not publicly installed
 HOPEST_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS)

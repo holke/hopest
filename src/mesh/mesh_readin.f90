@@ -93,7 +93,7 @@ INTEGER                        :: iNode,jNode,NodeID,SideID
 INTEGER                        :: iLocSide,jLocSide
 INTEGER                        :: iSide
 INTEGER                        :: FirstNodeInd,LastNodeInd,FirstSideInd,LastSideInd
-INTEGER                        :: nCurvedNodes,nCurvedNodesRef
+INTEGER                        :: nCurvedNodes_loc
 LOGICAL                        :: oriented
 INTEGER                        :: nPeriodicSides 
 LOGICAL                        :: fileExists
@@ -170,7 +170,7 @@ ALLOCATE(NodeInfo(1:nNodeIDs))
 CALL ReadArray('NodeInfo',1,(/nNodeIDs/),0,1,IntegerArray=NodeInfo)
 
 
-nCurvedNodesRef=(NGeo+1)**3
+nCurvedNodes=(NGeo+1)**3
 ALLOCATE(Nodes(1:nNodes)) ! pointer list, entry is known by NodeCoords
 DO iNode=1,nNodes
   NULLIFY(Nodes(iNode)%np)
@@ -191,20 +191,20 @@ DO iElem=1,nElems
   END DO
   CALL createSides(aElem)
   IF(NGeo.GT.1)THEN
-    nCurvedNodes = ElemInfo(iElem,ELEM_LastNodeInd) - ElemInfo(iElem,ELEM_FirstNodeInd) - 14 ! corner + oriented nodes
-    IF(nCurvedNodes.NE.nCurvedNodesRef) &
+    nCurvedNodes_loc = ElemInfo(iElem,ELEM_LastNodeInd) - ElemInfo(iElem,ELEM_FirstNodeInd) - 14 ! corner + oriented nodes
+    IF(nCurvedNodes.NE.nCurvedNodes_loc) &
       CALL abort(__STAMP__, &
-           'Wrong number of curved nodes.')
-    ALLOCATE(aElem%CurvedNode(0:NGeo,0:NGeo,0:NGeo))
-    DO k=0,NGeo; DO j=0,NGeo; DO i=0,NGeo
+           'Wrong number of curved nodes for hexahedra.')
+    ALLOCATE(aElem%CurvedNode(nCurvedNodes))
+    DO i=1,nCurvedNodes
       iNode=iNode+1
       NodeID=NodeInfo(iNode) !first oriented corner node
       IF(.NOT.ASSOCIATED(Nodes(NodeID)%np))THEN
         ALLOCATE(Nodes(NodeID)%np)
         Nodes(NodeID)%np%ind=NodeID 
       END IF
-      aElem%CurvedNode(i,j,k)%np=>Nodes(NodeID)%np
-    END DO; END DO; END DO
+      aElem%CurvedNode(i)%np=>Nodes(NodeID)%np
+    END DO
   END IF
 END DO
 

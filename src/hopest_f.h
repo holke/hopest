@@ -30,7 +30,7 @@
 #define BC_ALPHA  4
 
 !entry positions in ElemInfo 
-#define ELEM_InfoSize      6        /*number of entry in each line of ElemInfo*/
+#define ELEM_InfoSize     6        /*number of entry in each line of ElemInfo*/
 #define ELEM_Type         1        /*entry position in ElemInfo */
 #define ELEM_Zone         2           
 #define ELEM_FirstSideInd 3
