@@ -38,60 +38,262 @@ PUBLIC :: WriteAttribute
 CONTAINS
 
 
-SUBROUTINE WriteMeshToHDF5(MeshFileName)
+SUBROUTINE WriteMeshToHDF5(FileString)
 !===================================================================================================================================
-! Subroutine to write the solution U to HDF5 format
-! Is used for postprocessing and for restart
+! Subroutine to write Data to HDF5 format
 !===================================================================================================================================
 ! MODULES
-USE MOD_PreProc
-USE MOD_Globals
-USE MOD_Mesh_Vars  ,ONLY: nGlobalElems
+!USE MOD_Mesh_Vars,ONLY:tElem,tSide
+!USE MOD_Mesh_Vars,ONLY:FirstElem
+!USE MOD_Mesh_Vars,ONLY:readFlowSolution,FlowSol
+!USE MOD_Mesh_Vars,ONLY:N
+!USE MOD_Output_Vars,ONLY:dosortIJK
+!USE MOD_Mesh_Vars,ONLY:nUserDefinedBoundaries,BoundaryName,BoundaryType
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! INPUT VARIABLES
-CHARACTER(LEN=*),INTENT(IN)    :: MeshFileName
+CHARACTER(LEN=*),INTENT(IN)    :: FileString
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-!CHARACTER(LEN=255)             :: FileName
+
+!TYPE(tElem),POINTER            :: Elem
+!TYPE(tSide),POINTER            :: Side
+!INTEGER                        :: ElemID,SideID,NodeID
+!INTEGER,ALLOCATABLE            :: IDlist(:)
+!REAL                           :: sBasisBary(4)
+!CHARACTER(LEN=255)             :: Meshfile
 !===================================================================================================================================
-!IF(MPIROOT)THEN
-!  WRITE(UNIT_stdOut,'(a)',ADVANCE='NO')' WRITE MESH TO HDF5 FILE...'
-!#ifdef MPI
-!  StartT=MPI_WTIME()
-!#endif
+!WRITE(UNIT_stdOut,'(132("~"))')
+!CALL Timer(.TRUE.)
+!WRITE(UNIT_stdOut,'(A)')' WRITE DATA TO HDF5 FILE...'
+!! Create the file collectively.
+!CALL OpenHDF5File(FileString,create=.TRUE.)  
+!
+!
+!!set all node and side indices =0
+!Elem=>firstElem
+!DO WHILE(ASSOCIATED(Elem))
+!  DO i=1,Elem%nNodes
+!    Elem%Node(i)%np%ind=0
+!  END DO
+!  DO i=1,Elem%nCurvedNodes
+!    Elem%curvedNode(i)%np%ind=0
+!  END DO
+!  Side=>Elem%firstSide
+!  DO WHILE(ASSOCIATED(Side))
+!    Side%ind=0
+!    !CURVED
+!    DO i=1,side%nCurvedNodes
+!      side%curvedNode(i)%np%ind=0
+!    END DO
+!    Side=>Side%nextElemSide
+!  END DO
+!  Elem=>Elem%nextElem
+!END DO
+!
+!! count Elements , unique sides and nodes are marked with ind=0
+!nNodeIDs=0 !number of unique nodeIDs
+!nSideIDs=0 !number of unique side IDs (side and side%connection have the same sideID)
+!nElems=0   !number of elements
+!nSides=0   !number of all sides
+!nNodes=0   !number of all nodes
+!
+!Elem=>firstElem
+!DO WHILE(ASSOCIATED(Elem))
+!  nElems=nElems+1
+!  locnNodes=Elem%nNodes+Elem%nCurvedNodes
+!  locnSides=0
+!  Side=>Elem%firstSide
+!
+!  ! Count nodes
+!  DO i=1,Elem%nNodes
+!    IF(Elem%Node(i)%np%ind.NE.0) CYCLE
+!    nNodeIDs=nNodeIDs+1
+!    Elem%Node(i)%np%ind=-88888  ! mark no MPI side
+!  END DO
+!  DO i=1,Elem%nCurvedNodes
+!    IF(Elem%CurvedNode(i)%np%ind.NE.0) CYCLE
+!    nNodeIDs=nNodeIDs+1
+!    Elem%CurvedNode(i)%np%ind=-88888
+!  END DO
+!
+!  ! Count sides
+!  DO WHILE(ASSOCIATED(Side))
+!    locnNodes = locnNodes + 1 ! write only first oriented node of side, if curved all!  
+!    locnSides = locnSides + 1
+!    IF(side%ind.EQ.0) THEN
+!      nSideIDs=nSideIDs+1
+!      Side%ind=-88888
+!      IF(ASSOCIATED(Side%connection))THEN      
+!        IF(Side%connection%ind.EQ.0) nSideIDs=nSideIDs-1 ! count inner and periodic sides only once 
+!      END IF
+!    END IF
+!    Side=>Side%nextElemSide
+!  END DO
+!  nNodes = nNodes+locnNodes
+!  nSides = nSides+locnSides
+!  Elem=>Elem%nextElem
+!END DO
+!
+!! prepare sorting by space filling curve
+!ALLOCATE(IDlist(1:nElems))
+!CALL SpaceFillingCurve(IDList)
+!
+!!set unique nodes and Side Indices
+!ElemID=0
+!SideID=0
+!NodeID=0
+!Elem=>firstElem
+!DO WHILE(ASSOCIATED(Elem))
+!  ElemID=ElemID+1 
+!  Elem%ind=ElemID
+!  DO i=1,Elem%nNodes
+!    IF(Elem%Node(i)%np%ind.NE.-88888) CYCLE
+!    NodeID=NodeID+1
+!    Elem%Node(i)%np%ind=NodeID
+!  END DO
+!  DO i=1,Elem%nCurvedNodes
+!    IF(Elem%CurvedNode(i)%np%ind.NE.-88888) CYCLE
+!    NodeID=NodeID+1
+!    Elem%CurvedNode(i)%np%ind=NodeID
+!  END DO
+!
+!  Side=>Elem%firstSide
+!  DO WHILE(ASSOCIATED(Side))
+!    IF(side%ind.EQ.-88888) THEN  ! assign side ID only for non MPI sides and lower MPI sides
+!      SideID=SideID+1
+!      Side%ind=SideID
+!      IF(ASSOCIATED(Side%connection))THEN     
+!        IF(side%connection%ind.NE.-88888) Side%connection%ind=SideID !already assigned
+!      END IF
+!    END IF
+!    Side=>Side%nextElemSide
+!  END DO
+!  Elem=>Elem%nextElem
+!END DO !Elem
+!
+!CALL getMeshInfo() !allocates and fills ElemInfo,SideInfo,NodeInfo,NodeCoords
+!
+!!WRITE ElemInfo,into (1,nElems)  
+!CALL WriteArrayToHDF5(File_ID,'ElemInfo',nElems,2,(/nElems,ElemInfoSize/),0,IntegerArray=ElemInfo)
+!
+!!WRITE ElemWeight,into (1,nElems)  
+!CALL WriteArrayToHDF5(File_ID,'ElemWeight',nElems,1,(/nElems/),0,RealArray=ElemWeight)
+!
+!CALL WriteArrayToHDF5(File_ID,'ElemBarycenters',nElems,2,(/nElems,3/),0,RealArray=ElemBarycenters)
+!DEALLOCATE(ElemBarycenters)
+!
+!IF(dosortIJK)THEN
+!  ! WRITE element ijk index (for postprocessing of structured/semistructured domains)
+!  CALL WriteArrayToHDF5(File_ID,'nElems_IJK',3,1,(/3/),0,IntegerArray=nElems_IJK)
+!  CALL WriteArrayToHDF5(File_ID,'Elem_IJK',nElems,2,(/nElems,3/),0,IntegerArray=Elem_IJK)
+!  DEALLOCATE(Elem_IJK)
 !END IF
 !
-!! Generate skeleton for the file with all relevant data on a single proc (MPIRoot)
-!IF(MPIRoot) CALL GenerateFileSkeleton('State',PP_nVar,StrVarNames,MeshFileName,OutputTime,FutureTime)
-!#ifdef MPI
-!CALL MPI_BARRIER(MPI_COMM_WORLD,iError)
-!#endif
+!!WRITE SideInfo,into (1,nSides)   
+!CALL WriteArrayToHDF5(File_ID,'SideInfo',nSides,2,(/nSides,SideInfoSize/),0,IntegerArray=SideInfo)
+!DEALLOCATE(SideInfo)
 !
-!! Reopen file and write DG solution
-!FileName=TRIM(TIMESTAMP(TRIM(ProjectName)//'_State',OutputTime))//'.h5'
-!CALL OpenDataFile(FileName,create=.FALSE.,single=.FALSE.)
-!CALL WriteArrayToHDF5(DataSetName='DG_Solution', rank=5,&
-!                      nValGlobal=(/PP_nVar,NOut+1,NOut+1,NOut+1,nGlobalElems/),&
-!                      nVal=      (/PP_nVar,NOut+1,NOut+1,NOut+1,PP_nElems/),&
-!                      offset=    (/0,      0,     0,     0,     offsetElem/),&
-!                      collective=.TRUE., existing=.TRUE., RealArray=UOut)
-!CALL CloseDataFile()
-!IF(NOut.NE.PP_N) DEALLOCATE(UOut)
+!!WRITE NodeInfo,into (1,nNodes) 
+!CALL WriteArrayToHDF5(File_ID,'NodeInfo',nNodes,1,(/nNodes/),0,IntegerArray=NodeInfo)
+!DEALLOCATE(NodeInfo)
 !
-!CALL WriteAdditionalDataToHDF5(FileName)
+!! WRITE NodeCoords (have to be sorted according to nodemap)
+!CALL WriteArrayToHDF5(File_ID,'NodeCoords',nNodeIDs,2,(/nNodeIDs,3/),0,RealArray=NodeCoords)
+!DEALLOCATE(NodeCoords)
 !
-!#ifdef MPI
-!IF(MPIROOT)THEN
-!  EndT=MPI_WTIME()
-!  WRITE(UNIT_stdOut,'(A,F0.3,A)',ADVANCE='YES')'DONE  [',EndT-StartT,'s]'
-!END IF
-!#else
-!WRITE(UNIT_stdOut,'(a)',ADVANCE='YES')'DONE'
-!#endif
+!!! WRITE NodeCoords,arbitrary ordering by NodeMap
+!!CALL WriteCoordsToHDF5(File_ID,'NodeCoords',nNodeIDs,(/nNodeIDs,3/),NodeMap,NodeCoords)
+!
+!
+!CALL WriteArrayToHDF5(File_ID,'ElemCounter',11,2,(/11,2/),0,IntegerArray=ElemCounter)
+!WRITE(*,*)'Mesh statistics:'
+!WRITE(*,*)'Element Type | number of elements'
+!DO i=1,11
+!  WRITE(*,'(I4,A,I8)') Elemcounter(i,1),'        | ',Elemcounter(i,2)
+!END DO
+!
+!!attributes 
+!CALL WriteAttributeToHDF5(File_ID,'BoundaryOrder',1,IntegerScalar=N+1)
+!CALL WriteAttributeToHDF5(File_ID,'CurvedFound',1,LogicalScalar=CurvedFound)
+!nBCs=nUserDefinedBoundaries
+!ALLOCATE(BCNames(nBCs))
+!ALLOCATE(BCType(nBCs,4))
+!DO i=1,nBCs
+!  BCNames(i)=BoundaryName(i) 
+!  BCType(i,:)=BoundaryType(i,:) 
+!END DO
+!! WRITE BC 
+!
+!CALL WriteArrayToHDF5(File_ID,'BCNames',nBCs,1,(/nBCs/),0,StrArray=BCNames)
+!CALL WriteArrayToHDF5(File_ID,'BCType',nBCs,2,(/nBcs,4/),0,IntegerArray=BCType)
+!
+!DEALLOCATE(BCNames)
+!DEALLOCATE(BCType)
+!! Close the file.
+!CALL CloseHDF5File()
+!CALL Timer(.FALSE.)
+!
+!IF(readFlowSolution)THEN !write flow solution, which was read in from cgns file
+!  WRITE(UNIT_stdOut,'(132("~"))')
+!  CALL Timer(.TRUE.)
+!  WRITE(UNIT_stdOut,'(A)')' WRITE RESTART FILE TO HDF5 FILE...'
+!  WRITE(*,*)'DEBUG, nElems= ',nElems 
+!  ! Create the file collectively.
+!  CALL OpenHDF5File('CGNSrestartfile.h5',create=.TRUE.)  
+!  CALL WriteAttributeToHDF5(File_ID,'Time',1,RealScalar=0.0)
+!  MeshFile=TRIM(FileString)
+!  CALL WriteAttributeToHDF5(File_ID,'MeshFile',1,StrScalar=MeshFile)
+!  ElemWeight=1.
+!  CALL WriteArrayToHDF5(File_ID,'ElemWeight',nElems,1,(/nElems/),0,RealArray=ElemWeight)
+!  ! resort Flow Solution
+!  FlowSol(1:nElems,1:5)=FlowSol(IDlist(1:nElems),1:5)
+!  ! Halo style mean value: meanvalue/sqrt(refelem%volume)
+!  sBasisBary(1)=SQRT(1./6.)
+!  sBasisBary(2)=SQRT(1./3.)
+!  sBasisBary(3)=SQRT(0.5)
+!  sBasisBary(4)=1.
+!  iElem=0
+!  Elem=>firstElem
+!  DO WHILE(ASSOCIATED(Elem))
+!    iElem=iElem+1
+!    SELECT CASE(Elem%type)
+!    CASE(104)
+!      FlowSol(iElem,1:5)=FlowSol(iElem,1:5)*sBasisBary(1)
+!    CASE(105)
+!      FlowSol(iElem,1:5)=FlowSol(iElem,1:5)*sBasisBary(2)
+!    CASE(106)
+!      FlowSol(iElem,1:5)=FlowSol(iElem,1:5)*sBasisBary(3) 
+!    CASE(115)
+!      FlowSol(iElem,1:5)=FlowSol(iElem,1:5)*sBasisBary(2) !approximation
+!    CASE(116)
+!      FlowSol(iElem,1:5)=FlowSol(iElem,1:5)*sBasisBary(3) !approximation
+!    CASE(118)
+!      FlowSol(iElem,1:5)=FlowSol(iElem,1:5)*sBasisBary(4) !approximation
+!  !  CASE (115,116,118)
+!  !    WRITE(*,*)'Elem%type',Elem%type
+!  !    STOP 'Halo style mean value not jet implemented for trilinear hexa/penta/pyra'
+!    END SELECT
+!    Elem=>Elem%nextElem
+!  END DO
+!  CALL WriteArrayToHDF5(File_ID,'DGsolution',nElems,2,(/nElems,5/),0,RealArray=FlowSol(1:nElems,1:5))
+!  !use elemInfo as dummy for elemint
+!  ElemInfo(:,1)=1 !order
+!  DO iElem=1,nElems
+!    ElemInfo(iElem,2)=iElem-1
+!    ElemInfo(iElem,3)=iElem
+!  END DO
+!  CALL WriteArrayToHDF5(File_ID,'ElemInt',nElems,2,(/nElems,3/),0,IntegerArray=ElemInfo(1:nElems,1:3))
+!  CALL CloseHDF5File()
+!  CALL Timer(.FALSE.)
+!END IF !readFlowSolution
+!DEALLOCATE(ElemInfo)
+!DEALLOCATE(ElemWeight)
+!DEALLOCATE(IDlist)
+
 END SUBROUTINE WriteMeshToHDF5
 
 

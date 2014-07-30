@@ -10,25 +10,7 @@ USE MOD_HDF5_Input
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! Private Part ---------------------------------------------------------------------------------------------------------------------
-INTEGER,PARAMETER    :: ElemInfoSize=6        !number of entry in each line of ElemInfo
-INTEGER,PARAMETER    :: ELEM_Type=1           !entry position, 
-INTEGER,PARAMETER    :: ELEM_Zone=2           
-INTEGER,PARAMETER    :: ELEM_FirstSideInd=3
-INTEGER,PARAMETER    :: ELEM_LastSideInd=4
-INTEGER,PARAMETER    :: ELEM_FirstNodeInd=5
-INTEGER,PARAMETER    :: ELEM_LastNodeInd=6
 
-INTEGER,PARAMETER    :: SideInfoSize=4
-INTEGER,PARAMETER    :: SIDE_Type=1           !entry position
-INTEGER,PARAMETER    :: SIDE_ID=2
-INTEGER,PARAMETER    :: SIDE_nbElemID=3
-INTEGER,PARAMETER    :: SIDE_BCID=4
-
-INTEGER,ALLOCATABLE  :: ElemInfo(:,:),SideInfo(:,:),NodeInfo(:)
-REAL,ALLOCATABLE     :: NodeCoords(:,:)
-
-INTEGER              :: BoundaryOrder_mesh
-INTEGER              :: nNodeIDs,nSideIDs
 ! Public Part ----------------------------------------------------------------------------------------------------------------------
 INTERFACE ReadMesh
   MODULE PROCEDURE ReadMesh
@@ -58,43 +40,32 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER, ALLOCATABLE           :: BCMapping(:),BCType(:,:)
-CHARACTER(LEN=255), ALLOCATABLE:: BCNames(:)
 INTEGER                        :: iBC
 INTEGER                        :: Offset=0 ! Every process reads all BCs
 !===================================================================================================================================
+offset=0
 ! Read boundary names from data file
 CALL GetDataSize(File_ID,'BCNames',nDims,HSize)
 nBCs=HSize(1)
 DEALLOCATE(HSize)
-ALLOCATE(BCNames(nBCs))
-ALLOCATE(BCMapping(nBCs))
-CALL ReadArray('BCNames',1,(/nBCs/),Offset,1,StrArray=BCNames)  ! Type is a dummy type only
-! User may have redefined boundaries in the ini file. So we have to create mappings for the boundaries.
+IF(ALLOCATED(BoundaryName)) DEALLOCATE(BoundaryName)
+IF(ALLOCATED(BoundaryType)) DEALLOCATE(BoundaryType)
+ALLOCATE(BoundaryName(nBCs))
+CALL ReadArray('BCNames',1,(/nBCs/),Offset,1,StrArray=BoundaryName)  
 
 ! Read boundary types from data file
 CALL GetDataSize(File_ID,'BCType',nDims,HSize)
 IF(HSize(1).NE.nBCs) STOP 'Problem in readBC'
 DEALLOCATE(HSize)
-ALLOCATE(BCType(nBCs,4))
-offset=0
-CALL ReadArray('BCType',2,(/nBCs,4/),Offset,1,IntegerArray=BCType)
+ALLOCATE(BoundaryType(nBCs,4))
+CALL ReadArray('BCType',2,(/nBCs,4/),Offset,1,IntegerArray=BoundaryType)
 
-IF(ALLOCATED(BoundaryName)) DEALLOCATE(BoundaryName)
-IF(ALLOCATED(BoundaryType)) DEALLOCATE(BoundaryType)
-ALLOCATE(BoundaryName(nBCs))
-ALLOCATE(BoundaryType(nBCs,3))
-BoundaryName = BCNames
-BoundaryType(:,BC_TYPE)  = BCType(:,1)
-BoundaryType(:,BC_STATE) = BCType(:,3)
-BoundaryType(:,BC_ALPHA) = BCType(:,4)
 SWRITE(UNIT_StdOut,'(132("."))')
-SWRITE(Unit_StdOut,'(A,A16,A20,A10,A10,A10)')'BOUNDARY CONDITIONS','|','Name','Type','State','Alpha'
+SWRITE(Unit_StdOut,'(A,A16,A20,A10,A10,A10,A10)')'BOUNDARY CONDITIONS','|','Name','Type','CurveInd','State','Alpha'
 DO iBC=1,nBCs
-  SWRITE(*,'(A,A33,A20,I10,I10,I10)')' |','|',TRIM(BoundaryName(iBC)),BoundaryType(iBC,:)
+  SWRITE(*,'(A,A33,A20,I10,I10,I10,I10)')' |','|',TRIM(BoundaryName(iBC)),BoundaryType(iBC,:)
 END DO
 SWRITE(UNIT_StdOut,'(132("."))')
-DEALLOCATE(BCNames,BCType,BCMapping)
 END SUBROUTINE ReadBCs
 
 
@@ -130,6 +101,11 @@ LOGICAL                        :: doConnection
 TYPE(tElem),POINTER            :: aElem
 TYPE(tSide),POINTER            :: aSide,bSide
 TYPE(tNode),POINTER            :: aNode
+INTEGER,ALLOCATABLE            :: ElemInfo(:,:),SideInfo(:,:),NodeInfo(:)
+REAL,ALLOCATABLE               :: NodeCoords(:,:)
+                               
+INTEGER                        :: BoundaryOrder_mesh
+INTEGER                        :: nNodeIDs,nSideIDs
 ! p4est interface
 INTEGER                        :: num_vertices
 INTEGER                        :: num_trees
@@ -169,8 +145,8 @@ CALL ReadAttribute(File_ID,'CurvedFound',1,LogicalScalar=useCurveds)
 !----------------------------------------------------------------------------------------------------------------------------
 
 !read local ElemInfo from data file
-ALLOCATE(ElemInfo(1:nElems,ElemInfoSize))
-CALL ReadArray('ElemInfo',2,(/nElems,ElemInfoSize/),0,1,IntegerArray=ElemInfo)
+ALLOCATE(ElemInfo(1:nElems,ELEM_InfoSize))
+CALL ReadArray('ElemInfo',2,(/nElems,ELEM_InfoSize/),0,1,IntegerArray=ElemInfo)
 
 ALLOCATE(Elems(1:nElems))
 
@@ -238,8 +214,8 @@ END DO
 
 nSideIDs=ElemInfo(nElems,ELEM_LastSideInd)-ElemInfo(1,ELEM_FirstSideInd)
 !read local SideInfo from data file 
-ALLOCATE(SideInfo(1:nSideIDs,SideInfoSize))
-CALL ReadArray('SideInfo',2,(/nSideIDs,SideinfoSize/),0,1,IntegerArray=SideInfo)
+ALLOCATE(SideInfo(1:nSideIDs,SIDE_InfoSize))
+CALL ReadArray('SideInfo',2,(/nSideIDs,SIDE_InfoSize/),0,1,IntegerArray=SideInfo)
 
 DO iElem=1,nElems
   aElem=>Elems(iElem)%ep

@@ -21,26 +21,26 @@
 #define SDEALLOCATE(A) IF(ALLOCATED(A)) DEALLOCATE(A)
 
 ! Predefined "PARAMETER-like" variables
-#define XI_MINUS   5
-#define XI_PLUS    3
-#define ETA_MINUS  2
-#define ETA_PLUS   4
-#define ZETA_MINUS 1
-#define ZETA_PLUS  6
-
-! Entry position in SideToElem
-#define S2E_ELEM_ID        1
-#define S2E_NB_ELEM_ID     2
-#define S2E_LOC_SIDE_ID    3
-#define S2E_NB_LOC_SIDE_ID 4
-#define S2E_FLIP           5
-
-! Entry position in ElemToSide
-#define E2S_SIDE_ID 1
-#define E2S_FLIP    2
 
 ! Entry position in BC
-#define BC_TYPE  1
-#define BC_STATE 2
-#define BC_ALPHA 3
+#define BC_SIZE   4
+#define BC_TYPE   1
+#define BC_CURVED 2
+#define BC_STATE  3
+#define BC_ALPHA  4
 
+!entry positions in ElemInfo 
+#define ELEM_InfoSize      6        /*number of entry in each line of ElemInfo*/
+#define ELEM_Type         1        /*entry position in ElemInfo */
+#define ELEM_Zone         2           
+#define ELEM_FirstSideInd 3
+#define ELEM_LastSideInd  4
+#define ELEM_FirstNodeInd 5
+#define ELEM_LastNodeInd  6
+
+!entry positions in SideInfo 
+#define SIDE_InfoSize     4        /*number of entry in each line of SideInfo*/
+#define SIDE_Type         1         /*entry position in SideInfo */
+#define SIDE_ID           2
+#define SIDE_nbElemID     3
+#define SIDE_BCID         4
