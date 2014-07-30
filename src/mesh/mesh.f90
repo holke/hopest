@@ -38,6 +38,7 @@ USE MOD_Output_Vars, ONLY:Projectname
 USE MOD_p4estBinding
 !-----------------------------------------------------------------------------------------------------------------------------------
 USE MOD_Mesh_ReadIn,        ONLY:readMesh
+USE MOD_Output_HDF5,        ONLY:writeMeshToHDF5
 USE MOD_ReadInTools,        ONLY:GETLOGICAL,GETINT,GETINTARRAY,CNTSTR,GETSTR
 IMPLICIT NONE
 ! INPUT VARIABLES
@@ -57,12 +58,15 @@ SWRITE(UNIT_stdOut,'(A)') ' INIT MESH...'
 
 ! prepare pointer structure (get nElems, etc.)
 MeshFile = GETSTR('MeshFile')
-ProjectName=Meshfile(1:INDEX(Meshfile,'.h5')-1)
+ProjectName=Meshfile(1:INDEX(Meshfile,'_mesh.h5')-1)
 
 CALL readMesh(MeshFile) !set nElems
 
 CALL p4est_refine_mesh(p4est_ptr%p4est,2,-1,p4est_ptr%mesh)
-CALL p4est_save_all(TRIM(ProjectName)//'.p4est'//C_NULL_CHAR,p4est_ptr%p4est)
+CALL p4est_save_all(TRIM(ProjectName)//'_mesh.p4est'//C_NULL_CHAR,p4est_ptr%p4est)
+
+
+CALL writeMeshToHDF5(TRIM(ProjectName)//'_mesh_p4est.h5')
 
 ! dealloacte pointers
 SWRITE(UNIT_stdOut,'(A)') "NOW CALLING deleteMeshPointer..."

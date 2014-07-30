@@ -54,27 +54,6 @@ SWRITE(UNIT_stdOut,'(A)') ' INIT OUTPUT...'
 
 ! Name for all output files
 ProjectName=GETSTR('ProjectName')
-Logging    =GETLOGICAL('Logging','.FALSE.')
-
-WRITE(ErrorFileName,'(A,A8,I6.6,A4)')TRIM(ProjectName),'_ERRORS_',myRank,'.out'
-
-OutputFormat = GETINT('OutputFormat','1')
-! Open file for logging
-IF(Logging)THEN
-  WRITE(LogFile,'(A,A1,I6.6,A4)')TRIM(ProjectName),'_',myRank,'.log'
-  OPEN(UNIT=UNIT_logOut,  &
-       FILE=LogFile,      &
-       STATUS='UNKNOWN',  &
-       ACTION='WRITE',    &
-       POSITION='APPEND', &
-       IOSTAT=OpenStat)
-  CALL DATE_AND_TIME(StrDate,StrTime)
-  WRITE(UNIT_logOut,*)
-  WRITE(UNIT_logOut,'(132("#"))')
-  WRITE(UNIT_logOut,*)
-  WRITE(UNIT_logOut,*)'STARTED LOGGING FOR PROC',myRank,' ON ',StrDate(7:8),'.',StrDate(5:6),'.',StrDate(1:4),' | ',&
-                      StrTime(1:2),':',StrTime(3:4),':',StrTime(5:10)
-END IF  ! Logging
 
 OutputInitIsDone =.TRUE.
 SWRITE(UNIT_stdOut,'(A)')' INIT OUTPUT DONE!'
