@@ -99,7 +99,9 @@ void p4est_connectivity_treevertex (p4est_topidx_t num_vertices,
 void p4est_refine_mesh ( p4est_t        *p4est,
                          int             refine_level,
                          int             refine_elem,
-                         p4est_mesh_t   **mesh_out )
+                         p4est_mesh_t   **mesh_out,
+                         int            *global_num_quadrants,
+                         int            *num_half_faces )
 {
   p4est_mesh_t       *mesh;
   p4est_ghost_t      *ghost;
@@ -165,7 +167,64 @@ void p4est_refine_mesh ( p4est_t        *p4est,
 
   P4EST_GLOBAL_PRODUCTIONF
     ("DEBUG: REFINE FINISHED %d  \n",0);
-  
+
+  *global_num_quadrants = p4est->global_num_quadrants;
+  *num_half_faces = mesh->quad_to_half->elem_count;      // big face with 4 small neighbours
+  SC_CHECK_ABORTF (mesh->local_num_quadrants == p4est->global_num_quadrants,
+                   "Global quads %d and local quads %d mismatch ! ",
+                   p4est->global_num_quadrants,mesh->local_num_quadrants );
+
+}
+
+
+void p4est_get_quadrants ( p4est_t       *p4est,
+                           p4est_mesh_t   *mesh,
+                           int            global_num_quadrants,
+                           int            num_half_faces,
+                           double         *intsize,
+                           p4est_topidx_t *quad_to_tree,
+                           p4est_locidx_t *quad_to_quad,
+                           int8_t         *quad_to_face, 
+                           p4est_locidx_t *quad_to_half, 
+                           p4est_qcoord_t *quadcoords,
+                           int8_t         *quadlevel ) 
+{
+  int num_trees = p4est->connectivity->num_trees;
+  int iquad,iquadloc,iface,i;
+  p8est_tree_t       *tree;
+  p8est_quadrant_t   *q;
+  sc_array_t         *quadrants;
+  p4est_locidx_t     *halfentries;
+
+  *intsize = (double) 1.0/P4EST_ROOT_LEN;
+
+  P4EST_ASSERT (global_num_quadrants == p4est->local_num_quadrants);
+  for (iquad = 0; iquad < mesh->local_num_quadrants; iquad++) {
+    tree = p8est_tree_array_index (p4est->trees,mesh->quad_to_tree[iquad]);
+    quadrants = &(tree->quadrants);
+    iquadloc = iquad - tree->quadrants_offset;
+    q = p8est_quadrant_array_index(quadrants, iquadloc);
+    quadlevel [iquad    ] = q->level;
+    quadcoords[iquad*3  ] = q->x;
+    quadcoords[iquad*3+1] = q->y;
+    quadcoords[iquad*3+2] = q->z;
+  }
+  memcpy( (void*)quad_to_tree, (void*)mesh->quad_to_tree, 
+           mesh->local_num_quadrants*sizeof(p4est_topidx_t) );
+  memcpy( (void*)quad_to_quad, (void*)mesh->quad_to_quad, 
+           mesh->local_num_quadrants*6*sizeof(p4est_locidx_t) );
+  memcpy( (void*)quad_to_face, (void*)mesh->quad_to_face, 
+           mesh->local_num_quadrants*6*sizeof(int8_t) );
+
+  if(num_half_faces>0) {
+    for (iface = 0; iface < num_half_faces; iface++) {
+      halfentries=(p4est_locidx_t *) (mesh->quad_to_half->array + 4*sizeof(p4est_locidx_t) * iface);
+      for (i = 0; i < 4; i++) {
+        quad_to_half[iface*4+i] = halfentries[i];
+      }
+    }
+  }
+
 }
 
 void p4est_save_all ( char    filename[],
