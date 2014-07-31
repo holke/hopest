@@ -71,7 +71,8 @@ TYPE tSide
   INTEGER                      :: BCindex         ! index in BoundaryType array! 
   INTEGER                      :: flip 
   INTEGER                      :: nMortars        ! number of slave mortar sides associated with master mortar
-  INTEGER                      :: MortarType      ! type of mortar: Type1 : 1-4 , Type 2: 1-2 in eta, Type 2: 1-2 in xi
+  INTEGER                      :: MortarType      ! type of mortar: Type1 : 1-4 , Type 2: 1-2 in eta, Type 3: 1-2 in xi
+  !TODO: if tSide is small side of a mortar group, mortar type is -1
   TYPE(tNodePtr)               :: Node(4)
   TYPE(tEdgePtr)               :: Edge(4)
   TYPE(tElem),POINTER          :: Elem
@@ -115,8 +116,47 @@ INTEGER,PARAMETER   :: EdgeToElemNode(1:2,1:12) = RESHAPE((/ 1, 2,&  ! CGNS corn
                                                              2, 6,&
                                                              4, 8,&
                                                              3, 7 /),(/2,12/))
-INTEGER,PARAMETER   :: H2P_VertexMap(1:8) =  (/0,1,3,2,4,5,7,6/)  !mapping from local node order (CGNS) to p4est node order 
-INTEGER,PARAMETER   :: P2H_VertexMap(0:7) =  (/1,2,4,3,5,6,8,7/)  !mapping from local node order (CGNS) to p4est node order 
+INTEGER,PARAMETER   :: H2P_FaceMap(1:6)     =  (/4,2,1,3,0,5/)     !mapping from local face order (CGNS) to p4est face
+INTEGER,PARAMETER   :: P2H_FaceMap(0:5)     =  (/5,3,2,4,1,6/)     !mapping from local face order (CGNS) to p4est face
+INTEGER,PARAMETER   :: H2P_VertexMap(1:8)   =  (/0,1,3,2,4,5,7,6/) !mapping from local node order (CGNS) to p4est node order 
+INTEGER,PARAMETER   :: P2H_VertexMap(0:7)   =  (/1,2,4,3,5,6,8,7/) !mapping from local node order (CGNS) to p4est node order 
+
+INTEGER,PARAMETER   :: H2P_FaceNodeMap(1:4,1:6) = &
+                                      RESHAPE((/ 0,2,3,1,&
+                                                 0,1,3,2,&
+                                                 0,1,3,2,&
+                                                 1,0,2,3,&
+                                                 0,2,3,1,&
+                                                 0,1,3,2 /),(/4,6/))
+
+INTEGER,PARAMETER   :: P2H_FaceNodeMap(1:4,1:6) = &
+                                      RESHAPE((/ 1,4,2,3,&
+                                                 1,2,4,3,&
+                                                 1,2,4,3,&
+                                                 2,1,3,4,&
+                                                 1,4,2,3,&
+                                                 1,2,4,3 /),(/4,6/))
+
+INTEGER,PARAMETER   :: P4R(1:6,1:6) = RESHAPE((/ 1,2,2,1,1,2,&
+                                                 3,1,1,2,2,1,&
+                                                 3,1,1,2,2,1,&
+                                                 1,3,3,1,1,2,&
+                                                 3,1,1,3,3,1,&
+                                                 3,1,1,3,3,1 /),(/6,6/))
+
+INTEGER,PARAMETER   :: P4Q(1:4,1:3) = RESHAPE((/ 2,3,6,7,&
+                                                 1,4,5,8,&
+                                                 1,5,4,8 /),(/4,3/))
+
+INTEGER,PARAMETER   :: P4P(1:4,1:8) = RESHAPE((/ 0,1,2,3,&
+                                                 0,2,1,3,&
+                                                 1,0,3,2,&
+                                                 1,3,0,2,&
+                                                 2,0,3,1,&
+                                                 2,3,0,1,&
+                                                 3,1,2,0,&
+                                                 3,2,1,0 /),(/4,8/))
+
 !-----------------------------------------------------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------------------------------------------------
 LOGICAL          :: MeshInitIsDone =.FALSE.

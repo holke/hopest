@@ -82,19 +82,19 @@ INTERFACE
   IMPLICIT NONE
   !---------------------------------------------------------------------------------------------------------------------------------
   ! INPUT VARIABLES
-  TYPE(C_PTR),VALUE                :: p4est
-  TYPE(C_PTR),VALUE                :: mesh
-  INTEGER( KIND = C_INT),VALUE     :: global_num_quadrants
-  INTEGER( KIND = C_INT),VALUE     :: num_half_faces
+  TYPE(C_PTR),VALUE         :: p4est
+  TYPE(C_PTR),VALUE         :: mesh
+  INTEGER(KIND=C_INT),VALUE :: global_num_quadrants
+  INTEGER(KIND=C_INT),VALUE :: num_half_faces
   !---------------------------------------------------------------------------------------------------------------------------------
   ! OUTPUT VARIABLES
-  REAL(KIND=C_DOUBLE)           :: intsize ! 1.0 / P4EST_ROOT_LEN -> int2real transform in parameter space, REAL=intsize*INT [0,1]
-  INTEGER( KIND = 4)            :: quad_to_tree(  global_num_quadrants)
-  INTEGER( KIND = 4)            :: quad_to_quad(6,global_num_quadrants)
-  INTEGER( KIND = 1)            :: quad_to_face(6,global_num_quadrants)
-  INTEGER( KIND = 4)            :: quad_to_half(4,num_half_faces)
-  INTEGER( KIND = 4)            :: quadcoords(  3,global_num_quadrants)
-  INTEGER( KIND = 1)            :: quadlevel(     global_num_quadrants)
+  REAL(KIND=C_DOUBLE),INTENT(OUT) :: intsize ! 1.0 / P4EST_ROOT_LEN -> int2real transform in parameter space, REAL=intsize*INT [0,1]
+  TYPE(C_PTR),INTENT(OUT)     :: quad_to_tree
+  TYPE(C_PTR),INTENT(OUT)     :: quad_to_quad
+  TYPE(C_PTR),INTENT(OUT)     :: quad_to_face
+  TYPE(C_PTR),INTENT(OUT)     :: quad_to_half
+  INTEGER(KIND=4),INTENT(OUT) :: quadcoords(  3,global_num_quadrants)
+  INTEGER(KIND=1),INTENT(OUT) :: quadlevel(     global_num_quadrants)
   !=================================================================================================================================
   END SUBROUTINE p4est_get_quadrants
 
