@@ -11,15 +11,8 @@ IMPLICIT NONE
 PRIVATE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! GLOBAL VARIABLES 
-!-----------------------------------------------------------------------------------------------------------------------------------
 INTEGER(HID_T)                 :: File_ID
-INTEGER(HSIZE_T),POINTER       :: HSize(:)
-INTEGER,ALLOCATABLE            :: ElemInfo(:,:),SideInfo(:,:),NodeInfo(:)
-REAL,ALLOCATABLE               :: NodeCoords(:,:)
-REAL,ALLOCATABLE               :: ElemWeight(:)
-INTEGER                        :: ElemCounter(11,2)
-INTEGER                        :: nSideIDs,nNodeIDs
-INTEGER                        :: nTotalSides,nTotalNodes
+!-----------------------------------------------------------------------------------------------------------------------------------
 ! Private Part ---------------------------------------------------------------------------------------------------------------------
 ! Public Part ----------------------------------------------------------------------------------------------------------------------
 
@@ -51,16 +44,22 @@ CHARACTER(LEN=*),INTENT(IN)    :: FileString
 ! LOCAL VARIABLES
 
 TYPE(tElem),POINTER            :: Elem
+TYPE(tElem),POINTER            :: master
 TYPE(tSide),POINTER            :: Side
-INTEGER                        :: iElem,i
-INTEGER                        :: NodeID,iNode
-INTEGER                        :: SideID,iLocSide
+INTEGER,ALLOCATABLE            :: ElemInfo(:,:),SideInfo(:,:),NodeInfo(:)
 REAL,ALLOCATABLE               :: ElemBary(:,:)
+REAL,ALLOCATABLE               :: NodeCoords(:,:)
+REAL,ALLOCATABLE               :: ElemWeight(:)
+INTEGER                        :: iElem,i,j,k
+INTEGER                        :: NodeID,iNode
+INTEGER                        :: iSide,SideID,iLocSide
+INTEGER                        :: ElemCounter(11,2)
+INTEGER                        :: nSideIDs,nNodeIDs
+INTEGER                        :: nTotalSides,nTotalNodes
+INTEGER                        :: locnSides,locnNodes,offsetID
 !===================================================================================================================================
 WRITE(*,'(132("~"))')
 WRITE(*,'(A)')' WRITE MESH TO HDF5 FILE... ' // TRIM(FileString) 
-! Create the file collectively.
-CALL OpenHDF5File(FileString,create=.TRUE.,single=.TRUE.)  
 
 !set all node and side indices =0
 DO iElem=1,nElems
@@ -80,8 +79,6 @@ END DO !iElem=1,nElems
 ! count Elements , unique sides and nodes are marked with ind=0
 nNodeIDs=0 !number of unique nodeIDs
 nSideIDs=0 !number of unique side IDs (side and side%connection have the same sideID)
-nTotalSides=0   !number of all sides
-nTotalNodes=0   !number of all nodes
 
 
 DO iElem=1,nElems
@@ -110,8 +107,6 @@ DO iElem=1,nElems
       END IF
     END IF
   END DO
-  nTotalNodes = nTotalNodes+8+6+nCurvedNodes ! corner + oriented + curved
-  nTotalSides = nTotalSides+6
 END DO
 
 !set unique nodes and Side Indices
@@ -143,95 +138,58 @@ DO iElem=1,nElems
   END DO
 END DO !Elem
 
-CALL getMeshInfo() !allocates and fills ElemInfo,SideInfo,NodeInfo,NodeCoords
-
-!WRITE ElemInfo,into (1,nElems)  
-CALL WriteArrayToHDF5(File_ID,'ElemInfo',nElems,2,(/nElems,ELEM_InfoSize/),0,IntegerArray=ElemInfo)
-
-!WRITE ElemWeight,into (1,nElems)  
-CALL WriteArrayToHDF5(File_ID,'ElemWeight',nElems,1,(/nElems/),0,RealArray=ElemWeight)
-
-ALLOCATE(ElemBary(nElems,3))
-DO iElem=1,nElems
-  ElemBary(iElem,:)=0.
-  DO iNode=1,8
-    ElemBary(iElem,:)=ElemBary(iElem,:)+Elems(iElem)%ep%Node(iNode)%np%x
-  END DO !iNode
-  ElemBary(iElem,:)=ElemBary(iElem,:)*0.125  ! / nNodes=8
-END DO !iElem=1,nElem
-CALL WriteArrayToHDF5(File_ID,'ElemBarycenters',nElems,2,(/nElems,3/),0,RealArray=ElemBary)
-DEALLOCATE(ElemBary)
+! start output
+CALL OpenHDF5File(FileString,create=.TRUE.,single=.TRUE.)  
 
 
-!WRITE SideInfo,into (1,nTotalSides)   
-CALL WriteArrayToHDF5(File_ID,'SideInfo',nTotalSides,2,(/nTotalSides,SIDE_InfoSize/),0,IntegerArray=SideInfo)
-DEALLOCATE(SideInfo)
-
-!WRITE NodeInfo,into (1,nTotalNodes) 
-CALL WriteArrayToHDF5(File_ID,'NodeInfo',nTotalNodes,1,(/nTotalNodes/),0,IntegerArray=NodeInfo)
-DEALLOCATE(NodeInfo)
-
-! WRITE NodeCoords (have to be sorted according to nodemap)
-CALL WriteArrayToHDF5(File_ID,'NodeCoords',nNodeIDs,2,(/nNodeIDs,3/),0,RealArray=NodeCoords)
-DEALLOCATE(NodeCoords)
-
-!! WRITE NodeCoords,arbitrary ordering by NodeMap
-!CALL WriteCoordsToHDF5(File_ID,'NodeCoords',nNodeIDs,(/nNodeIDs,3/),NodeMap,NodeCoords)
-
-
-CALL WriteArrayToHDF5(File_ID,'ElemCounter',11,2,(/11,2/),0,IntegerArray=ElemCounter)
-WRITE(*,*)'Mesh statistics:'
-WRITE(*,*)'Element Type | number of elements'
-DO i=1,11
-  WRITE(*,'(I4,A,I8)') Elemcounter(i,1),'        | ',Elemcounter(i,2)
-END DO
-
+!-----------------------------------------------------------------
 !attributes 
+!-----------------------------------------------------------------
+
 CALL WriteAttributeToHDF5(File_ID,'BoundaryOrder',1,IntegerScalar=Ngeo+1)
 CALL WriteAttributeToHDF5(File_ID,'CurvedFound',1,LogicalScalar=useCurveds)
+
+!-----------------------------------------------------------------
 ! WRITE BC 
+!-----------------------------------------------------------------
 CALL WriteArrayToHDF5(File_ID,'BCNames',nBCs,1,(/nBCs/),0,StrArray=BoundaryName)
 CALL WriteArrayToHDF5(File_ID,'BCType',nBCs,2,(/nBcs,4/),0,IntegerArray=BoundaryType)
 
-! Close the file.
-CALL CloseHDF5File()
+!-----------------------------------------------------------------
+! Barycenters
+!-----------------------------------------------------------------
+WRITE(*,*)'WRITE Barycenters'
 
-DEALLOCATE(ElemInfo)
-DEALLOCATE(ElemWeight)
+ALLOCATE(ElemBary(nElems,3))
+DO iElem=1,nElems
+  ElemBary(iElem,1)=SUM(Xgeo(1,:,:,:,iElem))
+  ElemBary(iElem,2)=SUM(Xgeo(2,:,:,:,iElem))
+  ElemBary(iElem,3)=SUM(Xgeo(3,:,:,:,iElem))
+END DO !iElem=1,nElem
+ElemBary(:,:)=ElemBary(:,:)*(1./(Ngeo+1)**3)
 
-END SUBROUTINE WriteMeshToHDF5
+CALL WriteArrayToHDF5(File_ID,'ElemBarycenters',nElems,2,(/nElems,3/),0,RealArray=ElemBary)
+DEALLOCATE(ElemBary)
+
+!-----------------------------------------------------------------
+! WRITE NodeCoords  for each element !!!! (multiple nodes!!!)
+!-----------------------------------------------------------------
+nNodeIDs=(Ngeo+1)**3*nElems
+CALL WriteArrayToHDF5(File_ID,'NodeCoords',nNodeIDs,2,(/nNodeIDs,3/),0,  &
+          RealArray=TRANSPOSE(RESHAPE(Xgeo,(/3,nNodeIDs/))) )
+DEALLOCATE(Xgeo)
 
 
-
-SUBROUTINE getMeshInfo()
-!===================================================================================================================================
-! Subroutine prepares ElemInfo,Sideinfo,Nodeinfo,NodeCoords arrays
-!===================================================================================================================================
-! MODULES
-USE MOD_Mesh_Vars
-! IMPLICIT VARIABLE HANDLING
-IMPLICIT NONE
-!-----------------------------------------------------------------------------------------------------------------------------------
-! INPUT VARIABLES
-!-----------------------------------------------------------------------------------------------------------------------------------
-! OUTPUT VARIABLES
-!-----------------------------------------------------------------------------------------------------------------------------------
-! LOCAL VARIABLES
-TYPE(tElem),POINTER            :: Elem
-TYPE(tSide),POINTER            :: Side
-INTEGER                        :: iNodeP,iNode,NodeID
-INTEGER                        :: iElem
-INTEGER                        :: iSide,iLocSide 
-INTEGER                        :: locnSides,locnNodes
-!===================================================================================================================================
+!-----------------------------------------------------------------
 !fill ElementInfo. 
+!-----------------------------------------------------------------
+WRITE(*,*)'WRITE ElemInfo'
+
 ALLOCATE(ElemInfo(1:nElems,ELEM_InfoSize))
-ALLOCATE(ElemWeight(1:nElems))
 ElemInfo=0
-ElemWeight=0.
 Elemcounter=0
 Elemcounter(:,1)=(/104,204,105,115,205,106,116,206,108,118,208/)
-NodeID  = 0 
+iNode  = 0 
 iSide  = 0
 DO iElem=1,nElems
   Elem=>Elems(iElem)%ep
@@ -242,45 +200,52 @@ DO iElem=1,nElems
     Side=>Elem%Side(iLocSide)%sp
     locnNodes = locnNodes+1 ! wirte only first oriented node of side, if curved all!         
     locnSides = locnSides+1
+
+    !+ MORTAR SIDES  !?!?
+
   END DO !iLocSide=1,6
-  SELECT CASE(elem%type)
-    CASE(104) !linear tet
-      elemcounter(1,2)=elemcounter(1,2)+1
-    CASE(204) !spline tet
-      elemcounter(2,2)=elemcounter(2,2)+1
-    CASE(105) !linear pyr
-      elemcounter(3,2)=elemcounter(3,2)+1
-    CASE(115) !non-linear pyr
-      elemcounter(4,2)=elemcounter(4,2)+1
-    CASE(205) !spline pyr
-      elemcounter(5,2)=elemcounter(5,2)+1
-    CASE(106) !linear prism
-      elemcounter(6,2)=elemcounter(6,2)+1
-    CASE(116) !non-linear prism
-      elemcounter(7,2)=elemcounter(7,2)+1
-    CASE(206) !spline prism
-      elemcounter(8,2)=elemcounter(8,2)+1
-    CASE(108) !linear hex
-      elemcounter(9,2)=elemcounter(9,2)+1
-    CASE(118) !non-linear hex
-      elemcounter(10,2)=elemcounter(10,2)+1
-    CASE(208) !spline hex
-      elemcounter(11,2)=elemcounter(11,2)+1
-  END SELECT
   ElemInfo(iElem,ELEM_Type)         = Elem%Type        ! Element Type
   ElemInfo(iElem,ELEM_Zone)         = Elem%Zone        ! Zone Number
   ElemInfo(iElem,ELEM_FirstSideInd) = iSide            ! first index -1 in SideInfo
   ElemInfo(iElem,ELEM_LastSideInd)  = iSide+locnSides  ! last index in SideInfo
-  ElemInfo(iElem,ELEM_FirstNodeInd) = NodeID            ! first index -1 in NodeInfo
-  ElemInfo(iElem,ELEM_LastNodeInd)  = NodeID+locnNodes  ! last index in NodeInfo
-  NodeID = NodeID + locnNodes
+  ElemInfo(iElem,ELEM_FirstNodeInd) = iNode            ! first index -1 in NodeInfo
+  ElemInfo(iElem,ELEM_LastNodeInd)  = iNode+locnNodes  ! last index in NodeInfo
+  iNode = iNode + locnNodes
   iSide = iSide + locnSides
   !approximate weight: locnNodes
-  ElemWeight(iElem)=REAL(locnNodes)
+  CALL AddToElemCounter(Elem%type,ElemCounter)
 END DO !iElem
+nTotalNodes = iNode
+nTotalSides = iSide
+
+!WRITE ElemInfo,into (1,nElems)  
+CALL WriteArrayToHDF5(File_ID,'ElemInfo',nElems,2,(/nElems,ELEM_InfoSize/),0,IntegerArray=ElemInfo)
+
+DEALLOCATE(ElemInfo)
+
+CALL WriteArrayToHDF5(File_ID,'ElemCounter',11,2,(/11,2/),0,IntegerArray=ElemCounter)
+WRITE(*,*)'Mesh statistics:'
+WRITE(*,*)'Element Type | number of elements'
+DO i=1,11
+  WRITE(*,'(I4,A,I8)') Elemcounter(i,1),'        | ',Elemcounter(i,2)
+END DO
+
+!-----------------------------------------------------------------
+! element weights
+!-----------------------------------------------------------------
+!WRITE ElemWeight,into (1,nElems)  
+ALLOCATE(ElemWeight(1:nElems))
+ElemWeight=1.
+CALL WriteArrayToHDF5(File_ID,'ElemWeight',nElems,1,(/nElems/),0,RealArray=ElemWeight)
+DEALLOCATE(ElemWeight)
 
 
+
+!-----------------------------------------------------------------
 !fill SideInfo
+!-----------------------------------------------------------------
+WRITE(*,*)'WRITE SideInfo'
+
 ALLOCATE(SideInfo(1:nTotalSides,SIDE_InfoSize)) 
 SideInfo=0 
 iSide=0
@@ -307,77 +272,140 @@ DO iElem=1,nElems
   END DO !iLocSide=1,6
 END DO !iElem=1,nElems
 
+!WRITE SideInfo,into (1,nTotalSides)   
+CALL WriteArrayToHDF5(File_ID,'SideInfo',nTotalSides,2,(/nTotalSides,SIDE_InfoSize/),0,IntegerArray=SideInfo)
+DEALLOCATE(SideInfo)
 
+!-----------------------------------------------------------------
 !fill NodeInfo
+!-----------------------------------------------------------------
+WRITE(*,*)'WRITE NodeInfo'
+
+! since each element has its own nodes in NodeCoords ( = multiply defined nodes)
+! thus each element has its own index range, from [ locNodes*(iElem-1)+1 : locNodes*iElem ]
+
+! The node coordinates are written in tensor-product style i,j,k (i inner loop)
+! and we deduct the cgns corner and side node mapping
+
+locnNodes=8+6+nCurvedNodes  
+
+master=>GETNEWELEM()
+DO iNode=1,8
+  ALLOCATE(master%Node(iNode)%np)
+END DO
+master%Node(1)%np%ind=1    
+master%Node(2)%np%ind=(Ngeo+1) 
+master%Node(3)%np%ind=(Ngeo+1)**2 
+master%Node(4)%np%ind=(Ngeo+1)*Ngeo +1
+master%Node(5)%np%ind=master%Node(1)%np%ind + (Ngeo+1)**2*Ngeo 
+master%Node(6)%np%ind=master%Node(2)%np%ind + (Ngeo+1)**2*Ngeo
+master%Node(7)%np%ind=master%Node(3)%np%ind + (Ngeo+1)**2*Ngeo
+master%Node(8)%np%ind=master%Node(4)%np%ind + (Ngeo+1)**2*Ngeo
+CALL createSides(master)
+IF(nCurvedNodes.GT.0)THEN
+  ALLOCATE(master%CurvedNode(nCurvedNodes))
+  DO i=1,nCurvedNodes
+    ALLOCATE(master%CurvedNode(i)%np)
+    master%CurvedNode(i)%np%ind=i
+  END DO
+END IF 
+
+IF(nTotalNodes.NE.locnNodes*nElems) &
+       CALL abort(__STAMP__,&
+          'Sanity check: nNodes not equal to locnNodes*nElems!')
+
+
+
 ALLOCATE(NodeInfo(1:nTotalNodes))
 NodeInfo=-1
 NodeID=0
+
+
+offsetID=0
+locnNodes=(Ngeo+1)**3
 DO iElem=1,nElems
   Elem=>Elems(iElem)%ep
   DO iNode=1,8
     NodeID=NodeID+1
-    NodeInfo(NodeID)=Elem%Node(iNode)%np%ind
+    NodeInfo(NodeID)= master%Node(iNode)%np%ind + offsetID !Elem%Node(iNode)%np%ind
   END DO
   DO iNode=1,nCurvedNodes
     NodeID=NodeID+1
-    NodeInfo(NodeID)=Elem%curvedNode(iNode)%np%ind
+    NodeInfo(NodeID)=master%curvedNode(iNode)%np%ind + offsetID !Elem%curvedNode(iNode)%np%ind
   END DO
   DO iLocSide=1,6
     Side=>Elem%Side(iLocSide)%sp
     NodeID=NodeID+1
     IF(side%flip.EQ.0)THEN
-      NodeInfo(NodeID)=Side%Node(1)%np%ind
+      NodeInfo(NodeID)=master%Side(iLocSide)%sp%Node(1)%np%ind + offsetID !Side%Node(1)%np%ind
     ELSE 
-      NodeInfo(NodeID)=Side%Node(Side%flip)%np%ind
+      NodeInfo(NodeID)=master%Side(iLocSide)%sp%Node(Side%flip)%np%ind + offsetID !Side%Node(Side%flip)%np%ind
     END IF
   END DO !iLocSide=1,6
+  offsetID=offsetID+locnNodes
 END DO !iElem=1,nElems
 
 IF(NodeID.NE.nTotalNodes) &
        CALL abort(__STAMP__,&
           'Sanity check: nNodes not equal to number of nodes in NodeInfo!')
 
-ALLOCATE(NodeCoords(nNodeIDs,3))
-NodeCoords=-999.
+!WRITE NodeInfo,into (1,nTotalNodes) 
+CALL WriteArrayToHDF5(File_ID,'NodeInfo',nTotalNodes,1,(/nTotalNodes/),0,IntegerArray=NodeInfo)
+DEALLOCATE(NodeInfo)
 
-!fill NodeCoords and Sanity check of curvednodes
-DO iElem=1,nElems
-  Elem=>Elems(iElem)%ep
-  DO iNode=1,8
-    Elem%Node(iNode)%np%tmp=1
-  END DO
-  ! CURVED  
-  DO iNode=1,nCurvedNodes
-    Elem%CurvedNode(iNode)%np%tmp=1
-  END DO
-END DO !iElem=1,nElems
-NodeID=0
-DO iElem=1,nElems
-  Elem=>Elems(iElem)%ep
-  DO iNode=1,8
-    IF(Elem%Node(iNode)%np%tmp.GT.0)THEN
-      iNodeP=Elem%Node(iNode)%np%ind
-      NodeCoords(iNodeP,:)=Elem%Node(iNode)%np%x
-      NodeID=NodeID+1
-      Elem%Node(iNode)%np%tmp=0
-    END IF                  
-  END DO
-  ! CURVED  
-  DO iNode=1,nCurvedNodes
-    IF(Elem%CurvedNode(iNode)%np%tmp.GT.0)THEN
-      iNodeP=Elem%CurvedNode(iNode)%np%ind
-      NodeCoords(iNodeP,:)=Elem%CurvedNode(iNode)%np%x
-      NodeID=NodeID+1
-      Elem%CurvedNode(iNode)%np%tmp=0
-    END IF                  
-  END DO
-END DO !iElem=1,nElems
 
-IF(NodeID.NE.nNodeIDs) & 
-         CALL abort(__STAMP__,&
-                'Sanity check: nNodeIDs not equal to number of nodes in NodeCoords!')
 
-END SUBROUTINE getMeshinfo
+! Close the file.
+CALL CloseHDF5File()
+
+WRITE(*,'(A)')' DONE WRITING MESH.'
+WRITE(*,'(132("~"))')
+
+END SUBROUTINE WriteMeshToHDF5
+
+
+
+SUBROUTINE AddtoElemCounter(elemtype,elemCounter) 
+!===================================================================================================================================
+!
+!===================================================================================================================================
+! MODULES
+! IMPLICIT VARIABLE HANDLING
+IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+INTEGER,INTENT(IN)       :: ElemType
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+INTEGER,INTENT(INOUT)    :: ElemCounter(11,2)
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES
+!===================================================================================================================================
+  SELECT CASE(ElemType)
+    CASE(104) !linear tet
+      elemcounter(1,2)=elemcounter(1,2)+1
+    CASE(204) !spline tet
+      elemcounter(2,2)=elemcounter(2,2)+1
+    CASE(105) !linear pyr
+      elemcounter(3,2)=elemcounter(3,2)+1
+    CASE(115) !non-linear pyr
+      elemcounter(4,2)=elemcounter(4,2)+1
+    CASE(205) !spline pyr
+      elemcounter(5,2)=elemcounter(5,2)+1
+    CASE(106) !linear prism
+      elemcounter(6,2)=elemcounter(6,2)+1
+    CASE(116) !non-linear prism
+      elemcounter(7,2)=elemcounter(7,2)+1
+    CASE(206) !spline prism
+      elemcounter(8,2)=elemcounter(8,2)+1
+    CASE(108) !linear hex
+      elemcounter(9,2)=elemcounter(9,2)+1
+    CASE(118) !non-linear hex
+      elemcounter(10,2)=elemcounter(10,2)+1
+    CASE(208) !spline hex
+      elemcounter(11,2)=elemcounter(11,2)+1
+  END SELECT
+END SUBROUTINE AddToElemCounter
 
 
 END MODULE MOD_Output_HDF5

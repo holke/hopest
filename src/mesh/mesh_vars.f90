@@ -15,6 +15,7 @@ SAVE
 LOGICAL           :: useCurveds
 INTEGER           :: NGeo                        ! polynomial degree of geometric transformation
 REAL,ALLOCATABLE  :: Xi_NGeo(:)                  ! 1D equidistant point positions for curved elements (during readin)
+REAL,ALLOCATABLE  :: XGeo(:,:,:,:,:)              ! High order geometry nodes, per element (1:3,0:Ngeo,0:Ngeo,0:Ngeo,nElems)
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! GLOBAL VARIABLES 
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -55,7 +56,7 @@ TYPE tElem
   INTEGER                      :: ind             ! global element index
   INTEGER                      :: Type            ! element type (linear/bilinear/curved)
   INTEGER                      :: Zone
-  !INTEGER                      :: which_tree
+  INTEGER                      :: treeID
   !INTEGER                      :: quadrant_id
   TYPE(tNodePtr)               :: Node(8)
   TYPE(tSidePtr)               :: Side(6)
@@ -92,7 +93,7 @@ TYPE tNode
   TYPE(tEdge),POINTER          :: firstEdge     ! only used to assign edges 
   INTEGER                      :: ind=0         ! global unique node index
   INTEGER                      :: tmp=0
-  REAL                         :: x(3)=0.
+  !REAL                         :: x(3)=0.
 END TYPE tNode
 !-----------------------------------------------------------------------------------------------------------------------------------
 TYPE(tElemPtr),POINTER         :: Elems(:)
@@ -172,8 +173,8 @@ ELSEIF((Node2%ind).LT.(Node1%ind))THEN
 ELSE 
   WRITE(*,*) 'Problem with node%ind in GETNEWEDGE'
   WRITE(*,*) 'node IDs',Node1%ind,Node2%ind
-  WRITE(*,*) 'node1%x',Node1%x
-  WRITE(*,*) 'node2%x',Node2%x
+  !WRITE(*,*) 'node1%x',Node1%x
+  !WRITE(*,*) 'node2%x',Node2%x
   STOP
 END IF
 
