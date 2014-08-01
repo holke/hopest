@@ -63,7 +63,7 @@ WRITE(*,'(A)')' WRITE MESH TO HDF5 FILE... ' // TRIM(FileString)
 
 !set all node and side indices =0
 DO iElem=1,nElems
-  Elem=>Elems(iElem)%ep
+  Elem=>Quads(iElem)%ep
   DO iNode=1,8
     Elem%Node(iNode)%np%ind=0
   END DO
@@ -82,7 +82,7 @@ nSideIDs=0 !number of unique side IDs (side and side%connection have the same si
 
 
 DO iElem=1,nElems
-  Elem=>Elems(iElem)%ep
+  Elem=>Quads(iElem)%ep
   ! Count nodes
   DO iNode=1,8
     IF(Elem%Node(iNode)%np%ind.NE.0) CYCLE
@@ -113,7 +113,7 @@ END DO
 SideID=0
 NodeID=0
 DO iElem=1,nElems
-  Elem=>Elems(iElem)%ep
+  Elem=>Quads(iElem)%ep
   Elem%ind=iElem
   DO iNode=1,8
     IF(Elem%Node(iNode)%np%ind.NE.-88888) CYCLE
@@ -192,7 +192,7 @@ Elemcounter(:,1)=(/104,204,105,115,205,106,116,206,108,118,208/)
 iNode  = 0 
 iSide  = 0
 DO iElem=1,nElems
-  Elem=>Elems(iElem)%ep
+  Elem=>Quads(iElem)%ep
   locnNodes=8+nCurvedNodes
   locnSides=0
   ! for element sides
@@ -250,7 +250,7 @@ ALLOCATE(SideInfo(1:nTotalSides,SIDE_InfoSize))
 SideInfo=0 
 iSide=0
 DO iElem=1,nElems
-  Elem=>Elems(iElem)%ep
+  Elem=>Quads(iElem)%ep
   DO iLocSide=1,6
     Side=>Elem%Side(iLocSide)%sp
     iSide=iSide+1
@@ -324,7 +324,7 @@ NodeID=0
 offsetID=0
 locnNodes=(Ngeo+1)**3
 DO iElem=1,nElems
-  Elem=>Elems(iElem)%ep
+  Elem=>Quads(iElem)%ep
   DO iNode=1,8
     NodeID=NodeID+1
     NodeInfo(NodeID)= master%Node(iNode)%np%ind + offsetID !Elem%Node(iNode)%np%ind

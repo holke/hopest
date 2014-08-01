@@ -109,6 +109,18 @@ INTEGER,ALLOCATABLE            :: HexMapInv(:,:)
 ! P4EST related data structures 
 !-----------------------------------------------------------------------------------------------------------------------------------
 TYPE(t_p4est_ptr) :: p4est_ptr              ! c pointer derived data type, see MOD_P4estBindingTypes
+
+TYPE(tElemPtr),ALLOCATABLE  :: Quads(:)           ! new element list elements are "quadrants/octants"        
+INTEGER                     :: nQuadrants         ! local number of quadrants (here no MPI => all) 
+INTEGER                     :: nHalfFaces         ! number of mortar sides
+REAL                        :: IntSize            ! used to transform INT coords/levels to REAL coords/levels: REAL=inssize*INT  [0. ; 1.]
+INTEGER(KIND=4),POINTER     :: QuadToTree(:)      ! from quadrant to tree ( ~ new element ID to old element ID) 
+INTEGER(KIND=4),POINTER     :: QuadToQuad(:,:)    ! p4est quadrant connectivity (1:6,1:nQuadrants) => neighbor quadrant
+INTEGER(KIND=1),POINTER     :: QuadToFace(:,:)    ! p4est face connectivity (1:6,1:nQuadrants) => neighbor faceId + orientation + non-conform info
+INTEGER(KIND=4),POINTER     :: QuadToHalf(:,:)    ! p4est face connectivity for mortars (1:4,1:nHalfFaces), ( ~small sides)
+INTEGER(KIND=4),ALLOCATABLE :: QuadCoords(:,:)    ! p4est Integer coordinates of first quadrant node (xyz,nQuadrants)
+INTEGER(KIND=1),ALLOCATABLE :: QuadLevel(:)       ! p4est Integer Level of quadrant (use to compute quadrant size
+
 !-----------------------------------------------------------------------------------------------------------------------------------
 INTEGER,PARAMETER   :: EdgeToElemNode(1:2,1:12) = RESHAPE((/ 1, 2,&  ! CGNS corner nodes mapped 
                                                              4, 3,&  ! to p4est edges

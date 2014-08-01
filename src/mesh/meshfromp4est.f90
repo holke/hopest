@@ -38,46 +38,14 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER                        :: i,j,k
-INTEGER                        :: BCindex
-INTEGER                        :: iElem,ElemID
-INTEGER                        :: iNode,jNode,NodeID,SideID
-INTEGER                        :: iLocSide,jLocSide
-INTEGER                        :: iSide
-INTEGER                        :: FirstNodeInd,LastNodeInd,FirstSideInd,LastSideInd
-INTEGER                        :: nCurvedNodes_loc
-LOGICAL                        :: oriented
-INTEGER                        :: nPeriodicSides 
-LOGICAL                        :: fileExists
-LOGICAL                        :: doConnection
-TYPE(tElem),POINTER            :: aElem
-TYPE(tSide),POINTER            :: aSide,bSide
-TYPE(tNode),POINTER            :: aNode
-INTEGER,ALLOCATABLE            :: ElemInfo(:,:),SideInfo(:,:),NodeInfo(:)
-REAL,ALLOCATABLE               :: NodeCoords(:,:)
-                               
-INTEGER                        :: BoundaryOrder_mesh
-INTEGER                        :: nNodeIDs,nSideIDs
-! p4est interface
-INTEGER                        :: num_vertices
-INTEGER                        :: num_trees
-INTEGER,ALLOCATABLE            :: tree_to_vertex(:,:)
-REAL,ALLOCATABLE               :: vertices(:,:)
-
-TYPE(tElemPtr),ALLOCATABLE     :: Quads(:)
-INTEGER                     :: nQuadrants,nHalfFaces
 TYPE(C_PTR)                 :: QT,QQ,QF,QH
-INTEGER(KIND=4),POINTER     :: QuadToTree(:),QuadToQuad(:,:),QuadToHalf(:,:)
-INTEGER(KIND=1),POINTER     :: QuadToFace(:,:)
-INTEGER(KIND=4),ALLOCATABLE :: QuadCoords(:,:)
-INTEGER(KIND=1),ALLOCATABLE :: QuadLevel(:)
-REAL                        :: IntSize
-
 TYPE(tElem),POINTER         :: aQuad,nbQuad
+TYPE(tSide),POINTER         :: aSide
 INTEGER                     :: iQuad,iMortar
 INTEGER                     :: PSide,PnbSide,nbSide
 INTEGER                     :: nbQuadInd
 INTEGER                     :: PMortar,PFlip,HFlip,QHInd
+INTEGER                     :: iLocSide
 !===================================================================================================================================
 IF(MESHInitIsDone) RETURN
 SWRITE(UNIT_stdOut,'(A)')'BUILD P4EST MESH AND REFINE ...'
@@ -112,17 +80,17 @@ DO iQuad=1,nQuadrants
   aQuad=>Quads(iQuad)%ep
   aQuad%Ind    = iQuad
   CALL CreateSides(aQuad)
-  DO iSide=1,6
-    aQuad%Side(iSide)%sp%flip=-999
+  DO iLocSide=1,6
+    aQuad%Side(iLocSide)%sp%flip=-999
   END DO
 END DO
 
 DO iQuad=1,nQuadrants
   aQuad=>Quads(iQuad)%ep
-  DO iSide=1,6
-    aSide=>aQuad%Side(iSide)%sp
+  DO iLocSide=1,6
+    aSide=>aQuad%Side(iLocSide)%sp
     ! Get P4est local side
-    PSide=H2P_FaceMap(iSide)
+    PSide=H2P_FaceMap(iLocSide)
     ! Get P4est neighbour side/flip/morter
     CALL EvalP4ESTConnectivity(QuadToFace(PSide+1,iQuad),PnbSide,PFlip,PMortar)
     ! transform p4est orientation to HOPR flip (magic)
@@ -144,7 +112,7 @@ DO iQuad=1,nQuadrants
       nbQuadInd=QuadToQuad(PSide+1,iQuad)+1
       nbQuad=>Quads(nbQuadInd)%ep
       nbSide=P2H_FaceMap(PnbSide)
-      IF((nbQuadInd.EQ.iQuad).AND.(nbSide.EQ.iSide))THEN
+      IF((nbQuadInd.EQ.iQuad).AND.(nbSide.EQ.iLocSide))THEN
         ! this is a boundary side: 
         !WRITE(*,*)'BC found:'
         !aSide%BCIndex=xxxx
@@ -161,9 +129,9 @@ END DO
 !sanity check
 DO iQuad=1,nQuadrants
   aQuad=>Quads(iQuad)%ep
-  DO iSide=1,6
-    IF(aQuad%Side(iSide)%sp%flip.LT.0) THEN
-      WRITE(*,*) 'flip assignmenti failed, iQuad= ',iQuad,', iSide= ',iSide 
+  DO iLocSide=1,6
+    IF(aQuad%Side(iLocSide)%sp%flip.LT.0) THEN
+      WRITE(*,*) 'flip assignmenti failed, iQuad= ',iQuad,', iLocSide= ',iLocSide 
       STOP
     END IF
   END DO
