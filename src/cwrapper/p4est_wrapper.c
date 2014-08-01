@@ -95,9 +95,7 @@ void p4est_refine_mesh (p4est_t  *p4est,
                         int     (*myrefine_f)
                                 (p4est_qcoord_t,p4est_qcoord_t,p4est_qcoord_t,p4est_topidx_t,int8_t),
                         int     refine_level,
-                        p4est_mesh_t  **mesh_out,
-                        int     *global_num_quadrants,
-                        int     *num_half_faces )
+                        p4est_mesh_t  **mesh_out )
 {
   p4est_mesh_t       *mesh;
   p4est_ghost_t      *ghost;
@@ -158,7 +156,13 @@ void p4est_refine_mesh (p4est_t  *p4est,
 
   P4EST_GLOBAL_PRODUCTIONF
     ("DEBUG: REFINE FINISHED %d  \n",0);
+}
 
+void p4est_get_mesh_info ( p4est_t        *p4est,
+                           p4est_mesh_t   *mesh,
+                           int            *global_num_quadrants,
+                           int            *num_half_faces )
+{
   *global_num_quadrants = p4est->global_num_quadrants;
   *num_half_faces = mesh->quad_to_half->elem_count;      // big face with 4 small neighbours
   SC_CHECK_ABORTF (mesh->local_num_quadrants == p4est->global_num_quadrants,
@@ -167,12 +171,11 @@ void p4est_refine_mesh (p4est_t  *p4est,
 
 }
 
-
 void p4est_get_quadrants ( p4est_t       *p4est,
                            p4est_mesh_t   *mesh,
                            int            global_num_quadrants,
                            int            num_half_faces,
-                           double         *intsize,
+                           p4est_qcoord_t  *intsize,
                            p4est_topidx_t **quad_to_tree,
                            p4est_locidx_t **quad_to_quad,
                            int8_t         **quad_to_face, 
@@ -187,7 +190,7 @@ void p4est_get_quadrants ( p4est_t       *p4est,
   sc_array_t         *quadrants;
   p4est_locidx_t     *halfentries;
 
-  *intsize = (double) 1.0/P4EST_ROOT_LEN;
+  *intsize = P4EST_ROOT_LEN;
 
   P4EST_ASSERT (global_num_quadrants == p4est->local_num_quadrants);
   for (iquad = 0; iquad < mesh->local_num_quadrants; iquad++) {

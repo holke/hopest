@@ -101,6 +101,7 @@ LOGICAL                        :: doConnection
 TYPE(tElem),POINTER            :: aElem
 TYPE(tSide),POINTER            :: aSide,bSide
 TYPE(tNode),POINTER            :: aNode
+TYPE(tNodePtr),POINTER         :: ElemCurvedNode(:,:)
 INTEGER,ALLOCATABLE            :: ElemInfo(:,:),SideInfo(:,:),NodeInfo(:)
 REAL,ALLOCATABLE               :: NodeCoords(:,:)
                                
@@ -183,6 +184,8 @@ ELSE
   nCurvedNodes=0
 END IF
 
+ALLOCATE(ElemCurvedNode(nCurvedNodes,nElems))
+
 ALLOCATE(Nodes(1:nNodes)) ! pointer list, entry is known by NodeCoords
 DO iNode=1,nNodes
   NULLIFY(Nodes(iNode)%np)
@@ -207,7 +210,6 @@ DO iElem=1,nElems
     IF(nCurvedNodes.NE.nCurvedNodes_loc) &
       CALL abort(__STAMP__, &
            'Wrong number of curved nodes for hexahedra.')
-    ALLOCATE(aElem%CurvedNode(nCurvedNodes))
     DO i=1,nCurvedNodes
       iNode=iNode+1
       NodeID=NodeInfo(iNode) !first oriented corner node
@@ -215,7 +217,7 @@ DO iElem=1,nElems
         ALLOCATE(Nodes(NodeID)%np)
         Nodes(NodeID)%np%ind=NodeID 
       END IF
-      aElem%CurvedNode(i)%np=>Nodes(NodeID)%np
+      ElemCurvedNode(i,iElem)%np=>Nodes(NodeID)%np
     END DO
   END IF
 END DO
@@ -338,13 +340,14 @@ ELSE
     l=0
     DO k=0,Ngeo; DO j=0,Ngeo; DO i=0,Ngeo
       l=l+1
-      Xgeo(:,i,j,k,iElem)=NodeCoords(aElem%CurvedNode(l)%np%ind,:)
+      Xgeo(:,i,j,k,iElem)=NodeCoords(ElemCurvedNode(l,iElem)%np%ind,:)
     END DO ; END DO ; END DO 
  END DO !iElem=1,nElems
 END IF
 
 CALL CloseDataFile() 
 
+DEALLOCATE(ElemCurvedNode)
 ! P4est MESH connectivity (should be replaced by connectivity information ?)
 
 ! needs unique corner nodes for mesh connectivity

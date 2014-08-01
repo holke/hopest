@@ -15,7 +15,12 @@ INTERFACE BuildMeshFromP4EST
   MODULE PROCEDURE BuildMeshFromP4EST
 END INTERFACE
 
+INTERFACE BuildHOMeh
+  MODULE PROCEDURE BuildHOMesh
+END INTERFACE
+
 PUBLIC::BuildMeshFromP4EST
+PUBLIC::BuildHOMesh
 !===================================================================================================================================
 
 CONTAINS
@@ -23,7 +28,7 @@ CONTAINS
 
 SUBROUTINE BuildMeshFromP4EST()
 !===================================================================================================================================
-! Subroutine to read the mesh from a mesh data file
+! Subroutine to translate p4est mesh datastructure to HOPR datastructure
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
@@ -39,56 +44,28 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER                        :: i,j,k
-INTEGER                        :: BCindex
-INTEGER                        :: iElem,ElemID
-INTEGER                        :: iNode,jNode,NodeID,SideID
-INTEGER                        :: iLocSide,jLocSide
-INTEGER                        :: iSide
-INTEGER                        :: FirstNodeInd,LastNodeInd,FirstSideInd,LastSideInd
-INTEGER                        :: nCurvedNodes_loc
-LOGICAL                        :: oriented
-INTEGER                        :: nPeriodicSides 
-LOGICAL                        :: fileExists
-LOGICAL                        :: doConnection
-TYPE(tElem),POINTER            :: aElem
-TYPE(tSide),POINTER            :: aSide,bSide
-TYPE(tNode),POINTER            :: aNode
-INTEGER,ALLOCATABLE            :: ElemInfo(:,:),SideInfo(:,:),NodeInfo(:)
-REAL,ALLOCATABLE               :: NodeCoords(:,:)
-                               
-INTEGER                        :: BoundaryOrder_mesh
-INTEGER                        :: nNodeIDs,nSideIDs
-! p4est interface
-INTEGER                        :: num_vertices
-INTEGER                        :: num_trees
-INTEGER,ALLOCATABLE            :: tree_to_vertex(:,:)
-REAL,ALLOCATABLE               :: vertices(:,:)
-
-TYPE(tElemPtr),ALLOCATABLE     :: Quads(:)
 TYPE(C_PTR)                 :: QT,QQ,QF,QH
-INTEGER(KIND=4),POINTER     :: QuadToTree(:),QuadToQuad(:,:),QuadToHalf(:,:)
-INTEGER(KIND=1),POINTER     :: QuadToFace(:,:)
-INTEGER(KIND=4),ALLOCATABLE :: QuadCoords(:,:)
-INTEGER(KIND=1),ALLOCATABLE :: QuadLevel(:)
-REAL                        :: IntSize
-
-TYPE(tElem),POINTER         :: aQuad,nbQuad
-INTEGER                     :: iQuad,iMortar
+TYPE(tElem),POINTER         :: aQuad,nbQuad,Tree
+TYPE(tSide),POINTER         :: aSide
+INTEGER                     :: iQuad,iMortar,iElem
 INTEGER                     :: PSide,PnbSide,nbSide
 INTEGER                     :: nbQuadInd
 INTEGER                     :: PMortar,PFlip,HFlip,QHInd
+INTEGER                     :: iLocSide
+INTEGER                     :: StartQuad,EndQuad
+INTEGER                     :: BClocSide,BCindex
 !===================================================================================================================================
 IF(MESHInitIsDone) RETURN
 SWRITE(UNIT_stdOut,'(A)')'BUILD P4EST MESH AND REFINE ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
 
-! Transform input mesh to adapted mesh
-CALL p4est_save_all(TRIM(ProjectName)//'.p4est'//C_NULL_CHAR,p4est_ptr%p4est)
-
 ! Get arrays from p4est: use pointers for c arrays (QT,QQ,..), duplicate data for QuadCoords,Level
+CALL p4est_get_mesh_info(p4est_ptr%p4est,p4est_ptr%mesh,nQuadrants,nHalfFaces)
+
 ALLOCATE(QuadCoords(3,nQuadrants),QuadLevel(nQuadrants)) ! big to small flip
-QuadCoords=0; QuadLevel=0
+QuadCoords=0
+QuadLevel=0
+
 CALL p4est_get_quadrants(p4est_ptr%p4est,p4est_ptr%mesh,nQuadrants,nHalfFaces,& !IN
                          intsize,QT,QQ,QF,QH,QuadCoords,QuadLevel)              !OUT
 
@@ -97,6 +74,23 @@ CALL C_F_POINTER(QQ,QuadToQuad,(/6,nQuadrants/))
 CALL C_F_POINTER(QF,QuadToFace,(/6,nQuadrants/))
 IF(nHalfFaces.GT.0) CALL C_F_POINTER(QH,QuadToHalf,(/4,nHalfFaces/))
 
+ALLOCATE(TreeToQuad(2,nElems))
+TreeToQuad(1,1)=0
+TreeToQuad(2,nElems)=nQuadrants
+StartQuad=0
+EndQuad=0
+DO iElem=1,nElems
+  TreeToQuad(1,iElem)=StartQuad
+  DO iQuad=StartQuad+1,nQuadrants
+    IF(QuadToTree(iQuad)+1.EQ.iElem)THEN
+      EndQuad=EndQuad+1
+    ELSE
+      TreeToQuad(2,iElem)=EndQuad
+      StartQuad=EndQuad
+      EXIT 
+    END IF
+  END DO !iQuad
+END DO !iElem
 !----------------------------------------------------------------------------------------------------------------------------
 !             Start to build p4est datastructure in HOPEST
 !----------------------------------------------------------------------------------------------------------------------------
@@ -110,17 +104,19 @@ DO iQuad=1,nQuadrants
   aQuad=>Quads(iQuad)%ep
   aQuad%Ind    = iQuad
   CALL CreateSides(aQuad)
-  DO iSide=1,6
-    aQuad%Side(iSide)%sp%flip=-999
+  DO iLocSide=1,6
+    aQuad%Side(iLocSide)%sp%flip=-999
   END DO
 END DO
 
 DO iQuad=1,nQuadrants
   aQuad=>Quads(iQuad)%ep
-  DO iSide=1,6
-    aSide=>aQuad%Side(iSide)%sp
+  Tree=>Elems(QuadToTree(iQuad)+1)%ep
+  aQuad%type=Tree%type
+  DO iLocSide=1,6
+    aSide=>aQuad%Side(iLocSide)%sp
     ! Get P4est local side
-    PSide=H2P_FaceMap(iSide)
+    PSide=H2P_FaceMap(iLocSide)
     ! Get P4est neighbour side/flip/morter
     CALL EvalP4ESTConnectivity(QuadToFace(PSide+1,iQuad),PnbSide,PFlip,PMortar)
     ! transform p4est orientation to HOPR flip (magic)
@@ -142,11 +138,14 @@ DO iQuad=1,nQuadrants
       nbQuadInd=QuadToQuad(PSide+1,iQuad)+1
       nbQuad=>Quads(nbQuadInd)%ep
       nbSide=P2H_FaceMap(PnbSide)
-      IF((nbQuadInd.EQ.iQuad).AND.(nbSide.EQ.iSide))THEN
+      IF((nbQuadInd.EQ.iQuad).AND.(nbSide.EQ.iLocSide))THEN
         ! this is a boundary side: 
-        !WRITE(*,*)'BC found:'
-        !aSide%BCIndex=xxxx
+        BCindex=Tree%Side(iLocSide)%sp%BCindex 
+        IF(BCIndex.EQ.0) STOP 'Problem in Boundary assignment'
+        aSide%BCIndex=BCIndex
+        NULLIFY(aSide%connection)
         aSide%Flip=0
+        
       ELSE
         aSide%connection=>nbQuad%side(nbSide)%sp
         aSide%connection%flip=HFlip
@@ -156,12 +155,26 @@ DO iQuad=1,nQuadrants
   END DO
 END DO
 
+! set master slave,  element with lower element ID is master (flip=0)
+DO iQuad=1,nQuadrants
+  aQuad=>Quads(iQuad)%ep
+  DO iLocSide=1,6
+    aSide=>aQuad%Side(iLocSide)%sp
+    IF(ASSOCIATED(aSide%connection))THEN
+      IF(aSide%connection%elem%ind.GT.iQuad)THEN
+        aSide%flip=0
+      END IF
+    END IF
+  END DO
+END DO
+
+
 !sanity check
 DO iQuad=1,nQuadrants
   aQuad=>Quads(iQuad)%ep
-  DO iSide=1,6
-    IF(aQuad%Side(iSide)%sp%flip.LT.0) THEN
-      WRITE(*,*) 'flip assignmenti failed, iQuad= ',iQuad,', iSide= ',iSide 
+  DO iLocSide=1,6
+    IF(aQuad%Side(iLocSide)%sp%flip.LT.0) THEN
+      WRITE(*,*) 'flip assignmenti failed, iQuad= ',iQuad,', iLocSide= ',iLocSide 
       STOP
     END IF
   END DO
@@ -260,5 +273,30 @@ PNode1=P4P(P4Q(P4R(PSide0,PSide1),PFlip),PNode0)
 GetHFlip=P2H_FaceNodeMap(PNode1,PSide1)
 
 END FUNCTION GetHFlip
+
+SUBROUTINE BuildHOMesh()
+!===================================================================================================================================
+! uses XGeo High order data from trees and interpolates it to the quadrants 
+!===================================================================================================================================
+! MODULES
+USE MOD_Globals
+USE MOD_Mesh_Vars
+! IMPLICIT VARIABLE HANDLING
+IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES
+!===================================================================================================================================
+ALLOCATE(XgeoQuads(3,0:Ngeo,0:Ngeo,0:Ngeo,nQuadrants))
+IF(refineLevel.EQ.0)THEN
+  XgeoQuads=Xgeo
+ELSE
+  STOP 'interpolation only for refinelevel 0'
+END IF
+
+END SUBROUTINE BuildHOMesh
 
 END MODULE MOD_MeshFromP4EST

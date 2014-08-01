@@ -61,40 +61,21 @@ INTEGER                        :: locnSides,locnNodes,offsetID
 WRITE(*,'(132("~"))')
 WRITE(*,'(A)')' WRITE MESH TO HDF5 FILE... ' // TRIM(FileString) 
 
-!set all node and side indices =0
+!set all side indices =0
 DO iElem=1,nElems
-  Elem=>Elems(iElem)%ep
-  DO iNode=1,8
-    Elem%Node(iNode)%np%ind=0
-  END DO
-  DO iNode=1,nCurvedNodes
-    Elem%curvedNode(iNode)%np%ind=0
-  END DO
+  Elem=>Quads(iElem)%ep
   DO iLocSide=1,6
     Side=>Elem%Side(iLocSide)%sp
     Side%ind=0
   END DO !iLocSide=1,6
 END DO !iElem=1,nElems
 
-! count Elements , unique sides and nodes are marked with ind=0
-nNodeIDs=0 !number of unique nodeIDs
+! count Elements , unique sides 
 nSideIDs=0 !number of unique side IDs (side and side%connection have the same sideID)
 
 
 DO iElem=1,nElems
-  Elem=>Elems(iElem)%ep
-  ! Count nodes
-  DO iNode=1,8
-    IF(Elem%Node(iNode)%np%ind.NE.0) CYCLE
-    nNodeIDs=nNodeIDs+1
-    Elem%Node(iNode)%np%ind=-88888  ! mark no MPI side
-  END DO
-
-  DO iNode=1,nCurvedNodes
-    IF(Elem%CurvedNode(iNode)%np%ind.NE.0) CYCLE
-    nNodeIDs=nNodeIDs+1
-    Elem%CurvedNode(iNode)%np%ind=-88888
-  END DO
+  Elem=>Quads(iElem)%ep
 
   ! Count sides
   DO iLocSide=1,6
@@ -113,18 +94,8 @@ END DO
 SideID=0
 NodeID=0
 DO iElem=1,nElems
-  Elem=>Elems(iElem)%ep
+  Elem=>Quads(iElem)%ep
   Elem%ind=iElem
-  DO iNode=1,8
-    IF(Elem%Node(iNode)%np%ind.NE.-88888) CYCLE
-    NodeID=NodeID+1
-    Elem%Node(iNode)%np%ind=NodeID
-  END DO
-  DO iNode=1,nCurvedNodes
-    IF(Elem%CurvedNode(iNode)%np%ind.NE.-88888) CYCLE
-    NodeID=NodeID+1
-    Elem%CurvedNode(iNode)%np%ind=NodeID
-  END DO
 
   DO iLocSide=1,6
     Side=>Elem%Side(iLocSide)%sp
@@ -192,7 +163,7 @@ Elemcounter(:,1)=(/104,204,105,115,205,106,116,206,108,118,208/)
 iNode  = 0 
 iSide  = 0
 DO iElem=1,nElems
-  Elem=>Elems(iElem)%ep
+  Elem=>Quads(iElem)%ep
   locnNodes=8+nCurvedNodes
   locnSides=0
   ! for element sides
@@ -250,12 +221,12 @@ ALLOCATE(SideInfo(1:nTotalSides,SIDE_InfoSize))
 SideInfo=0 
 iSide=0
 DO iElem=1,nElems
-  Elem=>Elems(iElem)%ep
+  Elem=>Quads(iElem)%ep
   DO iLocSide=1,6
     Side=>Elem%Side(iLocSide)%sp
     iSide=iSide+1
     !Side Tpye
-    IF(ASSOCIATED(Elem%curvedNode))THEN
+    IF(Ngeo.GT.1)THEN
       SideInfo(iSide,SIDE_Type)=7            ! Side Type: NL quad
     ELSE
       SideInfo(iSide,SIDE_Type)=5            ! Side Type: bilinear
@@ -302,13 +273,6 @@ master%Node(6)%np%ind=HexMap(Ngeo,   0,Ngeo)
 master%Node(7)%np%ind=HexMap(Ngeo,Ngeo,Ngeo)
 master%Node(8)%np%ind=HexMap(   0,Ngeo,Ngeo)
 CALL createSides(master)
-IF(nCurvedNodes.GT.0)THEN
-  ALLOCATE(master%CurvedNode(nCurvedNodes))
-  DO i=1,nCurvedNodes
-    ALLOCATE(master%CurvedNode(i)%np)
-    master%CurvedNode(i)%np%ind=i
-  END DO
-END IF 
 
 IF(nTotalNodes.NE.locnNodes*nElems) &
        CALL abort(__STAMP__,&
@@ -324,14 +288,14 @@ NodeID=0
 offsetID=0
 locnNodes=(Ngeo+1)**3
 DO iElem=1,nElems
-  Elem=>Elems(iElem)%ep
+  Elem=>Quads(iElem)%ep
   DO iNode=1,8
     NodeID=NodeID+1
     NodeInfo(NodeID)= master%Node(iNode)%np%ind + offsetID !Elem%Node(iNode)%np%ind
   END DO
   DO iNode=1,nCurvedNodes
     NodeID=NodeID+1
-    NodeInfo(NodeID)=master%curvedNode(iNode)%np%ind + offsetID !Elem%curvedNode(iNode)%np%ind
+    NodeInfo(NodeID)=iNode + offsetID !Elem%curvedNode(iNode)%np%ind
   END DO
   DO iLocSide=1,6
     Side=>Elem%Side(iLocSide)%sp
@@ -404,6 +368,8 @@ INTEGER,INTENT(INOUT)    :: ElemCounter(11,2)
       elemcounter(10,2)=elemcounter(10,2)+1
     CASE(208) !spline hex
       elemcounter(11,2)=elemcounter(11,2)+1
+    CASE DEFAULT
+      STOP 'elem type not defined in elemcounter'
   END SELECT
 END SUBROUTINE AddToElemCounter
 
