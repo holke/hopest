@@ -85,7 +85,7 @@ SWRITE(UNIT_StdOut,'(132("-"))')
 
 ! Transform input mesh to adapted mesh
 ! Do refinement and save p4est refine
-CALL p4est_refine_mesh(p4est_ptr%p4est,2,1,p4est_ptr%mesh,nQuadrants,nHalfFaces)
+CALL p4est_refine_mesh(p4est_ptr%p4est,refineLevel,refineElem,p4est_ptr%mesh,nQuadrants,nHalfFaces)
 CALL p4est_save_all(TRIM(ProjectName)//'.p4est'//C_NULL_CHAR,p4est_ptr%p4est)
 
 ! Get arrays from p4est: use pointers for c arrays (QT,QQ,..), duplicate data for QuadCoords,Level
@@ -146,7 +146,7 @@ DO iQuad=1,nQuadrants
       nbSide=P2H_FaceMap(PnbSide)
       IF((nbQuadInd.EQ.iQuad).AND.(nbSide.EQ.iSide))THEN
         ! this is a boundary side: 
-        WRITE(*,*)'BC found:'
+        !WRITE(*,*)'BC found:'
         !aSide%BCIndex=xxxx
         aSide%Flip=0
       ELSE

@@ -39,7 +39,7 @@ USE MOD_Output_Vars, ONLY:Projectname
 USE MOD_Mesh_ReadIn,        ONLY:readMesh
 USE MOD_MeshFromP4EST,      ONLY:BuildMeshFromP4EST
 USE MOD_Output_HDF5,        ONLY:writeMeshToHDF5
-USE MOD_ReadInTools,        ONLY:GETLOGICAL,GETINT,GETINTARRAY,CNTSTR,GETSTR
+USE MOD_ReadInTools,        ONLY:GETINT,GETSTR
 IMPLICIT NONE
 ! INPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -60,6 +60,9 @@ SWRITE(UNIT_stdOut,'(A)') ' INIT MESH...'
 MeshFile = GETSTR('MeshFile')
 ProjectName=Meshfile(1:INDEX(Meshfile,'_mesh.h5')-1)
 CALL readMesh(MeshFile) !set nElems
+
+refineLevel=GETINT('refineLevel','2')
+refineElem =GETINT('refineElem','-1')   ! -1 all, >0 specific element
 
 CALL BuildMeshFromP4EST()
 
