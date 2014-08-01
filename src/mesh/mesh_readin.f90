@@ -317,13 +317,74 @@ DEALLOCATE(ElemInfo,SideInfo,NodeInfo)
 ALLOCATE(NodeCoords(nNodes,3))
 
 CALL ReadArray('NodeCoords',2,(/nNodes,3/),0,1,RealArray=NodeCoords)
-!assign to pointer
-DO iNode=1,nNodes
-  IF(ASSOCIATED(Nodes(iNode)%np))Nodes(iNode)%np%x=NodeCoords(iNode,:)
-END DO
-DEALLOCATE(NodeCoords)
- 
+
+ALLOCATE(Xgeo(1:3,0:Ngeo,0:Ngeo,0:Ngeo,nElems))
+IF(Ngeo.EQ.1)THEN !use the corner nodes
+  DO iElem=1,nElems
+    aElem=>Elems(iElem)%ep
+    Xgeo(:,0,0,0,iElem)=NodeCoords(aElem%Node(1)%np%ind,:)
+    Xgeo(:,1,0,0,iElem)=NodeCoords(aElem%Node(2)%np%ind,:)
+    Xgeo(:,1,1,0,iElem)=NodeCoords(aElem%Node(3)%np%ind,:)
+    Xgeo(:,0,1,0,iElem)=NodeCoords(aElem%Node(4)%np%ind,:)
+    Xgeo(:,0,0,1,iElem)=NodeCoords(aElem%Node(5)%np%ind,:)
+    Xgeo(:,1,0,1,iElem)=NodeCoords(aElem%Node(6)%np%ind,:)
+    Xgeo(:,1,1,1,iElem)=NodeCoords(aElem%Node(7)%np%ind,:)
+    Xgeo(:,0,1,1,iElem)=NodeCoords(aElem%Node(8)%np%ind,:)
+ END DO !iElem=1,nElems
+ELSE
+  DO iElem=1,nElems
+    aElem=>Elems(iElem)%ep
+    l=0
+    DO k=0,Ngeo; DO j=0,Ngeo; DO i=0,Ngeo
+      l=l+1
+      Xgeo(:,i,j,k,iElem)=NodeCoords(aElem%CurvedNode(l)%np%ind,:)
+    END DO ; END DO ; END DO 
+ END DO !iElem=1,nElems
+END IF
+
 CALL CloseDataFile() 
+
+! P4est MESH connectivity (should be replaced by connectivity information ?)
+
+! needs unique corner nodes for mesh connectivity
+DO iNode=1,nNodes
+  Nodes(iNode)%np%tmp=-1
+END DO
+num_vertices=0
+DO iElem=1,nElems
+  aElem=>Elems(iElem)%ep
+  DO iNode=1,8
+    aNode=>aElem%Node(iNode)%np
+    IF(aNode%tmp.EQ.-1)THEN
+      num_vertices=num_vertices+1
+      aElem%Node(iNode)%np%tmp=num_vertices
+    END IF
+  END DO
+END DO !iElem
+
+ALLOCATE(Vertices(3,num_vertices))
+DO iNode=1,nNodes
+  aNode=>Nodes(iNode)%np
+  IF(aNode%tmp.GT.0)THEN
+    Vertices(:,aNode%tmp)=NodeCoords(aNode%ind,:)
+  END IF
+END DO
+
+
+DEALLOCATE(NodeCoords)
+
+num_trees=nElems
+ALLOCATE(tree_to_vertex(8,num_trees))
+DO iElem=1,nElems
+  aElem=>Elems(iElem)%ep
+  DO iNode=1,8
+    tree_to_vertex(iNode,iElem)=aElem%Node(H2P_VertexMap(iNode)+1)%np%tmp-1
+  END DO
+END DO
+CALL p4est_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex,p4est_ptr%p4est)
+
+DEALLOCATE(Vertices,tree_to_vertex)
+ 
 
 ! COUNT SIDES
 
@@ -372,39 +433,6 @@ WRITE(*,'(A22,I8)' )'nBCSides:',nBCSides
 WRITE(*,'(A22,I8)' )'nPeriodicSides:',nPeriodicSides
 WRITE(*,*)'-------------------------------------------------------'
 
-DO iNode=1,nNodes
-  Nodes(iNode)%np%tmp=-1
-END DO
-num_vertices=0
-DO iElem=1,nElems
-  aElem=>Elems(iElem)%ep
-  DO iNode=1,8
-    aNode=>aElem%Node(iNode)%np
-    IF(aNode%tmp.EQ.-1)THEN
-      num_vertices=num_vertices+1
-      aElem%Node(iNode)%np%tmp=num_vertices
-    END IF
-  END DO
-END DO !iElem
-
-ALLOCATE(Vertices(3,num_vertices))
-DO iNode=1,nNodes
-  aNode=>Nodes(iNode)%np
-  IF(aNode%tmp.GT.0)THEN
-    Vertices(:,aNode%tmp)=aNode%x
-  END IF
-END DO
-num_trees=nElems
-ALLOCATE(tree_to_vertex(8,num_trees))
-DO iElem=1,nElems
-  aElem=>Elems(iElem)%ep
-  DO iNode=1,8
-    tree_to_vertex(iNode,iElem)=aElem%Node(H2P_VertexMap(iNode)+1)%np%tmp-1
-  END DO
-END DO
-CALL p4est_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex,p4est_ptr%p4est)
-
-DEALLOCATE(Vertices,tree_to_vertex)
 END SUBROUTINE ReadMesh
 
 
