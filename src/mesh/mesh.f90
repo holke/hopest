@@ -35,9 +35,10 @@ SUBROUTINE InitMesh()
 USE MOD_Globals
 USE MOD_Mesh_Vars
 USE MOD_Output_Vars, ONLY:Projectname
+USE MOD_p4estBinding
 !-----------------------------------------------------------------------------------------------------------------------------------
 USE MOD_Mesh_ReadIn,        ONLY:readMesh
-USE MOD_MeshFromP4EST,      ONLY:BuildMeshFromP4EST
+USE MOD_MeshFromP4EST,      ONLY:BuildMeshFromP4EST,BuildHOMesh
 USE MOD_Output_HDF5,        ONLY:writeMeshToHDF5
 USE MOD_ReadInTools,        ONLY:GETINT,GETSTR
 IMPLICIT NONE
@@ -64,8 +65,14 @@ CALL readMesh(MeshFile) !set nElems
 refineLevel=GETINT('refineLevel','2')
 refineElem =GETINT('refineElem','-1')   ! -1 all, >0 specific element
 
+! Transform input mesh to adapted mesh
+! Do refinement and save p4est refine
+CALL p4est_refine_mesh(p4est_ptr%p4est,refineLevel,refineElem,p4est_ptr%mesh)
+CALL p4est_save_all(TRIM(ProjectName)//'.p4est'//C_NULL_CHAR,p4est_ptr%p4est)
+
 CALL BuildMeshFromP4EST()
 
+CALL BuildHOMesh()
 !output new mesh
 CALL writeMeshToHDF5(TRIM(ProjectName)//'_mesh_p4est.h5')
 ! dealloacte pointers

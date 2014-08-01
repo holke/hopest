@@ -16,6 +16,7 @@ LOGICAL           :: useCurveds
 INTEGER           :: NGeo                        ! polynomial degree of geometric transformation
 REAL,ALLOCATABLE  :: Xi_NGeo(:)                  ! 1D equidistant point positions for curved elements (during readin)
 REAL,ALLOCATABLE  :: XGeo(:,:,:,:,:)              ! High order geometry nodes, per element (1:3,0:Ngeo,0:Ngeo,0:Ngeo,nElems)
+REAL,ALLOCATABLE  :: XGeoQuads(:,:,:,:,:)              ! High order geometry nodes, per element (1:3,0:Ngeo,0:Ngeo,0:Ngeo,nElems)
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! GLOBAL VARIABLES 
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -64,7 +65,6 @@ TYPE tElem
   TYPE(tNodePtr)               :: Node(8)
   TYPE(tSidePtr)               :: Side(6)
   TYPE(tEdgePtr)               :: Edge(12)
-  TYPE(tNodePtr),POINTER       :: CurvedNode(:)
 END TYPE tElem
 
 TYPE tSide
@@ -325,7 +325,6 @@ END DO
 DO iLocSide=1,6
   getNewElem%Side(iLocSide)%sp=>getNewSide()
 END DO
-NULLIFY(getNewElem%CurvedNode)
 getNewElem%ind=0
 getNewElem%Zone=0
 getNewElem%Type=0
@@ -352,31 +351,37 @@ Elem%Side(1)%sp%Node(1)%np=>Elem%Node(1)%np
 Elem%Side(1)%sp%Node(2)%np=>Elem%Node(4)%np
 Elem%Side(1)%sp%Node(3)%np=>Elem%Node(3)%np
 Elem%Side(1)%sp%Node(4)%np=>Elem%Node(2)%np
+Elem%Side(1)%sp%elem=>Elem
 !side 2                                    
 Elem%Side(2)%sp%Node(1)%np=>Elem%Node(1)%np
 Elem%Side(2)%sp%Node(2)%np=>Elem%Node(2)%np
 Elem%Side(2)%sp%Node(3)%np=>Elem%Node(6)%np
 Elem%Side(2)%sp%Node(4)%np=>Elem%Node(5)%np
+Elem%Side(2)%sp%elem=>Elem
 !side 3                                    
 Elem%Side(3)%sp%Node(1)%np=>Elem%Node(2)%np
 Elem%Side(3)%sp%Node(2)%np=>Elem%Node(3)%np
 Elem%Side(3)%sp%Node(3)%np=>Elem%Node(7)%np
 Elem%Side(3)%sp%Node(4)%np=>Elem%Node(6)%np
+Elem%Side(3)%sp%elem=>Elem
 !side 4                                    
 Elem%Side(4)%sp%Node(1)%np=>Elem%Node(3)%np
 Elem%Side(4)%sp%Node(2)%np=>Elem%Node(4)%np
 Elem%Side(4)%sp%Node(3)%np=>Elem%Node(8)%np
 Elem%Side(4)%sp%Node(4)%np=>Elem%Node(7)%np
+Elem%Side(4)%sp%elem=>Elem
 !side 5                                    
 Elem%Side(5)%sp%Node(1)%np=>Elem%Node(1)%np
 Elem%Side(5)%sp%Node(2)%np=>Elem%Node(5)%np
 Elem%Side(5)%sp%Node(3)%np=>Elem%Node(8)%np
 Elem%Side(5)%sp%Node(4)%np=>Elem%Node(4)%np
+Elem%Side(5)%sp%elem=>Elem
 !side 6                                                
 Elem%Side(6)%sp%Node(1)%np=>Elem%Node(5)%np
 Elem%Side(6)%sp%Node(2)%np=>Elem%Node(6)%np
 Elem%Side(6)%sp%Node(3)%np=>Elem%Node(7)%np
 Elem%Side(6)%sp%Node(4)%np=>Elem%Node(8)%np
+Elem%Side(6)%sp%elem=>Elem
 END SUBROUTINE createSides
 
 
@@ -399,7 +404,6 @@ TYPE(tSide),POINTER :: aSide
 !===================================================================================================================================
 DO iElem=1,nElems
   aElem=>Elems(iElem)%ep
-  IF(ASSOCIATED(aElem%CurvedNode)) DEALLOCATE(aElem%curvedNode)
   DO iLocSide=1,6
     aSide=>aElem%Side(iLocSide)%sp
     DEALLOCATE(aSide)

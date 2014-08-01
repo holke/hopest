@@ -99,9 +99,7 @@ void p4est_connectivity_treevertex (p4est_topidx_t num_vertices,
 void p4est_refine_mesh ( p4est_t        *p4est,
                          int             refine_level,
                          int             refine_elem,
-                         p4est_mesh_t   **mesh_out,
-                         int            *global_num_quadrants,
-                         int            *num_half_faces )
+                         p4est_mesh_t   **mesh_out)
 {
   p4est_mesh_t       *mesh;
   p4est_ghost_t      *ghost;
@@ -167,7 +165,13 @@ void p4est_refine_mesh ( p4est_t        *p4est,
 
   P4EST_GLOBAL_PRODUCTIONF
     ("DEBUG: REFINE FINISHED %d  \n",0);
+}
 
+void p4est_get_mesh_info ( p4est_t        *p4est,
+                           p4est_mesh_t   *mesh,
+                           int            *global_num_quadrants,
+                           int            *num_half_faces )
+{
   *global_num_quadrants = p4est->global_num_quadrants;
   *num_half_faces = mesh->quad_to_half->elem_count;      // big face with 4 small neighbours
   SC_CHECK_ABORTF (mesh->local_num_quadrants == p4est->global_num_quadrants,
@@ -175,7 +179,6 @@ void p4est_refine_mesh ( p4est_t        *p4est,
                    p4est->global_num_quadrants,mesh->local_num_quadrants );
 
 }
-
 
 void p4est_get_quadrants ( p4est_t       *p4est,
                            p4est_mesh_t   *mesh,

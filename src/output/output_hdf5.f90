@@ -61,40 +61,21 @@ INTEGER                        :: locnSides,locnNodes,offsetID
 WRITE(*,'(132("~"))')
 WRITE(*,'(A)')' WRITE MESH TO HDF5 FILE... ' // TRIM(FileString) 
 
-!set all node and side indices =0
+!set all side indices =0
 DO iElem=1,nElems
   Elem=>Quads(iElem)%ep
-  DO iNode=1,8
-    Elem%Node(iNode)%np%ind=0
-  END DO
-  DO iNode=1,nCurvedNodes
-    Elem%curvedNode(iNode)%np%ind=0
-  END DO
   DO iLocSide=1,6
     Side=>Elem%Side(iLocSide)%sp
     Side%ind=0
   END DO !iLocSide=1,6
 END DO !iElem=1,nElems
 
-! count Elements , unique sides and nodes are marked with ind=0
-nNodeIDs=0 !number of unique nodeIDs
+! count Elements , unique sides 
 nSideIDs=0 !number of unique side IDs (side and side%connection have the same sideID)
 
 
 DO iElem=1,nElems
   Elem=>Quads(iElem)%ep
-  ! Count nodes
-  DO iNode=1,8
-    IF(Elem%Node(iNode)%np%ind.NE.0) CYCLE
-    nNodeIDs=nNodeIDs+1
-    Elem%Node(iNode)%np%ind=-88888  ! mark no MPI side
-  END DO
-
-  DO iNode=1,nCurvedNodes
-    IF(Elem%CurvedNode(iNode)%np%ind.NE.0) CYCLE
-    nNodeIDs=nNodeIDs+1
-    Elem%CurvedNode(iNode)%np%ind=-88888
-  END DO
 
   ! Count sides
   DO iLocSide=1,6
@@ -115,16 +96,6 @@ NodeID=0
 DO iElem=1,nElems
   Elem=>Quads(iElem)%ep
   Elem%ind=iElem
-  DO iNode=1,8
-    IF(Elem%Node(iNode)%np%ind.NE.-88888) CYCLE
-    NodeID=NodeID+1
-    Elem%Node(iNode)%np%ind=NodeID
-  END DO
-  DO iNode=1,nCurvedNodes
-    IF(Elem%CurvedNode(iNode)%np%ind.NE.-88888) CYCLE
-    NodeID=NodeID+1
-    Elem%CurvedNode(iNode)%np%ind=NodeID
-  END DO
 
   DO iLocSide=1,6
     Side=>Elem%Side(iLocSide)%sp
@@ -255,7 +226,7 @@ DO iElem=1,nElems
     Side=>Elem%Side(iLocSide)%sp
     iSide=iSide+1
     !Side Tpye
-    IF(ASSOCIATED(Elem%curvedNode))THEN
+    IF(Ngeo.GT.1)THEN
       SideInfo(iSide,SIDE_Type)=7            ! Side Type: NL quad
     ELSE
       SideInfo(iSide,SIDE_Type)=5            ! Side Type: bilinear
@@ -302,13 +273,6 @@ master%Node(6)%np%ind=HexMap(Ngeo,   0,Ngeo)
 master%Node(7)%np%ind=HexMap(Ngeo,Ngeo,Ngeo)
 master%Node(8)%np%ind=HexMap(   0,Ngeo,Ngeo)
 CALL createSides(master)
-IF(nCurvedNodes.GT.0)THEN
-  ALLOCATE(master%CurvedNode(nCurvedNodes))
-  DO i=1,nCurvedNodes
-    ALLOCATE(master%CurvedNode(i)%np)
-    master%CurvedNode(i)%np%ind=i
-  END DO
-END IF 
 
 IF(nTotalNodes.NE.locnNodes*nElems) &
        CALL abort(__STAMP__,&
@@ -331,7 +295,7 @@ DO iElem=1,nElems
   END DO
   DO iNode=1,nCurvedNodes
     NodeID=NodeID+1
-    NodeInfo(NodeID)=master%curvedNode(iNode)%np%ind + offsetID !Elem%curvedNode(iNode)%np%ind
+    NodeInfo(NodeID)=iNode + offsetID !Elem%curvedNode(iNode)%np%ind
   END DO
   DO iLocSide=1,6
     Side=>Elem%Side(iLocSide)%sp

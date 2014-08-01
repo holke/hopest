@@ -15,7 +15,12 @@ INTERFACE BuildMeshFromP4EST
   MODULE PROCEDURE BuildMeshFromP4EST
 END INTERFACE
 
+INTERFACE BuildHOMeh
+  MODULE PROCEDURE BuildHOMesh
+END INTERFACE
+
 PUBLIC::BuildMeshFromP4EST
+PUBLIC::BuildHOMesh
 !===================================================================================================================================
 
 CONTAINS
@@ -23,7 +28,7 @@ CONTAINS
 
 SUBROUTINE BuildMeshFromP4EST()
 !===================================================================================================================================
-! Subroutine to read the mesh from a mesh data file
+! Subroutine to translate p4est mesh datastructure to HOPR datastructure
 !===================================================================================================================================
 ! MODULES
 USE MOD_Globals
@@ -51,14 +56,14 @@ IF(MESHInitIsDone) RETURN
 SWRITE(UNIT_stdOut,'(A)')'BUILD P4EST MESH AND REFINE ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
 
-! Transform input mesh to adapted mesh
-! Do refinement and save p4est refine
-CALL p4est_refine_mesh(p4est_ptr%p4est,refineLevel,refineElem,p4est_ptr%mesh,nQuadrants,nHalfFaces)
-CALL p4est_save_all(TRIM(ProjectName)//'.p4est'//C_NULL_CHAR,p4est_ptr%p4est)
 
 ! Get arrays from p4est: use pointers for c arrays (QT,QQ,..), duplicate data for QuadCoords,Level
+CALL p4est_get_mesh_info(p4est_ptr%p4est,p4est_ptr%mesh,nQuadrants,nHalfFaces)
+
 ALLOCATE(QuadCoords(3,nQuadrants),QuadLevel(nQuadrants)) ! big to small flip
-QuadCoords=0; QuadLevel=0
+QuadCoords=0
+QuadLevel=0
+
 CALL p4est_get_quadrants(p4est_ptr%p4est,p4est_ptr%mesh,nQuadrants,nHalfFaces,& !IN
                          intsize,QT,QQ,QF,QH,QuadCoords,QuadLevel)              !OUT
 
@@ -116,13 +121,28 @@ DO iQuad=1,nQuadrants
         ! this is a boundary side: 
         !WRITE(*,*)'BC found:'
         !aSide%BCIndex=xxxx
+        NULLIFY(aSide%connection)
         aSide%Flip=0
+        
       ELSE
         aSide%connection=>nbQuad%side(nbSide)%sp
         aSide%connection%flip=HFlip
       END IF !BC side
       IF(PMortar.NE.-1) aSide%MortarType= - (PMortar+1)  ! Pmortar 0...3, small side belonging to  mortar group -> -1..-4
     END IF ! PMortar
+  END DO
+END DO
+
+
+DO iQuad=1,nQuadrants
+  aQuad=>Quads(iQuad)%ep
+  DO iLocSide=1,6
+    aSide=>aQuad%Side(iLocSide)%sp
+    IF(ASSOCIATED(aSide%connection))THEN
+      IF(aSide%connection%elem%ind.GT.iQuad)THEN
+        aSide%flip=0
+      END IF
+    END IF
   END DO
 END DO
 
@@ -231,5 +251,29 @@ GetHFlip=P2H_FaceNodeMap(PNode1,PSide1)
 
 END FUNCTION GetHFlip
 
+SUBROUTINE BuildHOMesh()
+!===================================================================================================================================
+! uses XGeo High order data from trees and interpolates it to the quadrants 
+!===================================================================================================================================
+! MODULES
+USE MOD_Globals
+USE MOD_Mesh_Vars
+! IMPLICIT VARIABLE HANDLING
+IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES
+!===================================================================================================================================
+ALLOCATE(XgeoQuads(3,0:Ngeo,0:Ngeo,0:Ngeo,nQuadrants))
+IF(refineLevel.EQ.0)THEN
+  XgeoQuads=Xgeo
+ELSE
+  STOP 'interpolation only for refinelevel 0'
+END IF
+
+END SUBROUTINE BuildHOMesh
 
 END MODULE MOD_MeshFromP4EST
