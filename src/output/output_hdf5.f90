@@ -293,14 +293,14 @@ master=>GETNEWELEM()
 DO iNode=1,8
   ALLOCATE(master%Node(iNode)%np)
 END DO
-master%Node(1)%np%ind=1    
-master%Node(2)%np%ind=(Ngeo+1) 
-master%Node(3)%np%ind=(Ngeo+1)**2 
-master%Node(4)%np%ind=(Ngeo+1)*Ngeo +1
-master%Node(5)%np%ind=master%Node(1)%np%ind + (Ngeo+1)**2*Ngeo 
-master%Node(6)%np%ind=master%Node(2)%np%ind + (Ngeo+1)**2*Ngeo
-master%Node(7)%np%ind=master%Node(3)%np%ind + (Ngeo+1)**2*Ngeo
-master%Node(8)%np%ind=master%Node(4)%np%ind + (Ngeo+1)**2*Ngeo
+master%Node(1)%np%ind=HexMap(   0,   0,   0)
+master%Node(2)%np%ind=HexMap(Ngeo,   0,   0)
+master%Node(3)%np%ind=HexMap(Ngeo,Ngeo,   0)
+master%Node(4)%np%ind=HexMap(   0,Ngeo,   0)
+master%Node(5)%np%ind=HexMap(   0,   0,Ngeo)
+master%Node(6)%np%ind=HexMap(Ngeo,   0,Ngeo)
+master%Node(7)%np%ind=HexMap(Ngeo,Ngeo,Ngeo)
+master%Node(8)%np%ind=HexMap(   0,Ngeo,Ngeo)
 CALL createSides(master)
 IF(nCurvedNodes.GT.0)THEN
   ALLOCATE(master%CurvedNode(nCurvedNodes))

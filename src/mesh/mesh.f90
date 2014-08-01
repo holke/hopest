@@ -35,11 +35,11 @@ SUBROUTINE InitMesh()
 USE MOD_Globals
 USE MOD_Mesh_Vars
 USE MOD_Output_Vars, ONLY:Projectname
-USE MOD_p4estBinding
 !-----------------------------------------------------------------------------------------------------------------------------------
 USE MOD_Mesh_ReadIn,        ONLY:readMesh
+USE MOD_MeshFromP4EST,      ONLY:BuildMeshFromP4EST
 USE MOD_Output_HDF5,        ONLY:writeMeshToHDF5
-USE MOD_ReadInTools,        ONLY:GETLOGICAL,GETINT,GETINTARRAY,CNTSTR,GETSTR
+USE MOD_ReadInTools,        ONLY:GETINT,GETSTR
 IMPLICIT NONE
 ! INPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -48,10 +48,6 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER :: nQuadrants,nHalfFaces
-INTEGER(KIND=4),ALLOCATABLE :: QuadToTree(:),QuadToQuad(:,:),QuadToHalf(:,:),QuadCoords(:,:)
-INTEGER(KIND=1),ALLOCATABLE :: QuadToFace(:,:),QuadLevel(:)
-REAL :: intsize
 !===================================================================================================================================
 IF(MeshInitIsDone)&
   CALL abort(__STAMP__,&
@@ -63,28 +59,12 @@ SWRITE(UNIT_stdOut,'(A)') ' INIT MESH...'
 ! prepare pointer structure (get nElems, etc.)
 MeshFile = GETSTR('MeshFile')
 ProjectName=Meshfile(1:INDEX(Meshfile,'_mesh.h5')-1)
-
 CALL readMesh(MeshFile) !set nElems
 
-CALL p4est_refine_mesh(p4est_ptr%p4est,2,1,p4est_ptr%mesh,nQuadrants,nHalfFaces)
-CALL p4est_save_all(TRIM(ProjectName)//'.p4est'//C_NULL_CHAR,p4est_ptr%p4est)
+refineLevel=GETINT('refineLevel','2')
+refineElem =GETINT('refineElem','-1')   ! -1 all, >0 specific element
 
-ALLOCATE(QuadToTree(nQuadrants),QuadToQuad(6,nQuadrants),QuadToFace(6,nQuadrants))
-ALLOCATE(QuadCoords(3,nQuadrants),QuadLevel(nQuadrants)) ! big to small flip
-QuadToTree=0
-QuadToQuad=0
-QuadToFace=0
-QuadCoords=0
-QuadLevel=0
-IF(nHalfFaces.GT.0)THEN
-  ! do not allocate if mesh is conform
-  ALLOCATE(QuadToHalf(4,nHalfFaces))
-  QuadToHalf=0
-END IF
-CALL p4est_get_quadrants(p4est_ptr%p4est,p4est_ptr%mesh,nQuadrants,nHalfFaces,& !IN
-                         intsize,QuadToTree,QuadToQuad,QuadToFace,QuadToHalf,QuadCoords,QuadLevel) !OUT
-
-! transform input mesh to adapted mesh
+CALL BuildMeshFromP4EST()
 
 !output new mesh
 CALL writeMeshToHDF5(TRIM(ProjectName)//'_mesh_p4est.h5')

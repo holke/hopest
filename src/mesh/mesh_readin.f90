@@ -138,6 +138,15 @@ CALL readBCs()
 CALL ReadAttribute(File_ID,'BoundaryOrder',1,IntegerScalar=BoundaryOrder_mesh)
 NGeo = BoundaryOrder_mesh-1
 CALL ReadAttribute(File_ID,'CurvedFound',1,LogicalScalar=useCurveds)
+
+! mapping form one-dimensional list [1 ; (Ngeo+1)^3] to tensor-product 0 <= i,j,k <= Ngeo and back
+ALLOCATE(HexMap(0:Ngeo,0:Ngeo,0:Ngeo),HexMapInv(3,(Ngeo+1)**3))
+l=0
+DO k=0,Ngeo ; DO j=0,Ngeo ; DO i=0,Ngeo
+  l=l+1
+  HexMap(i,j,k)=l
+  HexMapInv(:,l)=(/i,j,k/)
+END DO ; END DO ; END DO
 !----------------------------------------------------------------------------------------------------------------------------
 !                              ELEMENTS
 !----------------------------------------------------------------------------------------------------------------------------

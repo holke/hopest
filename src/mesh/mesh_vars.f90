@@ -33,6 +33,9 @@ INTEGER          :: nCurvedNodes=0      ! number of curved nodes per element = (
 !-----------------------------------------------------------------------------------------------------------------------------------
 CHARACTER(LEN=255),ALLOCATABLE   :: BoundaryName(:)
 CHARACTER(LEN=255)               :: MeshFile        ! name of hdf5 meshfile (write with ending .h5!)
+INTEGER                          :: refineElem
+INTEGER                          :: refineLevel
+
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! USER DEFINED TYPES 
 TYPE tNodePtr
@@ -72,7 +75,8 @@ TYPE tSide
   INTEGER                      :: BCindex         ! index in BoundaryType array! 
   INTEGER                      :: flip 
   INTEGER                      :: nMortars        ! number of slave mortar sides associated with master mortar
-  INTEGER                      :: MortarType      ! type of mortar: Type1 : 1-4 , Type 2: 1-2 in eta, Type 2: 1-2 in xi
+  INTEGER                      :: MortarType      ! type of mortar: Type1 : 1-4 , Type 2: 1-2 in eta, Type 3: 1-2 in xi
+  !TODO: if tSide is small side of a mortar group, mortar type is -1
   TYPE(tNodePtr)               :: Node(4)
   TYPE(tEdgePtr)               :: Edge(4)
   TYPE(tElem),POINTER          :: Elem
@@ -99,6 +103,8 @@ END TYPE tNode
 TYPE(tElemPtr),POINTER         :: Elems(:)
 TYPE(tNodePtr),POINTER         :: Nodes(:)
 TYPE(tEdgePtr),POINTER         :: Edges(:)
+INTEGER,ALLOCATABLE            :: HexMap(:,:,:)
+INTEGER,ALLOCATABLE            :: HexMapInv(:,:)
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! P4EST related data structures 
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -116,8 +122,51 @@ INTEGER,PARAMETER   :: EdgeToElemNode(1:2,1:12) = RESHAPE((/ 1, 2,&  ! CGNS corn
                                                              2, 6,&
                                                              4, 8,&
                                                              3, 7 /),(/2,12/))
-INTEGER,PARAMETER   :: H2P_VertexMap(1:8) =  (/0,1,3,2,4,5,7,6/)  !mapping from local node order (CGNS) to p4est node order 
-INTEGER,PARAMETER   :: P2H_VertexMap(0:7) =  (/1,2,4,3,5,6,8,7/)  !mapping from local node order (CGNS) to p4est node order 
+INTEGER,PARAMETER   :: H2P_FaceMap(1:6)     =  (/4,2,1,3,0,5/)     !mapping from local face order (CGNS) to p4est face
+INTEGER,PARAMETER   :: P2H_FaceMap(0:5)     =  (/5,3,2,4,1,6/)     !mapping from local face order (CGNS) to p4est face
+INTEGER,PARAMETER   :: H2P_VertexMap(1:8)   =  (/0,1,3,2,4,5,7,6/) !mapping from local node order (CGNS) to p4est node order 
+INTEGER,PARAMETER   :: P2H_VertexMap(0:7)   =  (/1,2,4,3,5,6,8,7/) !mapping from local node order (CGNS) to p4est node order 
+
+! mapping from HOPEST node of local sides to P4EST nodes of local sides
+INTEGER,PARAMETER   :: H2P_FaceNodeMap(1:4,1:6) = &
+                                      RESHAPE((/ 0,2,3,1,&
+                                                 0,1,3,2,&
+                                                 0,1,3,2,&
+                                                 1,0,2,3,&
+                                                 0,2,3,1,&
+                                                 0,1,3,2 /),(/4,6/))
+
+! mapping from P4EST node of local sides to HOPEST node of local sides
+INTEGER,PARAMETER   :: P2H_FaceNodeMap(0:3,0:5) = &
+                                      RESHAPE((/ 1,4,2,3,&
+                                                 1,2,4,3,&
+                                                 1,2,4,3,&
+                                                 2,1,3,4,&
+                                                 1,4,2,3,&
+                                                 1,2,4,3 /),(/4,6/))
+
+! Mapping matrices for computation of same node on adjacent face, see paper Burstedde p4est, 2011
+! Node1= P4P(P4Q(P4R(Face0,Face1),orientation),Node0)
+INTEGER,PARAMETER   :: P4R(0:5,0:5) = TRANSPOSE(RESHAPE((/ 0,1,1,0,0,1,&
+                                                           2,0,0,1,1,0,&
+                                                           2,0,0,1,1,0,&
+                                                           0,2,2,0,0,1,&
+                                                           2,0,0,2,2,0,&
+                                                           2,0,0,2,2,0 /),(/6,6/)))
+
+INTEGER,PARAMETER   :: P4Q(0:2,0:3) = TRANSPOSE(RESHAPE((/ 1,2,5,6,&
+                                                           0,3,4,7,&
+                                                           0,4,3,7 /),(/4,3/)))
+
+INTEGER,PARAMETER   :: P4P(0:7,0:3) = TRANSPOSE(RESHAPE((/ 0,1,2,3,&
+                                                           0,2,1,3,&
+                                                           1,0,3,2,&
+                                                           1,3,0,2,&
+                                                           2,0,3,1,&
+                                                           2,3,0,1,&
+                                                           3,1,2,0,&
+                                                           3,2,1,0 /),(/4,8/)))
+
 !-----------------------------------------------------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------------------------------------------------
 LOGICAL          :: MeshInitIsDone =.FALSE.

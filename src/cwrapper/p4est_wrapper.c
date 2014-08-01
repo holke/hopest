@@ -182,10 +182,10 @@ void p4est_get_quadrants ( p4est_t       *p4est,
                            int            global_num_quadrants,
                            int            num_half_faces,
                            double         *intsize,
-                           p4est_topidx_t *quad_to_tree,
-                           p4est_locidx_t *quad_to_quad,
-                           int8_t         *quad_to_face, 
-                           p4est_locidx_t *quad_to_half, 
+                           p4est_topidx_t **quad_to_tree,
+                           p4est_locidx_t **quad_to_quad,
+                           int8_t         **quad_to_face, 
+                           p4est_locidx_t **quad_to_half, 
                            p4est_qcoord_t *quadcoords,
                            int8_t         *quadlevel ) 
 {
@@ -209,22 +209,12 @@ void p4est_get_quadrants ( p4est_t       *p4est,
     quadcoords[iquad*3+1] = q->y;
     quadcoords[iquad*3+2] = q->z;
   }
-  memcpy( (void*)quad_to_tree, (void*)mesh->quad_to_tree, 
-           mesh->local_num_quadrants*sizeof(p4est_topidx_t) );
-  memcpy( (void*)quad_to_quad, (void*)mesh->quad_to_quad, 
-           mesh->local_num_quadrants*6*sizeof(p4est_locidx_t) );
-  memcpy( (void*)quad_to_face, (void*)mesh->quad_to_face, 
-           mesh->local_num_quadrants*6*sizeof(int8_t) );
 
-  if(num_half_faces>0) {
-    for (iface = 0; iface < num_half_faces; iface++) {
-      halfentries=(p4est_locidx_t *) (mesh->quad_to_half->array + 4*sizeof(p4est_locidx_t) * iface);
-      for (i = 0; i < 4; i++) {
-        quad_to_half[iface*4+i] = halfentries[i];
-      }
-    }
-  }
+  *quad_to_tree=mesh->quad_to_tree;
+  *quad_to_quad=mesh->quad_to_quad;
+  *quad_to_face=mesh->quad_to_face;
 
+  if(num_half_faces>0) *quad_to_half=mesh->quad_to_half->array;
 }
 
 void p4est_save_all ( char    filename[],
