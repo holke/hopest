@@ -5,6 +5,9 @@ COMPILER='GNU_DEBUG'
 #First the bootstrapper:
 git submodule init && git submodule update
 ./bootstrap
+if [[ $? != 0 ]]; then
+  exit $?
+fi
 
 cd hdf5
 if [[ $COMPILER == *GNU* ]]; then

@@ -32,9 +32,6 @@ INTEGER             :: nNodes=0            ! SIZE of Nodes pointer array, number
 INTEGER             :: nBCs=0              ! number of BCs in mesh
 INTEGER             :: nCurvedNodes=0      ! number of curved nodes per element = (Ngeo+1)^3
 !-----------------------------------------------------------------------------------------------------------------------------------
-INTEGER                          :: nQuadrants
-INTEGER                          :: nHalfFaces
-!-----------------------------------------------------------------------------------------------------------------------------------
 CHARACTER(LEN=255),ALLOCATABLE   :: BoundaryName(:)
 CHARACTER(LEN=255)               :: MeshFile        ! name of hdf5 meshfile (write with ending .h5!)
 INTEGER                          :: refineLevel
