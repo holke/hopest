@@ -368,6 +368,8 @@ INTEGER,INTENT(INOUT)    :: ElemCounter(11,2)
       elemcounter(10,2)=elemcounter(10,2)+1
     CASE(208) !spline hex
       elemcounter(11,2)=elemcounter(11,2)+1
+    CASE DEFAULT
+      STOP 'elem type not defined in elemcounter'
   END SELECT
 END SUBROUTINE AddToElemCounter
 

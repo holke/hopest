@@ -44,13 +44,15 @@ IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 TYPE(C_PTR)                 :: QT,QQ,QF,QH
-TYPE(tElem),POINTER         :: aQuad,nbQuad
+TYPE(tElem),POINTER         :: aQuad,nbQuad,Tree
 TYPE(tSide),POINTER         :: aSide
-INTEGER                     :: iQuad,iMortar
+INTEGER                     :: iQuad,iMortar,iElem
 INTEGER                     :: PSide,PnbSide,nbSide
 INTEGER                     :: nbQuadInd
 INTEGER                     :: PMortar,PFlip,HFlip,QHInd
 INTEGER                     :: iLocSide
+INTEGER                     :: StartQuad,EndQuad
+INTEGER                     :: BClocSide,BCindex
 !===================================================================================================================================
 IF(MESHInitIsDone) RETURN
 SWRITE(UNIT_stdOut,'(A)')'BUILD P4EST MESH AND REFINE ...'
@@ -72,6 +74,23 @@ CALL C_F_POINTER(QQ,QuadToQuad,(/6,nQuadrants/))
 CALL C_F_POINTER(QF,QuadToFace,(/6,nQuadrants/))
 IF(nHalfFaces.GT.0) CALL C_F_POINTER(QH,QuadToHalf,(/4,nHalfFaces/))
 
+ALLOCATE(TreeToQuad(2,nElems))
+TreeToQuad(1,1)=0
+TreeToQuad(2,nElems)=nQuadrants
+StartQuad=0
+EndQuad=0
+DO iElem=1,nElems
+  TreeToQuad(1,iElem)=StartQuad
+  DO iQuad=StartQuad+1,nQuadrants
+    IF(QuadToTree(iQuad)+1.EQ.iElem)THEN
+      EndQuad=EndQuad+1
+    ELSE
+      TreeToQuad(2,iElem)=EndQuad
+      StartQuad=EndQuad
+      EXIT 
+    END IF
+  END DO !iQuad
+END DO !iElem
 !----------------------------------------------------------------------------------------------------------------------------
 !             Start to build p4est datastructure in HOPEST
 !----------------------------------------------------------------------------------------------------------------------------
@@ -92,6 +111,8 @@ END DO
 
 DO iQuad=1,nQuadrants
   aQuad=>Quads(iQuad)%ep
+  Tree=>Elems(QuadToTree(iQuad)+1)%ep
+  aQuad%type=Tree%type
   DO iLocSide=1,6
     aSide=>aQuad%Side(iLocSide)%sp
     ! Get P4est local side
@@ -119,8 +140,9 @@ DO iQuad=1,nQuadrants
       nbSide=P2H_FaceMap(PnbSide)
       IF((nbQuadInd.EQ.iQuad).AND.(nbSide.EQ.iLocSide))THEN
         ! this is a boundary side: 
-        !WRITE(*,*)'BC found:'
-        !aSide%BCIndex=xxxx
+        BCindex=Tree%Side(iLocSide)%sp%BCindex 
+        IF(BCIndex.EQ.0) STOP 'Problem in Boundary assignment'
+        aSide%BCIndex=BCIndex
         NULLIFY(aSide%connection)
         aSide%Flip=0
         
@@ -133,7 +155,7 @@ DO iQuad=1,nQuadrants
   END DO
 END DO
 
-
+! set master slave,  element with lower element ID is master (flip=0)
 DO iQuad=1,nQuadrants
   aQuad=>Quads(iQuad)%ep
   DO iLocSide=1,6
@@ -145,6 +167,7 @@ DO iQuad=1,nQuadrants
     END IF
   END DO
 END DO
+
 
 !sanity check
 DO iQuad=1,nQuadrants

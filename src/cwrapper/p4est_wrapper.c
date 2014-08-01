@@ -184,7 +184,7 @@ void p4est_get_quadrants ( p4est_t       *p4est,
                            p4est_mesh_t   *mesh,
                            int            global_num_quadrants,
                            int            num_half_faces,
-                           double         *intsize,
+                           p4est_qcoord_t  *intsize,
                            p4est_topidx_t **quad_to_tree,
                            p4est_locidx_t **quad_to_quad,
                            int8_t         **quad_to_face, 
@@ -199,7 +199,7 @@ void p4est_get_quadrants ( p4est_t       *p4est,
   sc_array_t         *quadrants;
   p4est_locidx_t     *halfentries;
 
-  *intsize = (double) 1.0/P4EST_ROOT_LEN;
+  *intsize = P4EST_ROOT_LEN;
 
   P4EST_ASSERT (global_num_quadrants == p4est->local_num_quadrants);
   for (iquad = 0; iquad < mesh->local_num_quadrants; iquad++) {

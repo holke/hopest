@@ -107,7 +107,7 @@ INTERFACE
   INTEGER(KIND=C_INT),VALUE :: num_half_faces
   !---------------------------------------------------------------------------------------------------------------------------------
   ! OUTPUT VARIABLES
-  REAL(KIND=C_DOUBLE),INTENT(OUT) :: intsize ! 1.0 / P4EST_ROOT_LEN -> int2real transform in parameter space, REAL=intsize*INT [0,1]
+  INTEGER(KIND=4),INTENT(OUT) :: intsize ! P4EST_ROOT_LEN -> int2real transform in parameter space, REAL=1/intsize*INT [0,1]
   TYPE(C_PTR),INTENT(OUT)     :: quad_to_tree
   TYPE(C_PTR),INTENT(OUT)     :: quad_to_quad
   TYPE(C_PTR),INTENT(OUT)     :: quad_to_face
