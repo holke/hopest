@@ -37,6 +37,7 @@ USE MOD_Mesh_Vars
 USE MOD_Output_Vars, ONLY:Projectname
 !-----------------------------------------------------------------------------------------------------------------------------------
 USE MOD_Mesh_ReadIn,        ONLY:readMesh
+USE MOD_Mesh_Refine,        ONLY:RefineMesh
 USE MOD_MeshFromP4EST,      ONLY:BuildMeshFromP4EST
 USE MOD_Output_HDF5,        ONLY:writeMeshToHDF5
 USE MOD_ReadInTools,        ONLY:GETINT,GETSTR
@@ -61,9 +62,10 @@ MeshFile = GETSTR('MeshFile')
 ProjectName=Meshfile(1:INDEX(Meshfile,'_mesh.h5')-1)
 CALL readMesh(MeshFile) !set nElems
 
-refineLevel=GETINT('refineLevel','2')
-refineElem =GETINT('refineElem','-1')   ! -1 all, >0 specific element
+refineLevel=GETINT('refineLevel','1')
+refineType =GETINT('refineType','1') ! default conform refinement
 
+CALL RefineMesh()
 CALL BuildMeshFromP4EST()
 
 !output new mesh

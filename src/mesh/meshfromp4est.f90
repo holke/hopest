@@ -26,6 +26,7 @@ SUBROUTINE BuildMeshFromP4EST()
 ! Subroutine to read the mesh from a mesh data file
 !===================================================================================================================================
 ! MODULES
+USE, INTRINSIC :: ISO_C_BINDING
 USE MOD_Globals
 USE MOD_Mesh_Vars
 USE MOD_p4estBinding
@@ -65,7 +66,6 @@ INTEGER,ALLOCATABLE            :: tree_to_vertex(:,:)
 REAL,ALLOCATABLE               :: vertices(:,:)
 
 TYPE(tElemPtr),ALLOCATABLE     :: Quads(:)
-INTEGER                     :: nQuadrants,nHalfFaces
 TYPE(C_PTR)                 :: QT,QQ,QF,QH
 INTEGER(KIND=4),POINTER     :: QuadToTree(:),QuadToQuad(:,:),QuadToHalf(:,:)
 INTEGER(KIND=1),POINTER     :: QuadToFace(:,:)
@@ -84,8 +84,6 @@ SWRITE(UNIT_stdOut,'(A)')'BUILD P4EST MESH AND REFINE ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
 
 ! Transform input mesh to adapted mesh
-! Do refinement and save p4est refine
-CALL p4est_refine_mesh(p4est_ptr%p4est,refineLevel,refineElem,p4est_ptr%mesh,nQuadrants,nHalfFaces)
 CALL p4est_save_all(TRIM(ProjectName)//'.p4est'//C_NULL_CHAR,p4est_ptr%p4est)
 
 ! Get arrays from p4est: use pointers for c arrays (QT,QQ,..), duplicate data for QuadCoords,Level
@@ -262,6 +260,5 @@ PNode1=P4P(P4Q(P4R(PSide0,PSide1),PFlip),PNode0)
 GetHFlip=P2H_FaceNodeMap(PNode1,PSide1)
 
 END FUNCTION GetHFlip
-
 
 END MODULE MOD_MeshFromP4EST

@@ -21,21 +21,24 @@ REAL,ALLOCATABLE  :: XGeo(:,:,:,:,:)              ! High order geometry nodes, p
 !-----------------------------------------------------------------------------------------------------------------------------------
 INTEGER,ALLOCATABLE :: BoundaryType(:,:)
 !-----------------------------------------------------------------------------------------------------------------------------------
-INTEGER          :: nGlobalElems=0      ! number of elements in mesh
-INTEGER          :: nElems=0            ! number of local elements
-INTEGER          :: nEdges=0            ! number of unique edges
-INTEGER          :: nSides=0            ! =nInnerSides+nBCSides
-INTEGER          :: nMortarSides=0      ! 
-INTEGER          :: nBCSides=0          ! BCSide index range: sideID \in [1:nBCSides]
-INTEGER          :: nNodes=0            ! SIZE of Nodes pointer array, number of unique nodes
-INTEGER          :: nBCs=0              ! number of BCs in mesh
-INTEGER          :: nCurvedNodes=0      ! number of curved nodes per element = (Ngeo+1)^3
+INTEGER             :: nGlobalElems=0      ! number of elements in mesh
+INTEGER             :: nElems=0            ! number of local elements
+INTEGER             :: nEdges=0            ! number of unique edges
+INTEGER             :: nSides=0            ! =nInnerSides+nBCSides
+INTEGER             :: nMortarSides=0      ! 
+INTEGER             :: nBCSides=0          ! BCSide index range: sideID \in [1:nBCSides]
+INTEGER             :: nNodes=0            ! SIZE of Nodes pointer array, number of unique nodes
+INTEGER             :: nBCs=0              ! number of BCs in mesh
+INTEGER             :: nCurvedNodes=0      ! number of curved nodes per element = (Ngeo+1)^3
+!-----------------------------------------------------------------------------------------------------------------------------------
+INTEGER                          :: nQuadrants
+INTEGER                          :: nHalfFaces
 !-----------------------------------------------------------------------------------------------------------------------------------
 CHARACTER(LEN=255),ALLOCATABLE   :: BoundaryName(:)
 CHARACTER(LEN=255)               :: MeshFile        ! name of hdf5 meshfile (write with ending .h5!)
-INTEGER                          :: refineElem
 INTEGER                          :: refineLevel
-
+INTEGER                          :: refineType
+INTEGER,ALLOCATABLE              :: RefineList(:)
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! USER DEFINED TYPES 
 TYPE tNodePtr

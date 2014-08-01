@@ -31,8 +31,9 @@ INTERFACE
   !=================================================================================================================================
   END SUBROUTINE p4est_connectivity_treevertex 
 
-  SUBROUTINE p4est_refine_mesh(p4est,refine_level,refine_elem,mesh,&
-                               global_num_quadrants,num_half_faces) BIND(C)
+
+  SUBROUTINE p4est_refine_mesh(p4est,refine_function,refine_level,&
+                               mesh,global_num_quadrants,num_half_faces) BIND(C)
   !=================================================================================================================================
   ! simple refine function, giving the level and if refine_elem < 0 then a conformal refinement is applied.
   !=================================================================================================================================
@@ -42,16 +43,17 @@ INTERFACE
   IMPLICIT NONE
   !---------------------------------------------------------------------------------------------------------------------------------
   ! INPUT VARIABLES
-  TYPE(C_PTR),VALUE                :: p4est
-  INTEGER( KIND = C_INT),VALUE     :: refine_level 
-  INTEGER( KIND = C_INT),VALUE     :: refine_elem 
+  TYPE(C_PTR),INTENT(IN),VALUE          :: p4est
+  TYPE(C_FUNPTR),INTENT(IN),VALUE       :: refine_function
+  INTEGER(KIND=C_INT),INTENT(IN),VALUE  :: refine_level 
   !---------------------------------------------------------------------------------------------------------------------------------
   ! OUTPUT VARIABLES
-  TYPE(C_PTR)                      :: mesh
-  INTEGER                          :: global_num_quadrants
-  INTEGER                          :: num_half_faces
+  TYPE(C_PTR),INTENT(OUT)               :: mesh
+  INTEGER(KIND=C_INT),INTENT(OUT)       :: global_num_quadrants
+  INTEGER(KIND=C_INT),INTENT(OUT)       :: num_half_faces
   !=================================================================================================================================
   END SUBROUTINE p4est_refine_mesh 
+
 
   SUBROUTINE p4est_save_all(filename, p4est) BIND(C)
   !=================================================================================================================================

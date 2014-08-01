@@ -10,27 +10,7 @@
 #include <p4est_to_p8est.h>
 
 
-static int
-refine_one (p4est_t * p4est, p4est_topidx_t which_tree,
-           p4est_quadrant_t * quadrant) 
-{
-  if(which_tree == 0)  
-  //if( which_tree == 147 | which_tree == 148 ) 
-  {
-    return 1;
-  }
-  else
-  {
-    return 0;
-  }
-}
 
-static int
-refine_all (p4est_t * p4est, p4est_topidx_t which_tree,
-           p4est_quadrant_t * quadrant)
-{
-  return 1;
-}
 
 
 void p4est_connectivity_treevertex (p4est_topidx_t num_vertices,
@@ -96,12 +76,28 @@ void p4est_connectivity_treevertex (p4est_topidx_t num_vertices,
 
 }
 
-void p4est_refine_mesh ( p4est_t        *p4est,
-                         int             refine_level,
-                         int             refine_elem,
-                         p4est_mesh_t   **mesh_out,
-                         int            *global_num_quadrants,
-                         int            *num_half_faces )
+
+/* Theses functions are required for performing the mesh refinement in p4est.
+   The dummy function refine_hopest is used a refinement function for p4est.
+   The actual refinement functions are in HOPEST, called through refine_f.
+*/
+
+int (*refine_f) (p4est_qcoord_t,p4est_qcoord_t,p4est_qcoord_t,p4est_topidx_t,int8_t);
+
+static int
+refine_hopest (p4est_t * p4est, p4est_topidx_t which_tree,
+               p4est_quadrant_t * q)
+{
+  return refine_f(q->x,q->y,q->z,which_tree,q->level);
+}
+
+void p4est_refine_mesh (p4est_t  *p4est,
+                        int     (*myrefine_f)
+                                (p4est_qcoord_t,p4est_qcoord_t,p4est_qcoord_t,p4est_topidx_t,int8_t),
+                        int     refine_level,
+                        p4est_mesh_t  **mesh_out,
+                        int     *global_num_quadrants,
+                        int     *num_half_faces )
 {
   p4est_mesh_t       *mesh;
   p4est_ghost_t      *ghost;
@@ -112,21 +108,16 @@ void p4est_refine_mesh ( p4est_t        *p4est,
   P4EST_GLOBAL_PRODUCTIONF
     ("DEBUG: refine_level  %d \n",refine_level);
   P4EST_GLOBAL_PRODUCTIONF
-    ("DEBUG: refine_elem  %d \n",refine_elem);
-  P4EST_GLOBAL_PRODUCTIONF
     ("DEBUG: New connectivity with %lld trees and %lld vertices\n",
      (long long) p4est->connectivity->num_trees, (long long) p4est->connectivity->num_vertices);
+
+  // Set refinement function pointer called by refine_hopest to function provided by HOPEST
+  refine_f=myrefine_f;
+  
   /* Refine the forest iteratively, load balancing at each iteration.
    * This is important when starting with an unrefined forest */
   for (level = 0; level < refine_level; ++level) {
-    if(refine_elem < 0 )
-    {
-      p4est_refine (p4est, 0, refine_all, NULL);
-    }
-    else
-    {
-      p4est_refine (p4est, 0, refine_one, NULL);
-    }
+    p4est_refine (p4est, 0, &refine_hopest, NULL);
     /* Refinement has lead to up to 8x more elements; redistribute them. */
     p4est_partition (p4est, 0, NULL);
   }
