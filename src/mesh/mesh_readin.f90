@@ -86,7 +86,7 @@ CHARACTER(LEN=*),INTENT(IN)  :: FileString
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER                        :: i,j,k
+INTEGER                        :: i,j,k,l
 INTEGER                        :: BCindex
 INTEGER                        :: iElem,ElemID
 INTEGER                        :: iNode,jNode,NodeID,SideID
@@ -138,6 +138,14 @@ CALL readBCs()
 CALL ReadAttribute(File_ID,'BoundaryOrder',1,IntegerScalar=BoundaryOrder_mesh)
 NGeo = BoundaryOrder_mesh-1
 CALL ReadAttribute(File_ID,'CurvedFound',1,LogicalScalar=useCurveds)
+
+ALLOCATE(HexMap(0:Ngeo,0:Ngeo,0:Ngeo),HexMapInv(3,(Ngeo+1)**3))
+l=0
+DO k=0,Ngeo ; DO j=0,Ngeo ; DO i=0,Ngeo
+  l=l+1
+  HexMap(i,j,k)=l
+  HexMapInv(:,l)=(/i,j,k/)
+END DO ; END DO ; END DO
 !----------------------------------------------------------------------------------------------------------------------------
 !                              ELEMENTS
 !----------------------------------------------------------------------------------------------------------------------------

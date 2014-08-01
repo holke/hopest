@@ -99,6 +99,8 @@ END TYPE tNode
 TYPE(tElemPtr),POINTER         :: Elems(:)
 TYPE(tNodePtr),POINTER         :: Nodes(:)
 TYPE(tEdgePtr),POINTER         :: Edges(:)
+INTEGER,ALLOCATABLE            :: HexMap(:,:,:)
+INTEGER,ALLOCATABLE            :: HexMapInv(:,:)
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! P4EST related data structures 
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -121,6 +123,7 @@ INTEGER,PARAMETER   :: P2H_FaceMap(0:5)     =  (/5,3,2,4,1,6/)     !mapping from
 INTEGER,PARAMETER   :: H2P_VertexMap(1:8)   =  (/0,1,3,2,4,5,7,6/) !mapping from local node order (CGNS) to p4est node order 
 INTEGER,PARAMETER   :: P2H_VertexMap(0:7)   =  (/1,2,4,3,5,6,8,7/) !mapping from local node order (CGNS) to p4est node order 
 
+! mapping from HOPEST node of local sides to P4EST nodes of local sides
 INTEGER,PARAMETER   :: H2P_FaceNodeMap(1:4,1:6) = &
                                       RESHAPE((/ 0,2,3,1,&
                                                  0,1,3,2,&
@@ -129,7 +132,8 @@ INTEGER,PARAMETER   :: H2P_FaceNodeMap(1:4,1:6) = &
                                                  0,2,3,1,&
                                                  0,1,3,2 /),(/4,6/))
 
-INTEGER,PARAMETER   :: P2H_FaceNodeMap(1:4,1:6) = &
+! mapping from P4EST node of local sides to HOPEST node of local sides
+INTEGER,PARAMETER   :: P2H_FaceNodeMap(0:3,0:5) = &
                                       RESHAPE((/ 1,4,2,3,&
                                                  1,2,4,3,&
                                                  1,2,4,3,&
@@ -137,25 +141,27 @@ INTEGER,PARAMETER   :: P2H_FaceNodeMap(1:4,1:6) = &
                                                  1,4,2,3,&
                                                  1,2,4,3 /),(/4,6/))
 
-INTEGER,PARAMETER   :: P4R(1:6,1:6) = RESHAPE((/ 1,2,2,1,1,2,&
-                                                 3,1,1,2,2,1,&
-                                                 3,1,1,2,2,1,&
-                                                 1,3,3,1,1,2,&
-                                                 3,1,1,3,3,1,&
-                                                 3,1,1,3,3,1 /),(/6,6/))
+! Mapping matrices for computation of same node on adjacent face, see paper Burstedde p4est, 2011
+! Node1= P4P(P4Q(P4R(Face0,Face1),orientation),Node0)
+INTEGER,PARAMETER   :: P4R(0:5,0:5) = TRANSPOSE(RESHAPE((/ 0,1,1,0,0,1,&
+                                                           2,0,0,1,1,0,&
+                                                           2,0,0,1,1,0,&
+                                                           0,2,2,0,0,1,&
+                                                           2,0,0,2,2,0,&
+                                                           2,0,0,2,2,0 /),(/6,6/)))
 
-INTEGER,PARAMETER   :: P4Q(1:4,1:3) = RESHAPE((/ 2,3,6,7,&
-                                                 1,4,5,8,&
-                                                 1,5,4,8 /),(/4,3/))
+INTEGER,PARAMETER   :: P4Q(0:2,0:3) = TRANSPOSE(RESHAPE((/ 1,2,5,6,&
+                                                           0,3,4,7,&
+                                                           0,4,3,7 /),(/4,3/)))
 
-INTEGER,PARAMETER   :: P4P(1:4,1:8) = RESHAPE((/ 0,1,2,3,&
-                                                 0,2,1,3,&
-                                                 1,0,3,2,&
-                                                 1,3,0,2,&
-                                                 2,0,3,1,&
-                                                 2,3,0,1,&
-                                                 3,1,2,0,&
-                                                 3,2,1,0 /),(/4,8/))
+INTEGER,PARAMETER   :: P4P(0:7,0:3) = TRANSPOSE(RESHAPE((/ 0,1,2,3,&
+                                                           0,2,1,3,&
+                                                           1,0,3,2,&
+                                                           1,3,0,2,&
+                                                           2,0,3,1,&
+                                                           2,3,0,1,&
+                                                           3,1,2,0,&
+                                                           3,2,1,0 /),(/4,8/)))
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------------------------------------------------
