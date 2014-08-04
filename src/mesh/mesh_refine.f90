@@ -29,6 +29,7 @@ SUBROUTINE RefineMesh()
 USE MOD_Globals
 USE MOD_Mesh_Vars
 USE MOD_p4estBinding
+USE MOD_Readintools,ONLY:GETINT
 USE, INTRINSIC :: ISO_C_BINDING
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
@@ -39,6 +40,7 @@ IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 TYPE(C_FUNPTR)              :: refineFunc
+INTEGER                     :: iSide,iElem
 !===================================================================================================================================
 IF(MESHInitIsDone) RETURN
 SWRITE(UNIT_stdOut,'(A)')'BUILD P4EST MESH AND REFINE ...'
@@ -60,11 +62,11 @@ CASE(2)
 CASE(3)
   refineFunc=C_FUNLOC(RefineByGeom)
 CASE(4)
-  refineFunc=C_FUNLOC(RefineByBC)
+  refineFunc=C_FUNLOC(RefineByList)
   DO iElem=1,nElems
     DO iSide=1,6
-      IF(Elems(iElem)%ep%side(iSide)%BCIndex.GT.0)THEN
-        RefineList(iElem)=RefineLevel
+      IF(Elems(iElem)%ep%side(iSide)%sp%BCIndex.GT.0)THEN
+!        RefineList(iElem)=RefineLevel
       END IF
     END DO
   END DO
@@ -100,11 +102,7 @@ INTEGER(KIND=C_INT)                      :: refineAll
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
-IF(tree==0)THEN
-  refineAll=1
-ELSE
-  refineAll=0
-END IF
+refineAll=1
 END FUNCTION RefineAll
 
 
@@ -131,29 +129,6 @@ INTEGER(KIND=C_INT)                      :: refineByList
 refineByList = RefineList(tree)
 RefineList(tree)=RefineList(tree)-1
 END FUNCTION RefineByList
-
-
-FUNCTION RefineByGeom(x,y,z,tree,level) BIND(C)
-!===================================================================================================================================
-! Subroutine to refine the the mesh
-!===================================================================================================================================
-! MODULES
-USE, INTRINSIC :: ISO_C_BINDING
-! IMPLICIT VARIABLE HANDLING
-IMPLICIT NONE
-!-----------------------------------------------------------------------------------------------------------------------------------
-! INPUT VARIABLES
-INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: x,y,z
-INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: tree
-INTEGER(KIND=C_INT8_T ),INTENT(IN),VALUE :: level
-!-----------------------------------------------------------------------------------------------------------------------------------
-! OUTPUT VARIABLES
-INTEGER(KIND=C_INT)                      :: refineByGeom
-!-----------------------------------------------------------------------------------------------------------------------------------
-! LOCAL VARIABLES
-!-----------------------------------------------------------------------------------------------------------------------------------
-RefineByGeom=1
-END FUNCTION RefineByGeom
 
 
 FUNCTION RefineByGeom(x,y,z,tree,level) BIND(C)
