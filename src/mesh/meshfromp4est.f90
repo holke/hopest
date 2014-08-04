@@ -174,7 +174,7 @@ DO iQuad=1,nQuadrants
   aQuad=>Quads(iQuad)%ep
   DO iLocSide=1,6
     IF(aQuad%Side(iLocSide)%sp%flip.LT.0) THEN
-      WRITE(*,*) 'flip assignmenti failed, iQuad= ',iQuad,', iLocSide= ',iLocSide 
+      WRITE(*,*) 'flip assignment failed, iQuad= ',iQuad,', iLocSide= ',iLocSide 
       STOP
     END IF
   END DO
@@ -280,7 +280,8 @@ SUBROUTINE BuildHOMesh()
 !===================================================================================================================================
 ! MODULES
 USE MOD_Globals
-USE MOD_Mesh_Vars
+USE MOD_Mesh_Vars, ONLY: refinelevel 
+USE MOD_Mesh_Vars, ONLY: Ngeo,nQuadrants,nElems,Xgeo,XgeoQuad
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -290,9 +291,9 @@ IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 !===================================================================================================================================
-ALLOCATE(XgeoQuads(3,0:Ngeo,0:Ngeo,0:Ngeo,nQuadrants))
+ALLOCATE(XgeoQuad(3,0:Ngeo,0:Ngeo,0:Ngeo,nQuadrants))
 IF(refineLevel.EQ.0)THEN
-  XgeoQuads=Xgeo
+  XgeoQuad=Xgeo
 ELSE
   STOP 'interpolation only for refinelevel 0'
 END IF
