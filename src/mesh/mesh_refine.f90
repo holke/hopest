@@ -61,7 +61,7 @@ CASE DEFAULT
 END SELECT
 
 CALL p4est_refine_mesh(p4est_ptr%p4est,refineFunction,refineLevel,& !IN
-                       p4est_ptr%mesh,nQuadrants,nHalfFaces)        !OUT
+                       p4est_ptr%mesh)                              !OUT
 
 SDEALLOCATE(RefineList)
 
