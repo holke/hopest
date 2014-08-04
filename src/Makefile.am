@@ -31,7 +31,7 @@ libhopest_compiled_sources = \
 	src/io_hdf5/hdf5_input.f90 \
 	src/io_hdf5/hdf5_output.f90 \
 	src/output/output_hdf5.f90 \
-	src/output/output.f90 \ 
+	src/output/output.f90 \
 	src/mesh/mesh_readin.f90 \
 	src/mesh/mesh_refine.f90 \
 	src/mesh/meshfromp4est.f90 \
