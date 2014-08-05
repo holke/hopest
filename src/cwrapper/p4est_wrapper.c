@@ -84,7 +84,8 @@ static int
 refine_hopest (p4est_t * p4est, p4est_topidx_t which_tree,
                p4est_quadrant_t * q)
 {
-  return refine_f(q->x,q->y,q->z,which_tree,q->level);
+  // Call HOPEST refinemtn routines
+  return refine_f(q->x,q->y,q->z,which_tree+1,q->level);
 }
 
 void p4est_refine_mesh (p4est_t  *p4est,

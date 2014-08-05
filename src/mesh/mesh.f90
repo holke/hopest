@@ -63,9 +63,6 @@ MeshFile = GETSTR('MeshFile')
 ProjectName=Meshfile(1:INDEX(Meshfile,'_mesh.h5')-1)
 CALL readMesh(MeshFile) !set nElems
 
-refineLevel=GETINT('refineLevel','1')
-refineType =GETINT('refineType','1') ! default conform refinement
-
 CALL RefineMesh()
 CALL p4est_save_all(TRIM(ProjectName)//'.p4est'//C_NULL_CHAR,p4est_ptr%p4est)
 CALL BuildMeshFromP4EST()
