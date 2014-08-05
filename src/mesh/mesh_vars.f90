@@ -38,6 +38,7 @@ CHARACTER(LEN=255)               :: MeshFile        ! name of hdf5 meshfile (wri
 INTEGER                          :: refineLevel
 INTEGER                          :: refineType
 INTEGER                          :: refineListType
+INTEGER                          :: refineBCIndex
 INTEGER,ALLOCATABLE              :: RefineList(:)
 REAL,ALLOCATABLE                 :: refineBoundary(:)
 INTEGER,ALLOCATABLE                 :: TreeToQuadRefine(:,:)

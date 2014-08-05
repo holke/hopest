@@ -58,6 +58,7 @@ CASE(1)
   refineFunc=C_FUNLOC(RefineAll)
 CASE(2)
   refineListType =GETINT('refineListType') ! 
+  refineBCIndex=GETINT('refineBCIndex','1')
   CALL InitRefineList()
   refineFunc=C_FUNLOC(RefineByList)
 CASE(3)
@@ -83,7 +84,7 @@ SUBROUTINE InitRefineList()
 !===================================================================================================================================
 ! MODULES
 USE MOD_Globals
-USE MOD_Mesh_Vars, ONLY: Elems,refineListType,nElems,TreeToQuadRefine
+USE MOD_Mesh_Vars, ONLY: Elems,refineListType,nElems,TreeToQuadRefine,refineBCIndex
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -101,30 +102,30 @@ CASE(1)
   TreeToQuadRefine=0
   DO iElem=1,nElems
     DO iSide=1,6
-      IF (Elems(iElem)%ep%Side(iSide)%sp%BCIndex.EQ.3) THEN
+      IF (Elems(iElem)%ep%Side(iSide)%sp%BCIndex.EQ.refineBCIndex) THEN
         SELECT CASE (iSide)
           CASE (1) 
             TreeToQuadRefine(1:4,iElem)=1
           CASE (2) 
+            TreeToQuadRefine(1,iElem)=1
+            TreeToQuadRefine(2,iElem)=1
+            TreeToQuadRefine(5,iElem)=1
+            TreeToQuadRefine(6,iElem)=1
+          CASE (3) 
             TreeToQuadRefine(2,iElem)=1
             TreeToQuadRefine(4,iElem)=1
             TreeToQuadRefine(6,iElem)=1
-            TreeToQuadRefine(8,iElem)=1
-          CASE (3) 
-            TreeToQuadRefine(3,iElem)=1
-            TreeToQuadRefine(4,iElem)=1
-            TreeToQuadRefine(7,iElem)=1
             TreeToQuadRefine(8,iElem)=1
           CASE (4) 
+            TreeToQuadRefine(3,iElem)=1
+            TreeToQuadRefine(4,iElem)=1
+            TreeToQuadRefine(7,iElem)=1
+            TreeToQuadRefine(8,iElem)=1
+          CASE (5) 
             TreeToQuadRefine(1,iElem)=1
             TreeToQuadRefine(3,iElem)=1
             TreeToQuadRefine(5,iElem)=1
             TreeToQuadRefine(7,iElem)=1
-          CASE (5) 
-            TreeToQuadRefine(1,iElem)=1
-            TreeToQuadRefine(2,iElem)=1
-            TreeToQuadRefine(5,iElem)=1
-            TreeToQuadRefine(6,iElem)=1
           CASE (6) 
             TreeToQuadRefine(5:8,iElem)=1
         END SELECT
@@ -217,9 +218,8 @@ INTEGER(KIND=C_INT)                      :: refineByList
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
-
 IF (level.EQ.0) RefineByList=SUM(TreeToQuadRefine(:,tree))
-IF (level.GE.1) RefineByList=TreeToQuadRefine(childID,tree)
+IF (level.GE.1) RefineByList=TreeToQuadRefine(childID+1,tree)
 END FUNCTION RefineByList
 
 
