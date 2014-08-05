@@ -309,9 +309,9 @@ DO iElem=1,nElems
   StartQuad = TreeToQuad(1,iElem)+1
   EndQuad   = TreeToQuad(2,iElem)
   nQuads    = TreeToQuad(2,iElem)-TreeToQuad(1,iElem)
-!  IF(nQuads.EQ.1)THEN !no refinement in this tree
-!    XgeoQuad(:,:,:,StartQuad)=Xgeo(:,:,:,:,iElem)
-!  ELSE
+  IF(nQuads.EQ.1)THEN !no refinement in this tree
+    XgeoQuad(:,:,:,:,StartQuad)=Xgeo(:,:,:,:,iElem)
+  ELSE
     DO iQuad=StartQuad,EndQuad
       ! transform p4est first corner coordinates (integer from 0... intsize) to [-1,1] reference element
       xi0(:)=-1.+2.*REAL(QuadCoords(:,iQuad))*sIntSize
@@ -327,7 +327,7 @@ DO iElem=1,nElems
       !interpolate tree HO mapping to quadrant HO mapping
       CALL ChangeBasis3D_var(3,Ngeo,Ngeo,Vdm_xi,Vdm_eta,Vdm_zeta,XGeo(:,:,:,:,iElem),XgeoQuad(:,:,:,:,iQuad))
     END DO !iQuad=StartQuad,EndQuad
-!  END IF !nQuads==1
+  END IF !nQuads==1
 END DO !iElem=1,nElems
 END SUBROUTINE BuildHOMesh
 

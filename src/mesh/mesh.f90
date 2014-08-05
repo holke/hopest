@@ -65,7 +65,6 @@ MeshFile = GETSTR('MeshFile')
 ProjectName=Meshfile(1:INDEX(Meshfile,'_mesh.h5')-1)
 CALL readMesh(MeshFile) !set nElems
 
-
 ALLOCATE(Xi_Ngeo(0:Ngeo))
 ALLOCATE(wBary_Ngeo(0:Ngeo))
 
@@ -73,9 +72,6 @@ DO i=0,NGeo
   Xi_Ngeo(i)=-1+REAL(i)*2./REAL(NGeo)
 END DO
 CALL BarycentricWeights(Ngeo,xi_Ngeo,wBary_Ngeo)
-
-refineLevel=GETINT('refineLevel','1')
-refineType =GETINT('refineType','1') ! default conform refinement
 
 CALL RefineMesh()
 CALL p4est_save_all(TRIM(ProjectName)//'.p4est'//C_NULL_CHAR,p4est_ptr%p4est)
