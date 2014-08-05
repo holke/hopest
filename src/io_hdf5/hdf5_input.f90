@@ -74,7 +74,7 @@ CALL H5ESET_AUTO_F(0, iError)
 CALL H5OPEN_F(iError)
 IF(iError.NE.0)THEN
   CALL Abort(__STAMP__,&
-       'ERROR: COULD NOT OPEN FILE!',999,999.)
+       'ERROR: COULD NOT OPEN FILE!')
 END IF
 
 ! Open HDF5 file

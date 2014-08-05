@@ -11,7 +11,41 @@ IMPLICIT NONE
 
 INTERFACE 
 
-  SUBROUTINE p4est_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex,p4est) BIND(C)
+  SUBROUTINE p4_initvars() BIND(C)
+  !=================================================================================================================================
+  ! initialize MPI, SC, p4est
+  !=================================================================================================================================
+  ! MODULES
+  USE, INTRINSIC :: ISO_C_BINDING  
+  ! IMPLICIT VARIABLE HANDLING
+  IMPLICIT NONE
+  !---------------------------------------------------------------------------------------------------------------------------------
+  ! INPUT VARIABLES
+  !---------------------------------------------------------------------------------------------------------------------------------
+  ! OUTPUT VARIABLES
+  !=================================================================================================================================
+  END SUBROUTINE p4_initvars
+  
+
+  SUBROUTINE p4_loadmesh(filename,p4est) BIND(C)
+  !=================================================================================================================================
+  ! read p4est connectivity from file and build p4est
+  !=================================================================================================================================
+  ! MODULES
+  USE, INTRINSIC :: ISO_C_BINDING  
+  ! IMPLICIT VARIABLE HANDLING
+  IMPLICIT NONE
+  !---------------------------------------------------------------------------------------------------------------------------------
+  ! INPUT VARIABLES
+  CHARACTER(KIND=C_CHAR),DIMENSION(*) :: filename
+  !---------------------------------------------------------------------------------------------------------------------------------
+  ! OUTPUT VARIABLES
+  TYPE(C_PTR)                         :: p4est
+  !=================================================================================================================================
+  END SUBROUTINE p4_loadmesh 
+
+
+  SUBROUTINE p4_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex,p4est) BIND(C)
   !=================================================================================================================================
   ! builds up p4est connectivit, using only element connectivity and vertex positions
   !=================================================================================================================================
@@ -29,10 +63,10 @@ INTERFACE
   ! OUTPUT VARIABLES
   TYPE(C_PTR)                      :: p4est
   !=================================================================================================================================
-  END SUBROUTINE p4est_connectivity_treevertex 
+  END SUBROUTINE p4_connectivity_treevertex 
 
 
-  SUBROUTINE p4est_refine_mesh(p4est,refine_function,refine_level,&
+  SUBROUTINE p4_refine_mesh(p4est,refine_function,refine_level,&
                                mesh) BIND(C)
   !=================================================================================================================================
   ! simple refine function, giving the level and if refine_elem < 0 then a conformal refinement is applied.
@@ -50,12 +84,12 @@ INTERFACE
   ! OUTPUT VARIABLES
   TYPE(C_PTR),INTENT(OUT)               :: mesh
   !=================================================================================================================================
-  END SUBROUTINE p4est_refine_mesh 
+  END SUBROUTINE p4_refine_mesh 
 
 
-  SUBROUTINE p4est_save_all(filename, p4est) BIND(C)
+  SUBROUTINE p4_build_bcs(p4est,num_trees,bcelemmap) BIND(C)
   !=================================================================================================================================
-  ! save the p4est data  to a p4est state file 
+  ! simple refine function, giving the level and if refine_elem < 0 then a conformal refinement is applied.
   !=================================================================================================================================
   ! MODULES
   USE, INTRINSIC :: ISO_C_BINDING  
@@ -63,14 +97,35 @@ INTERFACE
   IMPLICIT NONE
   !---------------------------------------------------------------------------------------------------------------------------------
   ! INPUT VARIABLES
-  CHARACTER(KIND=C_CHAR),DIMENSION(*) :: filename
-  TYPE(C_PTR),VALUE                   :: p4est
+  TYPE(C_PTR),VALUE,INTENT(IN)       :: p4est
+  INTEGER( KIND = C_INT),VALUE       :: num_trees 
+  INTEGER(KIND=C_INT16_T),INTENT(IN) :: bcelemmap(0:5,num_trees)
   !---------------------------------------------------------------------------------------------------------------------------------
   ! OUTPUT VARIABLES
   !=================================================================================================================================
-  END SUBROUTINE p4est_save_all
+  END SUBROUTINE p4_build_bcs
 
-  SUBROUTINE p4est_get_mesh_info(p4est,mesh,global_num_quadrants,num_half_faces) BIND(C)
+
+  SUBROUTINE p4_get_bcs(p4est,num_trees,bcelemmap) BIND(C)
+  !=================================================================================================================================
+  ! simple refine function, giving the level and if refine_elem < 0 then a conformal refinement is applied.
+  !=================================================================================================================================
+  ! MODULES
+  USE, INTRINSIC :: ISO_C_BINDING  
+  ! IMPLICIT VARIABLE HANDLING
+  IMPLICIT NONE
+  !---------------------------------------------------------------------------------------------------------------------------------
+  ! INPUT VARIABLES
+  TYPE(C_PTR),VALUE,INTENT(IN)        :: p4est
+  INTEGER( KIND = C_INT),VALUE        :: num_trees 
+  INTEGER(KIND=C_INT16_T),INTENT(OUT) :: bcelemmap(0:5,num_trees)
+  !---------------------------------------------------------------------------------------------------------------------------------
+  ! OUTPUT VARIABLES
+  !=================================================================================================================================
+  END SUBROUTINE p4_get_bcs
+
+
+  SUBROUTINE p4_get_mesh_info(p4est,mesh,global_num_quadrants,num_half_faces) BIND(C)
   !=================================================================================================================================
   ! simple refine function, giving the level and if refine_elem < 0 then a conformal refinement is applied.
   !=================================================================================================================================
@@ -87,10 +142,10 @@ INTERFACE
   INTEGER                          :: global_num_quadrants
   INTEGER                          :: num_half_faces
   !=================================================================================================================================
-  END SUBROUTINE p4est_get_mesh_info
+  END SUBROUTINE p4_get_mesh_info
 
 
-  SUBROUTINE p4est_get_quadrants(p4est,mesh,global_num_quadrants,num_half_faces,&
+  SUBROUTINE p4_get_quadrants(p4est,mesh,global_num_quadrants,num_half_faces,&
                                  intsize,quad_to_tree,quad_to_quad,quad_to_face,quad_to_half,&
                                  quadcoords,quadlevel) BIND(C)
   !=================================================================================================================================
@@ -116,7 +171,26 @@ INTERFACE
   INTEGER(KIND=4),INTENT(OUT) :: quadcoords(  3,global_num_quadrants)
   INTEGER(KIND=1),INTENT(OUT) :: quadlevel(     global_num_quadrants)
   !=================================================================================================================================
-  END SUBROUTINE p4est_get_quadrants
+  END SUBROUTINE p4_get_quadrants
+
+
+  SUBROUTINE p4_save_all(filename, p4est) BIND(C)
+  !=================================================================================================================================
+  ! save the p4est data  to a p4est state file 
+  !=================================================================================================================================
+  ! MODULES
+  USE, INTRINSIC :: ISO_C_BINDING  
+  ! IMPLICIT VARIABLE HANDLING
+  IMPLICIT NONE
+  !---------------------------------------------------------------------------------------------------------------------------------
+  ! INPUT VARIABLES
+  CHARACTER(KIND=C_CHAR),DIMENSION(*) :: filename
+  TYPE(C_PTR),VALUE                   :: p4est
+  !---------------------------------------------------------------------------------------------------------------------------------
+  ! OUTPUT VARIABLES
+  !=================================================================================================================================
+  END SUBROUTINE p4_save_all
+  
 
 END INTERFACE
 

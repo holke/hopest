@@ -1,6 +1,6 @@
 #include "hopest_f.h"
 
-MODULE MOD_Mesh
+MODULE MOD_HopestSolver
 !===================================================================================================================================
 ! Contains subroutines to build (curviilinear) meshes and provide metrics, etc.
 !===================================================================================================================================
@@ -13,31 +13,32 @@ PRIVATE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! Public Part ----------------------------------------------------------------------------------------------------------------------
 
-INTERFACE InitMesh
-  MODULE PROCEDURE InitMesh
+INTERFACE HopestSolver
+  MODULE PROCEDURE HopestSolver
 END INTERFACE
 
-INTERFACE FinalizeMesh
-  MODULE PROCEDURE FinalizeMesh
+INTERFACE FinalizeHopestSolver
+  MODULE PROCEDURE FinalizeHopestSolver
 END INTERFACE
 
-PUBLIC::InitMesh
-PUBLIC::FinalizeMesh
+PUBLIC::HopestSolver
+PUBLIC::FinalizeHopestSolver
 !===================================================================================================================================
 
 CONTAINS
 
-SUBROUTINE InitMesh()
+SUBROUTINE HopestSolver()
 !===================================================================================================================================
 ! Read Parameter from inputfile 
 !===================================================================================================================================
 ! MODULES
 USE MOD_Globals
+USE MOD_IO_HDF5
 USE MOD_Mesh_Vars
 USE MOD_Output_Vars, ONLY:Projectname
 USE MOD_p4estBinding
 !-----------------------------------------------------------------------------------------------------------------------------------
-USE MOD_Mesh_ReadIn,        ONLY:readMeshFromHDF5
+!USE MOD_Mesh_ReadIn,        ONLY:readMeshFromP4EST
 USE MOD_Mesh_Refine,        ONLY:RefineMesh
 USE MOD_MeshFromP4EST,      ONLY:BuildMeshFromP4EST,BuildHOMesh
 USE MOD_Output_HDF5,        ONLY:writeMeshToHDF5
@@ -51,38 +52,40 @@ IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 !===================================================================================================================================
-IF(MeshInitIsDone)&
-  CALL abort(__STAMP__,&
-  'InitMesh not ready to be called or already called.')
+!CALL InitIO()
 
-SWRITE(UNIT_StdOut,'(132("-"))')
-SWRITE(UNIT_stdOut,'(A)') ' INIT MESH...'
+!IF(MeshInitIsDone)&
+  !CALL abort(__STAMP__,&
+  !'InitMesh not ready to be called or already called.')
 
-! prepare pointer structure (get nElems, etc.)
-MeshFile = GETSTR('MeshFile')
-ProjectName=Meshfile(1:INDEX(Meshfile,'_mesh.h5')-1)
-CALL readMeshFromHDF5(MeshFile) !set nElems
+!SWRITE(UNIT_StdOut,'(132("-"))')
+!SWRITE(UNIT_stdOut,'(A)') ' INIT MESH...'
 
-CALL RefineMesh()
-CALL p4_save_all(TRIM(ProjectName)//'.p4est'//C_NULL_CHAR,p4est_ptr%p4est)
-CALL BuildMeshFromP4EST()
+!! prepare pointer structure (get nElems, etc.)
+!MeshFile = GETSTR('MeshFile')
+!ProjectName=Meshfile(1:INDEX(Meshfile,'_mesh.h5')-1)
+!CALL readMesh(MeshFile) !set nElems
 
-CALL BuildHOMesh()
-!output new mesh
-CALL writeMeshToHDF5(TRIM(ProjectName)//'_mesh_p4est.h5')
-! dealloacte pointers
-SWRITE(UNIT_stdOut,'(A)') "NOW CALLING deleteMeshPointer..."
-CALL deleteMeshPointer()
+!CALL RefineMesh()
+!CALL p4_save_all(TRIM(ProjectName)//'.p4est'//C_NULL_CHAR,p4est_ptr%p4est)
+!CALL BuildMeshFromP4EST()
 
-!IF(GETLOGICAL('debugmesh','.FALSE.')) CALL WriteDebugMesh()
+!CALL BuildHOMesh()
+!!output new mesh
+!CALL writeMeshToHDF5(TRIM(ProjectName)//'_mesh_p4est.h5')
+!! dealloacte pointers
+!SWRITE(UNIT_stdOut,'(A)') "NOW CALLING deleteMeshPointer..."
+!CALL deleteMeshPointer()
 
-MeshInitIsDone=.TRUE.
+!MeshInitIsDone=.TRUE.
+
+!CALL FinalizeHopestSolver()
 SWRITE(UNIT_stdOut,'(A)')' INIT MESH DONE!'
 SWRITE(UNIT_StdOut,'(132("-"))')
-END SUBROUTINE InitMesh
+END SUBROUTINE HopestSolver
 
 
-SUBROUTINE FinalizeMesh()
+SUBROUTINE FinalizeHopestSolver()
 !============================================================================================================================
 ! Deallocate all global interpolation variables.
 !============================================================================================================================
@@ -103,6 +106,6 @@ SDEALLOCATE(Xi_NGeo)
 SDEALLOCATE(BoundaryName)
 SDEALLOCATE(BoundaryType)
 MeshInitIsDone = .FALSE.
-END SUBROUTINE FinalizeMesh
+END SUBROUTINE FinalizeHopestSolver
 
-END MODULE MOD_Mesh
+END MODULE MOD_HopestSolver

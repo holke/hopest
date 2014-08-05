@@ -12,15 +12,11 @@ IMPLICIT NONE
 ! Private Part ---------------------------------------------------------------------------------------------------------------------
 
 ! Public Part ----------------------------------------------------------------------------------------------------------------------
-INTERFACE ReadMesh
-  MODULE PROCEDURE ReadMesh
+INTERFACE ReadMeshFromHDF5
+  MODULE PROCEDURE ReadMeshFromHDF5
 END INTERFACE
 
-INTERFACE BuildEdges
-  MODULE PROCEDURE BuildEdges
-END INTERFACE
-
-PUBLIC::ReadMesh,BuildEdges
+PUBLIC::ReadMeshFromHDF5
 !===================================================================================================================================
 
 CONTAINS
@@ -69,7 +65,7 @@ SWRITE(UNIT_StdOut,'(132("."))')
 END SUBROUTINE ReadBCs
 
 
-SUBROUTINE ReadMesh(FileString)
+SUBROUTINE ReadMeshFromHDF5(FileString)
 !===================================================================================================================================
 ! Subroutine to read the mesh from a mesh data file
 !===================================================================================================================================
@@ -199,7 +195,6 @@ DO iElem=1,nElems
     NodeID=ABS(NodeInfo(iNode))     !global, unique NodeID
     IF(.NOT.ASSOCIATED(Nodes(NodeID)%np))THEN
       ALLOCATE(Nodes(NodeID)%np) 
-      NULLIFY(Nodes(NodeID)%np%firstEdge) 
       Nodes(NodeID)%np%ind=NodeID 
     END IF
     aElem%Node(jNode)%np=>Nodes(NodeID)%np
@@ -385,7 +380,7 @@ DO iElem=1,nElems
     tree_to_vertex(iNode,iElem)=aElem%Node(H2P_VertexMap(iNode)+1)%np%tmp-1
   END DO
 END DO
-CALL p4est_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex,p4est_ptr%p4est)
+CALL p4_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex,p4est_ptr%p4est)
 
 DEALLOCATE(Vertices,tree_to_vertex)
  
@@ -423,101 +418,126 @@ DO iElem=1,nElems
   END DO !iLocSide
 END DO !iElem
 
-CALL buildEdges()
-
 
 WRITE(*,*)'-------------------------------------------------------'
 WRITE(*,'(A22,I8)' )'NGeo:',NGeo
 WRITE(*,'(A22,X7L)')'useCurveds:',useCurveds
 WRITE(*,'(A22,I8)' )'nElems:',nElems
-WRITE(*,'(A22,I8)' )'nEdges:',nEdges
 WRITE(*,'(A22,I8)' )'nNodes:',nNodes
 WRITE(*,'(A22,I8)' )'nSides:',nSides
 WRITE(*,'(A22,I8)' )'nBCSides:',nBCSides
 WRITE(*,'(A22,I8)' )'nPeriodicSides:',nPeriodicSides
 WRITE(*,*)'-------------------------------------------------------'
 
-END SUBROUTINE ReadMesh
+END SUBROUTINE ReadMeshFromHDF5
 
 
-SUBROUTINE buildEdges()
-!===================================================================================================================================
-! Create Edge datastructure, each edge is unique, and has a pointer from each side and from the node with the lower index.
-! on the node, a list beginning with node%firstEdge is build up. On the Element sides, a edge pointer array Edge(1:nNodes) is 
-! filled, together with their orientation inside the side. Very important: OrientedNodes are used!!!! 
-! If the edge is oriented, it goes from orientedNode(i)-> orientedNode(i+1), and 
-! If the edge is not  oriented, it goes from orientedNode(i+1)-> orientedNode(i)
-!===================================================================================================================================
-! MODULES
-USE MOD_Globals
-USE MOD_Mesh_Vars,ONLY:tElem,tSide,tEdge,tNode
-USE MOD_Mesh_Vars,ONLY:nElems,nEdges,Edges,Elems
-USE MOD_Mesh_Vars,ONLY:EdgeToElemNode
-USE MOD_Mesh_Vars,ONLY:GETNEWEDGE
-! IMPLICIT VARIABLE HANDLING
-IMPLICIT NONE
-!-----------------------------------------------------------------------------------------------------------------------------------
-! INPUT VARIABLES
-! OUTPUT VARIABLES
-! LOCAL VARIABLES
-INTEGER                      :: iNode,iEdge,iElem,EdgeInd
-TYPE(tElem),POINTER          :: Elem
-TYPE(tEdge),POINTER          :: Edge
-TYPE(tNode),POINTER          :: aNode,bNode
-INTEGER,ALLOCATABLE          :: Edge_nElems(:)
-LOGICAL                      :: edgeFound,isNew,isOriented
-!===================================================================================================================================
-WRITE(UNIT_stdOut,'(132("~"))')
-WRITE(UNIT_stdOut,'(A)')'BUILD EDGES ...'
+!SUBROUTINE ReadMeshFromP4EST(FileString)
+!!===================================================================================================================================
+!! Subroutine to read the mesh from a mesh data file
+!!===================================================================================================================================
+!! MODULES
+!USE MOD_Globals
+!USE MOD_Mesh_Vars
+!USE MOD_p4estBinding
+!! IMPLICIT VARIABLE HANDLING
+!IMPLICIT NONE
+!!-----------------------------------------------------------------------------------------------------------------------------------
+!! INPUT VARIABLES
+!CHARACTER(LEN=*),INTENT(IN)  :: FileString
+!!-----------------------------------------------------------------------------------------------------------------------------------
+!! OUTPUT VARIABLES
+!!-----------------------------------------------------------------------------------------------------------------------------------
+!! LOCAL VARIABLES
+!INTEGER                     :: i,j,k,l
+!INTEGER                     :: iQuad,iMortar,iLocSide,iTree
+!INTEGER                     :: nbQuadInd
+!TYPE(C_PTR)                 :: QT,QQ,QF,QH
+!TYPE(tElem),POINTER         :: aQuad,nbQuad,Tree
+!TYPE(tSide),POINTER         :: aSide,nbSide
+!INTEGER                     :: PMortar,PFlip,HFlip,QHInd
+!INTEGER                     :: BClocSide,BCindex
+!!-----------------------------------------------------------------------------------------------------------------------------------
 
-EdgeInd=0
-DO iElem=1,nElems
-  Elem=>Elems(iElem)%ep
-  DO iEdge=1,12
-    aNode=>Elem%Node(EdgeToElemNode(1,iEdge))%np
-    bNode=>Elem%Node(EdgeToElemNode(2,iEdge))%np
-    Elem%Edge(iEdge)%edp => GETNEWEDGE(aNode,bNode,isNew,isOriented)
-    IF(isNew)THEN
-      EdgeInd=EdgeInd+1
-      Elem%Edge(iEdge)%edp%ind    = EdgeInd
-      Elem%Edge(iEdge)%isOriented = isOriented
-    END IF
-    Elem%Edge(iEdge)%edp%nNbElems=Elem%Edge(iEdge)%edp%nNbElems+1
-  END DO
-END DO !! ELEMS!!
-nEdges=EdgeInd
+!! Load p4est mesh from file
+!CALL p4_loadmesh(FileString,p4est_ptr%p4est)
+!CALL p4_get_mesh_info(p4est_ptr%p4est,p4est_ptr%mesh,nQuadrants,nHalfFaces)
+!ALLOCATE(QuadCoords(3,nQuadrants),QuadLevel(nQuadrants)) ! big to small flip
+!QuadCoords=0
+!QuadLevel=0
+!CALL p4_get_quadrants(p4est_ptr%p4est,p4est_ptr%mesh,nQuadrants,nHalfFaces,& !IN
+                      !intsize,QT,QQ,QF,QH,QuadCoords,QuadLevel)              !OUT
 
-ALLOCATE(Edges(nEdges))
-DO iEdge=1,nEdges
-  NULLIFY(Edges(iEdge)%edp)
-END DO
+!CALL C_F_POINTER(QT,QuadToTree,(/nQuadrants/))
+!CALL C_F_POINTER(QQ,QuadToQuad,(/6,nQuadrants/))
+!CALL C_F_POINTER(QF,QuadToFace,(/6,nQuadrants/))
+!IF(nHalfFaces.GT.0) CALL C_F_POINTER(QH,QuadToHalf,(/4,nHalfFaces/))
 
-DO iElem=1,nElems
-  Elem=>Elems(iElem)%ep
-  DO iEdge=1,12
-    Edge=>Elem%Edge(iEdge)%edp
-    EdgeInd=Edge%ind
-    IF(.NOT.ASSOCIATED(Edges(EdgeInd)%edp))THEN
-      Edges(EdgeInd)%edp=>Edge
-    END IF
-  END DO
-END DO
-DO iEdge=1,nEdges
-  ALLOCATE(Edges(iEdge)%edp%nbElem(Edges(iEdge)%edp%nNbElems))
-  Edges(iEdge)%edp%nNbElems=0
-END DO
+!!----------------------------------------------------------------------------------------------------------------------------
+!!             Start to build p4est datastructure in HOPEST
+!!----------------------------------------------------------------------------------------------------------------------------
+!!                              ELEMENTS
+!!----------------------------------------------------------------------------------------------------------------------------
 
-DO iElem=1,nElems
-  Elem=>Elems(iElem)%ep
-  DO iEdge=1,12
-    Edge=>Elem%Edge(iEdge)%edp
-    EdgeInd=Edge%ind
-    Edge%nNbElems=Edge%nNbElems+1
-    Edge%nbElem(Edge%nNbElems)%ep=>Elem
-  END DO
-END DO
+!!read local ElemInfo from data file
+!ALLOCATE(Quads(1:nQuadrants))
+!DO iQuad=1,nQuadrants
+  !Quads(iQuad)%ep=>GETNEWELEM()
+  !aQuad=>Quads(iQuad)%ep
+  !aQuad%Ind    = iQuad
+  !CALL CreateSides(aQuad)
+  !DO iLocSide=1,6
+    !aQuad%Side(iLocSide)%sp%flip=-999
+  !END DO
+!END DO
 
-END SUBROUTINE buildEdges
+
+!DO iQuad=1,nQuadrants
+  !aQuad=>Quads(iQuad)%ep
+  !aQuad%type=0
+  !DO iLocSide=1,6
+    !aSide=>aQuad%Side(iLocSide)%sp
+    !! Get P4est local side
+    !PSide=H2P_FaceMap(iLocSide)
+    !! Get P4est neighbour side/flip/morter
+    !CALL EvalP4ESTConnectivity(QuadToFace(PSide+1,iQuad),PnbSide,PFlip,PMortar)
+    !! transform p4est orientation to HOPR flip (magic)
+    !HFlip=GetHFlip(PSide,PnbSide,PFlip)  !Hflip of neighbor side!!!
+    !IF(PMortar.EQ.4)THEN
+      !! Neighbour side is mortar (4 sides), all neighbour element sides have same orientation and local side ind
+      !QHInd=QuadToQuad(PSide+1,iQuad)+1
+      !aSide%nMortars=4
+      !aSide%MortarType=1             ! 1->4 case
+      !ALLOCATE(aSide%MortarSide(4))
+      !DO iMortar=1,4
+        !nbQuadInd=QuadToHalf(iMortar,QHInd)+1
+        !nbQuad=>Quads(nbQuadInd)%ep
+        !nbSide=P2H_FaceMap(PnbSide)
+        !aSide%MortarSide(iMortar)%sp=>nbQuad%side(nbSide)%sp
+        !aSide%MortarSide(iMortar)%sp%flip=HFlip
+      !END DO ! iMortar
+    !ELSE
+      !nbQuadInd=QuadToQuad(PSide+1,iQuad)+1
+      !nbQuad=>Quads(nbQuadInd)%ep
+      !nbSide=P2H_FaceMap(PnbSide)
+      !IF((nbQuadInd.EQ.iQuad).AND.(nbSide.EQ.iLocSide))THEN
+        !! this is a boundary side: 
+        !BCindex=TreeBCMap(iLocSide,iTree)
+        !IF(BCIndex.EQ.0) STOP 'Problem in Boundary assignment'
+        !aSide%BCIndex=BCIndex
+        !NULLIFY(aSide%connection)
+        !aSide%Flip=0
+        
+      !ELSE
+        !aSide%connection=>nbQuad%side(nbSide)%sp
+        !aSide%connection%flip=HFlip
+      !END IF !BC side
+      !IF(PMortar.NE.-1) aSide%MortarType= - (PMortar+1)  ! Pmortar 0...3, small side belonging to  mortar group -> -1..-4
+    !END IF ! PMortar
+  !END DO
+!END DO
+
+!END SUBROUTINE ReadMeshFromP4EST
 
 
 END MODULE MOD_Mesh_ReadIn

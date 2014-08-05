@@ -24,7 +24,6 @@ INTEGER,ALLOCATABLE :: BoundaryType(:,:)
 !-----------------------------------------------------------------------------------------------------------------------------------
 INTEGER             :: nGlobalElems=0      ! number of elements in mesh
 INTEGER             :: nElems=0            ! number of local elements
-INTEGER             :: nEdges=0            ! number of unique edges
 INTEGER             :: nSides=0            ! =nInnerSides+nBCSides
 INTEGER             :: nMortarSides=0      ! 
 INTEGER             :: nBCSides=0          ! BCSide index range: sideID \in [1:nBCSides]
@@ -43,11 +42,6 @@ TYPE tNodePtr
   TYPE(tNode),POINTER          :: np                     ! node pointer
 END TYPE tNodePtr
 
-TYPE tEdgePtr
-  LOGICAL                      :: isOriented
-  TYPE(tEdge),POINTER          :: edp                    ! edge pointer
-END TYPE tEdgePtr
-
 TYPE tSidePtr
   TYPE(tSide),POINTER          :: sp                     ! side pointer
 END TYPE tSidePtr
@@ -64,7 +58,6 @@ TYPE tElem
   !INTEGER                      :: quadrant_id
   TYPE(tNodePtr)               :: Node(8)
   TYPE(tSidePtr)               :: Side(6)
-  TYPE(tEdgePtr)               :: Edge(12)
 END TYPE tElem
 
 TYPE tSide
@@ -78,23 +71,12 @@ TYPE tSide
   INTEGER                      :: MortarType      ! type of mortar: Type1 : 1-4 , Type 2: 1-2 in eta, Type 3: 1-2 in xi
   !TODO: if tSide is small side of a mortar group, mortar type is -1
   TYPE(tNodePtr)               :: Node(4)
-  TYPE(tEdgePtr)               :: Edge(4)
   TYPE(tElem),POINTER          :: Elem
   TYPE(tSide),POINTER          :: connection
   TYPE(tSidePtr),POINTER       :: MortarSide(:)   ! array of side pointers to slave mortar sides
 END TYPE tSide
 
-TYPE tEdge ! provides data structure for local edge
-  INTEGER                      :: ind
-  INTEGER                      :: tmp
-  INTEGER                      :: nNbElems
-  TYPE(tNodePtr)               :: Node(2)                ! pointer to node always 2
-  TYPE(tEdge),POINTER          :: nextEdge               ! only used to assign edges 
-  TYPE(tElemPtr),POINTER       :: nbElem(:)
-END TYPE tEdge
-
 TYPE tNode
-  TYPE(tEdge),POINTER          :: firstEdge     ! only used to assign edges 
   INTEGER                      :: ind=0         ! global unique node index
   INTEGER                      :: tmp=0
   !REAL                         :: x(3)=0.
@@ -102,7 +84,6 @@ END TYPE tNode
 !-----------------------------------------------------------------------------------------------------------------------------------
 TYPE(tElemPtr),POINTER         :: Elems(:)
 TYPE(tNodePtr),POINTER         :: Nodes(:)
-TYPE(tEdgePtr),POINTER         :: Edges(:)
 INTEGER,ALLOCATABLE            :: HexMap(:,:,:)
 INTEGER,ALLOCATABLE            :: HexMapInv(:,:)
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -184,10 +165,6 @@ INTEGER,PARAMETER   :: P4P(0:7,0:3) = TRANSPOSE(RESHAPE((/ 0,1,2,3,&
 !-----------------------------------------------------------------------------------------------------------------------------------
 LOGICAL          :: MeshInitIsDone =.FALSE.
 !===================================================================================================================================
-INTERFACE GETNEWEDGE
-  MODULE PROCEDURE GETNEWEDGE
-END INTERFACE
-
 INTERFACE GETNEWSIDE
   MODULE PROCEDURE GETNEWSIDE
 END INTERFACE
@@ -202,72 +179,6 @@ END INTERFACE
 
 CONTAINS
 
-
-FUNCTION GETNEWEDGE(Node1,Node2,isNew,isOriented)
-!===================================================================================================================================
-! Create "Edge" with nodes "Node1" and "Node2"
-!===================================================================================================================================
-! MODULES
-! IMPLICIT VARIABLE HANDLING
-IMPLICIT NONE
-!-----------------------------------------------------------------------------------------------------------------------------------
-! INPUT VARIABLES
-TYPE(tNode),POINTER :: Node1, Node2 ! Node pointers
-!-----------------------------------------------------------------------------------------------------------------------------------
-! OUTPUT VARIABLES
-LOGICAL             :: isNew
-LOGICAL             :: isOriented
-TYPE(tEdge),POINTER :: GETNEWEDGE   ! New edge
-!-----------------------------------------------------------------------------------------------------------------------------------
-! LOCAL VARIABLES 
-TYPE(tNode),POINTER :: aNode,bNode
-TYPE(tEdge),POINTER :: aEdge
-LOGICAL             :: edgeFound
-!===================================================================================================================================
-IF((Node2%ind).GT.(Node1%ind)) THEN
-  aNode=>Node1
-  bNode=>Node2
-  isOriented=.FALSE.
-ELSEIF((Node2%ind).LT.(Node1%ind))THEN
-  aNode=>Node2
-  bNode=>Node1
-  isOriented=.TRUE.
-ELSE 
-  WRITE(*,*) 'Problem with node%ind in GETNEWEDGE'
-  WRITE(*,*) 'node IDs',Node1%ind,Node2%ind
-  !WRITE(*,*) 'node1%x',Node1%x
-  !WRITE(*,*) 'node2%x',Node2%x
-  STOP
-END IF
-
-edgeFound=.FALSE.
-aEdge=>aNode%firstEdge
-DO WHILE (ASSOCIATED(aEdge))    
-  IF(aEdge%Node(2)%np%ind .EQ. bNode%ind) THEN
-    edgeFound=.TRUE.
-    EXIT
-  END IF
-  aEdge=>aEdge%nextEdge
-END DO
-IF(edgeFound)THEN
-  isNew=.FALSE.
-ELSE
-  ALLOCATE(aEdge)
-  aEdge%Node(1)%np=>aNode
-  aEdge%Node(2)%np=>bNode
-  NULLIFY(aEdge%nextEdge)
-  aEdge%ind=0
-  aEdge%nNbElems=0
-  ! sort new edge into edge list ( from the from)
-  IF(ASSOCIATED(aNode%firstEdge)) THEN
-    aEdge%nextEdge=>aNode%firstEdge 
-  END IF
-  aNode%firstEdge=>aEdge
-  isNew=.TRUE.
-END IF
-GETNEWEDGE=>aEdge
-
-END FUNCTION GETNEWEDGE
 
 
 FUNCTION GETNEWSIDE()
