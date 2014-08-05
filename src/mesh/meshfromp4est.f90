@@ -68,6 +68,7 @@ QuadLevel=0
 
 CALL p4est_get_quadrants(p4est_ptr%p4est,p4est_ptr%mesh,nQuadrants,nHalfFaces,& !IN
                          intsize,QT,QQ,QF,QH,QuadCoords,QuadLevel)              !OUT
+sIntSize=1./REAL(Intsize)
 
 CALL C_F_POINTER(QT,QuadToTree,(/nQuadrants/))
 CALL C_F_POINTER(QQ,QuadToQuad,(/6,nQuadrants/))
@@ -174,7 +175,7 @@ DO iQuad=1,nQuadrants
   aQuad=>Quads(iQuad)%ep
   DO iLocSide=1,6
     IF(aQuad%Side(iLocSide)%sp%flip.LT.0) THEN
-      WRITE(*,*) 'flip assignmenti failed, iQuad= ',iQuad,', iLocSide= ',iLocSide 
+      WRITE(*,*) 'flip assignment failed, iQuad= ',iQuad,', iLocSide= ',iLocSide 
       STOP
     END IF
   END DO
@@ -280,7 +281,13 @@ SUBROUTINE BuildHOMesh()
 !===================================================================================================================================
 ! MODULES
 USE MOD_Globals
-USE MOD_Mesh_Vars
+USE MOD_Mesh_Vars,   ONLY: refinelevel 
+USE MOD_Mesh_Vars,   ONLY: Ngeo,nQuadrants,nElems,Xgeo,XgeoQuad
+USE MOD_Mesh_Vars,   ONLY: sIntSize 
+USE MOD_Mesh_Vars,   ONLY: wBary_Ngeo,xi_Ngeo 
+USE MOD_Mesh_Vars,   ONLY: TreeToQuad,QuadCoords,QuadLevel
+USE MOD_Basis,       ONLY: LagrangeInterpolationPolys 
+USE MOD_ChangeBasis, ONLY: ChangeBasis3D_var 
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -289,14 +296,39 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
+REAL                          :: xi0(3)
+REAL                          :: dxi,length
+REAL,DIMENSION(0:Ngeo,0:Ngeo) :: Vdm_xi,Vdm_eta,Vdm_zeta
+INTEGER                       :: StartQuad,EndQuad,nQuads
+INTEGER                       :: i,iQuad,iElem 
 !===================================================================================================================================
-ALLOCATE(XgeoQuads(3,0:Ngeo,0:Ngeo,0:Ngeo,nQuadrants))
-IF(refineLevel.EQ.0)THEN
-  XgeoQuads=Xgeo
-ELSE
-  STOP 'interpolation only for refinelevel 0'
-END IF
+ALLOCATE(XgeoQuad(3,0:Ngeo,0:Ngeo,0:Ngeo,nQuadrants))
 
+
+DO iElem=1,nElems
+  StartQuad = TreeToQuad(1,iElem)+1
+  EndQuad   = TreeToQuad(2,iElem)
+  nQuads    = TreeToQuad(2,iElem)-TreeToQuad(1,iElem)
+  IF(nQuads.EQ.1)THEN !no refinement in this tree
+    XgeoQuad(:,:,:,:,StartQuad)=Xgeo(:,:,:,:,iElem)
+  ELSE
+    DO iQuad=StartQuad,EndQuad
+      ! transform p4est first corner coordinates (integer from 0... intsize) to [-1,1] reference element
+      xi0(:)=-1.+2.*REAL(QuadCoords(:,iQuad))*sIntSize
+      ! length of each quadrant in integers
+      length=2./REAL(2**QuadLevel(iQuad))
+      ! Build Vandermonde matrices for each parameter range in xi, eta,zeta
+      DO i=0,Ngeo
+        dxi=0.5*(xi_Ngeo(i)+1.)*Length
+        CALL LagrangeInterpolationPolys(xi0(1) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_xi(i,:)) 
+        CALL LagrangeInterpolationPolys(xi0(2) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_eta(i,:)) 
+        CALL LagrangeInterpolationPolys(xi0(3) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_zeta(i,:)) 
+      END DO
+      !interpolate tree HO mapping to quadrant HO mapping
+      CALL ChangeBasis3D_var(3,Ngeo,Ngeo,Vdm_xi,Vdm_eta,Vdm_zeta,XGeo(:,:,:,:,iElem),XgeoQuad(:,:,:,:,iQuad))
+    END DO !iQuad=StartQuad,EndQuad
+  END IF !nQuads==1
+END DO !iElem=1,nElems
 END SUBROUTINE BuildHOMesh
 
 END MODULE MOD_MeshFromP4EST

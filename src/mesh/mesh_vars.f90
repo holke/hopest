@@ -15,8 +15,9 @@ SAVE
 LOGICAL           :: useCurveds
 INTEGER           :: NGeo                        ! polynomial degree of geometric transformation
 REAL,ALLOCATABLE  :: Xi_NGeo(:)                  ! 1D equidistant point positions for curved elements (during readin)
+REAL,ALLOCATABLE  :: wBary_NGeo(:)               ! barycentric weights from xi_Ngeo
 REAL,ALLOCATABLE  :: XGeo(:,:,:,:,:)              ! High order geometry nodes, per element (1:3,0:Ngeo,0:Ngeo,0:Ngeo,nElems)
-REAL,ALLOCATABLE  :: XGeoQuads(:,:,:,:,:)              ! High order geometry nodes, per element (1:3,0:Ngeo,0:Ngeo,0:Ngeo,nElems)
+REAL,ALLOCATABLE  :: XGeoQuad(:,:,:,:,:)              ! High order geometry nodes, per element (1:3,0:Ngeo,0:Ngeo,0:Ngeo,nElems)
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! GLOBAL VARIABLES 
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -114,6 +115,7 @@ TYPE(tElemPtr),ALLOCATABLE  :: Quads(:)           ! new element list elements ar
 INTEGER                     :: nQuadrants         ! local number of quadrants (here no MPI => all) 
 INTEGER                     :: nHalfFaces         ! number of mortar sides
 INTEGER(KIND=4)             :: IntSize            ! used to transform INT coords/levels to REAL coords/levels: REAL=1/inssize*INT  [0. ; 1.]
+REAL                        :: sIntSize           ! 1./REAL(intsize)
 INTEGER(KIND=4),POINTER     :: QuadToTree(:)      ! from quadrant to tree ( ~ new element ID to old element ID) 
 INTEGER(KIND=4),ALLOCATABLE :: TreeToQuad(:,:) ! from tree to quad range (2,nElems), entry 1: firstInd-1, entry2:lastInd 
 INTEGER(KIND=4),POINTER     :: QuadToQuad(:,:)    ! p4est quadrant connectivity (1:6,1:nQuadrants) => neighbor quadrant

@@ -29,6 +29,7 @@ SUBROUTINE RefineMesh()
 USE MOD_Globals
 USE MOD_Mesh_Vars
 USE MOD_p4estBinding
+USE MOD_Readintools,ONLY:GETINT
 USE, INTRINSIC :: ISO_C_BINDING
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
@@ -38,30 +39,44 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-TYPE(C_FUNPTR)              :: refineFunction
+TYPE(C_FUNPTR)              :: refineFunc
+INTEGER                     :: iSide,iElem
 !===================================================================================================================================
 IF(MESHInitIsDone) RETURN
 SWRITE(UNIT_stdOut,'(A)')'BUILD P4EST MESH AND REFINE ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
 
+refineLevel=GETINT('refineLevel','1')
+refineType =GETINT('refineType','1') ! default conform refinement
+
+ALLOCATE(RefineList(nElems))
+RefineList=0
+
 ! Transform input mesh to adapted mesh
 ! Do refinement and save p4est refine
 SELECT CASE(refineType)
 CASE(1)
-  refineFunction=C_FUNLOC(RefineAll)
+  refineFunc=C_FUNLOC(RefineAll)
+CASE(11)
+  refineFunc=C_FUNLOC(RefineFirst)
 CASE(2)
-  refineFunction=C_FUNLOC(RefineByList)
-  ALLOCATE(RefineList(0:nElems-1))
-  RefineList=0
-  RefineList(1)=1
+  refineFunc=C_FUNLOC(RefineByList)
 CASE(3)
-  refineFunction=C_FUNLOC(RefineByGeom)
+  refineFunc=C_FUNLOC(RefineByGeom)
+CASE(4)
+  refineFunc=C_FUNLOC(RefineByList)
+  DO iElem=1,nElems
+    DO iSide=1,6
+      IF(Elems(iElem)%ep%side(iSide)%sp%BCIndex.GT.0)THEN
+!        RefineList(iElem)=RefineLevel
+      END IF
+    END DO
+  END DO
 CASE DEFAULT
   STOP 'refineType is not defined'
 END SELECT
 
-CALL p4est_refine_mesh(p4est_ptr%p4est,refineFunction,refineLevel,& !IN
-                       p4est_ptr%mesh)                              !OUT
+CALL p4est_refine_mesh(p4est_ptr%p4est,refineFunc,refineLevel,p4est_ptr%mesh)
 
 SDEALLOCATE(RefineList)
 
@@ -89,11 +104,7 @@ INTEGER(KIND=C_INT)                      :: refineAll
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
-IF(tree==0)THEN
-  refineAll=1
-ELSE
-  refineAll=0
-END IF
+refineAll=1
 END FUNCTION RefineAll
 
 
@@ -118,6 +129,7 @@ INTEGER(KIND=C_INT)                      :: refineByList
 ! LOCAL VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 refineByList = RefineList(tree)
+RefineList(tree)=RefineList(tree)-1
 END FUNCTION RefineByList
 
 
@@ -143,5 +155,31 @@ INTEGER(KIND=C_INT)                      :: refineByGeom
 RefineByGeom=1
 END FUNCTION RefineByGeom
 
+
+FUNCTION RefineFirst(x,y,z,tree,level) BIND(C)
+!===================================================================================================================================
+! Subroutine to refine the the mesh
+!===================================================================================================================================
+! MODULES
+USE, INTRINSIC :: ISO_C_BINDING
+! IMPLICIT VARIABLE HANDLING
+IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: x,y,z
+INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: tree
+INTEGER(KIND=C_INT8_T ),INTENT(IN),VALUE :: level
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+INTEGER(KIND=C_INT)                      :: refineFirst
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+IF(tree.EQ.1)THEN
+  refineFirst=1
+ELSE
+  refineFirst=0
+END IF
+END FUNCTION RefineFirst
 
 END MODULE MOD_Mesh_Refine
