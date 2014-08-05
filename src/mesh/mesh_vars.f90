@@ -39,6 +39,8 @@ INTEGER                          :: refineLevel
 INTEGER                          :: refineType
 INTEGER                          :: refineListType
 INTEGER,ALLOCATABLE              :: RefineList(:)
+REAL,ALLOCATABLE                 :: refineBoundary(:)
+INTEGER,ALLOCATABLE                 :: TreeToQuadRefine(:,:)
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! USER DEFINED TYPES 
 TYPE tNodePtr
