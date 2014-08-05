@@ -23,4 +23,4 @@
 ./src/io_hdf5/io_hdf5.f90
 ./src/io_hdf5/hdf5_input.f90
 ./src/io_hdf5/hdf5_output.f90
-
+./src/fortranwrap.f90

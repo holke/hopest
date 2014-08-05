@@ -11,6 +11,7 @@ libhopest_internal_headers = \
 	src/hopest_f.h
 libhopest_compiled_sources = \
         src/hopest.c src/hopest_f.f \
+	src/fortranwrap.f90 \
 	src/hopest_fortran_test.c \
 	src/hopest_c_test.f \
 	src/hopest_c_testf90.f90 \
