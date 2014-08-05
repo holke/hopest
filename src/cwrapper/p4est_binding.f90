@@ -106,7 +106,7 @@ INTERFACE
   END SUBROUTINE p4_build_bcs
 
 
-  SUBROUTINE p4_get_bcs(p4est,num_trees,bcelemmap) BIND(C)
+  SUBROUTINE p4_get_bcs(p4est,tree_to_bc) BIND(C)
   !=================================================================================================================================
   ! simple refine function, giving the level and if refine_elem < 0 then a conformal refinement is applied.
   !=================================================================================================================================
@@ -117,15 +117,14 @@ INTERFACE
   !---------------------------------------------------------------------------------------------------------------------------------
   ! INPUT VARIABLES
   TYPE(C_PTR),VALUE,INTENT(IN)        :: p4est
-  INTEGER( KIND = C_INT),VALUE        :: num_trees 
-  INTEGER(KIND=C_INT16_T),INTENT(OUT) :: bcelemmap(0:5,num_trees)
+  TYPE(C_PTR),INTENT(OUT)             :: tree_to_bc
   !---------------------------------------------------------------------------------------------------------------------------------
   ! OUTPUT VARIABLES
   !=================================================================================================================================
   END SUBROUTINE p4_get_bcs
 
 
-  SUBROUTINE p4_get_mesh_info(p4est,mesh,global_num_quadrants,num_half_faces) BIND(C)
+  SUBROUTINE p4_get_mesh_info(p4est,mesh,global_num_quadrants,num_half_faces,num_trees) BIND(C)
   !=================================================================================================================================
   ! simple refine function, giving the level and if refine_elem < 0 then a conformal refinement is applied.
   !=================================================================================================================================
@@ -135,12 +134,13 @@ INTERFACE
   IMPLICIT NONE
   !---------------------------------------------------------------------------------------------------------------------------------
   ! INPUT VARIABLES
-  TYPE(C_PTR),VALUE                :: p4est
-  TYPE(C_PTR),VALUE                :: mesh
+  TYPE(C_PTR),VALUE,INTENT(IN)     :: p4est
+  TYPE(C_PTR),VALUE,INTENT(IN)     :: mesh
   !---------------------------------------------------------------------------------------------------------------------------------
   ! OUTPUT VARIABLES
-  INTEGER                          :: global_num_quadrants
-  INTEGER                          :: num_half_faces
+  INTEGER,INTENT(OUT)              :: global_num_quadrants
+  INTEGER,INTENT(OUT)              :: num_half_faces
+  INTEGER,INTENT(OUT)              :: num_trees
   !=================================================================================================================================
   END SUBROUTINE p4_get_mesh_info
 

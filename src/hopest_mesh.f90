@@ -40,7 +40,7 @@ USE MOD_p4estBinding
 !-----------------------------------------------------------------------------------------------------------------------------------
 USE MOD_Mesh_ReadIn,        ONLY:readMeshFromHDF5
 USE MOD_Mesh_Refine,        ONLY:RefineMesh
-USE MOD_MeshFromP4EST,      ONLY:BuildMeshFromP4EST,BuildHOMesh,BuildBCs,GetBCs
+USE MOD_MeshFromP4EST,      ONLY:BuildMeshFromP4EST,BuildHOMesh,BuildBCs
 USE MOD_Output_HDF5,        ONLY:writeMeshToHDF5
 USE MOD_ReadInTools,        ONLY:GETINT,GETSTR
 IMPLICIT NONE
@@ -69,8 +69,6 @@ CALL readMeshFromHDF5(MeshFile) !set nElems
 
 CALL RefineMesh()
 CALL BuildBCs()
-CALL GetBCs()
-!STOP 'Bis hier und nicht weiter'
 CALL p4_save_all(TRIM(ProjectName)//'.p4est'//C_NULL_CHAR,p4est_ptr%p4est)
 CALL BuildMeshFromP4EST()
 

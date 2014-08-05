@@ -48,8 +48,6 @@ void p4_initvars()
 
 
 
-
-
 // Build p4est data structures with existing connectivity from HDF5 mesh
 void p4_connectivity_treevertex(p4est_topidx_t num_vertices,
                                     p4est_topidx_t num_trees,
@@ -115,7 +113,6 @@ void p4_build_bcs(p4est_t        *p4est,
   
   for(itree=0; itree<num_trees; itree++) {
     for(iside=0; iside<6; iside++) {
-      printf("Test1 %d %d %d \n",itree,iside,bcelemmap[itree*6+iside]);
       ((int16_t*) conn->tree_to_attr)[itree*6+iside]=bcelemmap[itree*6+iside];
     }
   }
@@ -123,21 +120,19 @@ void p4_build_bcs(p4est_t        *p4est,
 
 
 void p4_get_bcs(p4est_t        *p4est,
-                p4est_topidx_t num_trees,
-                int16_t        *bcelemmap)
+                int16_t        **bcelemmap)
 {
   
   int itree,iside;
   p8est_connectivity_t *conn=p4est->connectivity;
+  bcelemmap=(int16_t*) conn->tree_to_attr;
 
-  P4EST_ASSERT (p4est->trees->elem_count == num_trees);
-
-  for(itree=0; itree<num_trees; itree++) {
-    for(iside=0; iside<6; iside++) {
-      bcelemmap[itree*6+iside]=((int16_t*) conn->tree_to_attr)[itree*6+iside];
-//      printf("Test2 %d %d %d \n",itree,iside,((int16_t*) conn->tree_to_attr)[itree*6+iside]);
-    }
-  }
+  //for(itree=0; itree<num_trees; itree++) {
+  //  for(iside=0; iside<6; iside++) {
+  //    bcelemmap[itree*6+iside]=((int16_t*) conn->tree_to_attr)[itree*6+iside];
+////      printf("Test2 %d %d %d \n",itree,iside,((int16_t*) conn->tree_to_attr)[itree*6+iside]);
+  //  }
+  //}
 }
 
 
@@ -215,7 +210,7 @@ void p4_refine_mesh(p4est_t  *p4est,
 
   /* create ghost layer and mesh */
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
-  mesh = p4est_mesh_new (p4est, ghost, P4EST_CONNECT_FULL);
+  mesh = p4est_mesh_new_ext (p4est, ghost, 1,1,P4EST_CONNECT_FULL);
 
   //return mesh as pointer adress;
   *mesh_out=(p4est_mesh_t *)mesh;
@@ -227,10 +222,12 @@ void p4_refine_mesh(p4est_t  *p4est,
 void p4_get_mesh_info ( p4est_t        *p4est,
                         p4est_mesh_t   *mesh,
                         int            *global_num_quadrants,
-                        int            *num_half_faces )
+                        int            *num_half_faces,
+                        int            *num_trees )
 {
   *global_num_quadrants = p4est->global_num_quadrants;
   *num_half_faces = mesh->quad_to_half->elem_count;      // big face with 4 small neighbours
+  *num_trees = p4est->trees->elem_count;
   SC_CHECK_ABORTF (mesh->local_num_quadrants == p4est->global_num_quadrants,
                    "Global quads %i and local quads %i mismatch ! ",
                    (int) p4est->global_num_quadrants,(int) mesh->local_num_quadrants );

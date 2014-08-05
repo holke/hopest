@@ -23,14 +23,9 @@ INTERFACE BuildBCs
   MODULE PROCEDURE BuildBCs
 END INTERFACE
 
-INTERFACE GetBCs
-  MODULE PROCEDURE GetBCs
-END INTERFACE
-
 PUBLIC::BuildMeshFromP4EST
 PUBLIC::BuildHOMesh
 PUBLIC::BuildBCs
-PUBLIC::GetBCs
 !===================================================================================================================================
 
 CONTAINS
@@ -54,7 +49,7 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-TYPE(C_PTR)                 :: QT,QQ,QF,QH
+TYPE(C_PTR)                 :: QT,QQ,QF,QH,TB
 TYPE(tElem),POINTER         :: aQuad,nbQuad,Tree
 TYPE(tSide),POINTER         :: aSide
 INTEGER                     :: iQuad,iMortar,iElem
@@ -64,13 +59,14 @@ INTEGER                     :: PMortar,PFlip,HFlip,QHInd
 INTEGER                     :: iLocSide
 INTEGER                     :: StartQuad,EndQuad
 INTEGER                     :: BClocSide,BCindex
+INTEGER(KIND=C_INT16_T),POINTER :: TreeToBC(:,:)
 !===================================================================================================================================
 IF(MESHInitIsDone) RETURN
-SWRITE(UNIT_stdOut,'(A)')'BUILD P4EST MESH AND REFINE ...'
+SWRITE(UNIT_stdOut,'(A)')'GENERATE HOPEST MESH FROM P4EST ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
 
 ! Get arrays from p4est: use pointers for c arrays (QT,QQ,..), duplicate data for QuadCoords,Level
-CALL p4_get_mesh_info(p4est_ptr%p4est,p4est_ptr%mesh,nQuadrants,nHalfFaces)
+CALL p4_get_mesh_info(p4est_ptr%p4est,p4est_ptr%mesh,nQuadrants,nHalfFaces,nElems)
 
 ALLOCATE(QuadCoords(3,nQuadrants),QuadLevel(nQuadrants)) ! big to small flip
 QuadCoords=0
@@ -83,6 +79,10 @@ CALL C_F_POINTER(QT,QuadToTree,(/nQuadrants/))
 CALL C_F_POINTER(QQ,QuadToQuad,(/6,nQuadrants/))
 CALL C_F_POINTER(QF,QuadToFace,(/6,nQuadrants/))
 IF(nHalfFaces.GT.0) CALL C_F_POINTER(QH,QuadToHalf,(/4,nHalfFaces/))
+
+! Get boundary conditions from p4est
+CALL p4_get_bcs(p4est_ptr%p4est,TB)
+CALL C_F_POINTER(TB,TreeToBC,(/6,nElems/))
 
 ALLOCATE(TreeToQuad(2,nElems))
 TreeToQuad(1,1)=0
@@ -346,41 +346,5 @@ CALL p4_build_bcs(p4est_ptr%p4est,nElems,BCElemMap)
 
 END SUBROUTINE BuildBCs
 
-
-SUBROUTINE GetBCs()
-!===================================================================================================================================
-! Subroutine to translate p4est mesh datastructure to HOPR datastructure
-!===================================================================================================================================
-! MODULES
-USE, INTRINSIC :: ISO_C_BINDING
-USE MOD_Globals
-USE MOD_Mesh_Vars
-USE MOD_p4estBinding
-USE MOD_Output_Vars, ONLY:Projectname
-! IMPLICIT VARIABLE HANDLING
-IMPLICIT NONE
-!-----------------------------------------------------------------------------------------------------------------------------------
-! INPUT VARIABLES
-!-----------------------------------------------------------------------------------------------------------------------------------
-! OUTPUT VARIABLES
-!-----------------------------------------------------------------------------------------------------------------------------------
-! LOCAL VARIABLES
-TYPE(tElem),POINTER         :: Elem
-TYPE(tSide),POINTER         :: Side
-INTEGER                     :: iElem,iSide
-INTEGER(KIND=C_INT16_T)     :: BCElemMap(0:5,nElems)
-!===================================================================================================================================
-CALL p4_get_bcs(p4est_ptr%p4est,nElems,BCElemMap)
-!BCElemMap=-1
-!DO iELem=1,nElems
-  !Elem=>Elems(iElem)%ep
-  !DO iSide=1,6
-    !Side=>Elem%side(iSide)%sp
-    !BCElemMap(H2P_FaceMap(iSide),iElem)=Side%BCIndex
-  !END DO
-!END DO
-
-
-END SUBROUTINE GetBCs
 
 END MODULE MOD_MeshFromP4EST
