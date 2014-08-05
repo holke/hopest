@@ -46,8 +46,6 @@ void p4_loadmesh(char    filename[],
 
 
 
-
-
 // Build p4est data structures with existing connectivity from HDF5 mesh
 void p4_connectivity_treevertex (p4est_topidx_t num_vertices,
                                  p4est_topidx_t num_trees,
@@ -278,7 +276,7 @@ void p4_get_quadrants( p4est_t       *p4est,
 }
 
 
-void p4_save_all ( char    filename[],
+void p4_savemesh ( char    filename[],
                    p4est_t *p4est)
 {
   p4est_save(filename,p4est,0);

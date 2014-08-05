@@ -22,13 +22,13 @@ INTERFACE ChangeBasis2D
   MODULE PROCEDURE ChangeBasis2D
 END INTERFACE
 
-INTERFACE ChangeBasis3D_var 
-  MODULE PROCEDURE ChangeBasis3D_var
+INTERFACE ChangeBasis3D_XYZ 
+  MODULE PROCEDURE ChangeBasis3D_XYZ
 END INTERFACE
 
 PUBLIC :: ChangeBasis3D
 PUBLIC :: ChangeBasis2D
-PUBLIC :: ChangeBasis3D_var
+PUBLIC :: ChangeBasis3D_XYZ
 !===================================================================================================================================
 
 CONTAINS
@@ -141,7 +141,7 @@ END SUBROUTINE ChangeBasis2D
 
 
 
-SUBROUTINE ChangeBasis3D_var(Dim1,N_In,N_Out,Vdm_xi,Vdm_eta,Vdm_zeta,X3D_In,X3D_Out)
+SUBROUTINE ChangeBasis3D_XYZ(Dim1,N_In,N_Out,Vdm_xi,Vdm_eta,Vdm_zeta,X3D_In,X3D_Out)
 !===================================================================================================================================
 ! interpolate a 3D tensor product Lagrange basis defined by (N_in+1) 1D interpolation point positions xi_In(0:N_In)
 ! to another 3D tensor product node positions (number of nodes N_out+1) 
@@ -200,6 +200,6 @@ DO kN_In=0,N_In
     END DO
   END DO
 END DO
-END SUBROUTINE ChangeBasis3D_var
+END SUBROUTINE ChangeBasis3D_XYZ
 
 END MODULE MOD_changeBasis

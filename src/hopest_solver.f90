@@ -35,15 +35,16 @@ SUBROUTINE HopestSolver()
 USE MOD_Globals
 USE MOD_IO_HDF5
 USE MOD_Mesh_Vars
-USE MOD_Output_Vars, ONLY:Projectname
-USE MOD_p4estBinding
-!-----------------------------------------------------------------------------------------------------------------------------------
-!USE MOD_Mesh_ReadIn,        ONLY:readMeshFromP4EST
-USE MOD_Mesh_Refine,        ONLY:RefineMesh
+USE MOD_Mesh,               ONLY:InitMesh
+USE MOD_Output_Vars,        ONLY:Projectname
+USE MOD_p4estBinding,       ONLY: p4_initvars,p4_loadmesh
+USE MOD_Basis,              ONLY:BarycentricWeights
+USE MOD_Mesh_ReadIn,        ONLY:ReadGeoFromHDF5
 USE MOD_MeshFromP4EST,      ONLY:BuildMeshFromP4EST,BuildHOMesh
 USE MOD_Output_HDF5,        ONLY:writeMeshToHDF5
 USE MOD_ReadInTools,        ONLY:GETINT,GETSTR
 IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
 ! INPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! INPUT/OUTPUT VARIABLES
@@ -51,35 +52,38 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
+INTEGER :: i
 !===================================================================================================================================
-!CALL InitIO()
+IF(MeshInitIsDone)&
+ CALL abort(__STAMP__,&
+ 'InitMesh not ready to be called or already called.')
 
-!IF(MeshInitIsDone)&
-  !CALL abort(__STAMP__,&
-  !'InitMesh not ready to be called or already called.')
+SWRITE(UNIT_StdOut,'(132("-"))')
+SWRITE(UNIT_stdOut,'(A)') ' INIT MESH...'
 
-!SWRITE(UNIT_StdOut,'(132("-"))')
-!SWRITE(UNIT_stdOut,'(A)') ' INIT MESH...'
+CALL InitIO()
+CALL p4_initvars()
+CALL InitMesh()
 
-!! prepare pointer structure (get nElems, etc.)
-!MeshFile = GETSTR('MeshFile')
-!ProjectName=Meshfile(1:INDEX(Meshfile,'_mesh.h5')-1)
-!CALL readMesh(MeshFile) !set nElems
+CALL p4_loadmesh(MeshFile,p4est_ptr%p4est)
+!CALL p4_partition_info !start and end tree and quadrants
+CALL BuildMeshFromP4EST()
 
-!CALL RefineMesh()
-!CALL p4_save_all(TRIM(ProjectName)//'.p4est'//C_NULL_CHAR,p4est_ptr%p4est)
-!CALL BuildMeshFromP4EST()
+!STOP 'Weiter gehts nicht'
+CALL ReadGeoFromHDF5(MeshFile)
 
-!CALL BuildHOMesh()
-!!output new mesh
-!CALL writeMeshToHDF5(TRIM(ProjectName)//'_mesh_p4est.h5')
-!! dealloacte pointers
-!SWRITE(UNIT_stdOut,'(A)') "NOW CALLING deleteMeshPointer..."
-!CALL deleteMeshPointer()
+CALL BuildHOMesh()
 
-!MeshInitIsDone=.TRUE.
+!CALL FlexiPrepareMesh() ! Suggestion
 
-!CALL FinalizeHopestSolver()
+
+! dealloacte pointers
+SWRITE(UNIT_stdOut,'(A)') "NOW CALLING deleteMeshPointer..."
+CALL deleteMeshPointer()
+
+MeshInitIsDone=.TRUE.
+
+CALL FinalizeHopestSolver()
 SWRITE(UNIT_stdOut,'(A)')' INIT MESH DONE!'
 SWRITE(UNIT_StdOut,'(132("-"))')
 END SUBROUTINE HopestSolver

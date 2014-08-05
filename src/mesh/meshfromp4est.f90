@@ -304,7 +304,7 @@ USE MOD_Mesh_Vars,   ONLY: sIntSize
 USE MOD_Mesh_Vars,   ONLY: wBary_Ngeo,xi_Ngeo 
 USE MOD_Mesh_Vars,   ONLY: TreeToQuad,QuadCoords,QuadLevel
 USE MOD_Basis,       ONLY: LagrangeInterpolationPolys 
-USE MOD_ChangeBasis, ONLY: ChangeBasis3D_var 
+USE MOD_ChangeBasis, ONLY: ChangeBasis3D_XYZ 
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -342,7 +342,7 @@ DO iElem=1,nElems
         CALL LagrangeInterpolationPolys(xi0(3) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_zeta(i,:)) 
       END DO
       !interpolate tree HO mapping to quadrant HO mapping
-      CALL ChangeBasis3D_var(3,Ngeo,Ngeo,Vdm_xi,Vdm_eta,Vdm_zeta,XGeo(:,:,:,:,iElem),XgeoQuad(:,:,:,:,iQuad))
+      CALL ChangeBasis3D_XYZ(3,Ngeo,Ngeo,Vdm_xi,Vdm_eta,Vdm_zeta,XGeo(:,:,:,:,iElem),XgeoQuad(:,:,:,:,iQuad))
     END DO !iQuad=StartQuad,EndQuad
   END IF !nQuads==1
 END DO !iElem=1,nElems

@@ -27,8 +27,7 @@ libhopest_compiled_sources = \
 	src/interpolation/basis.f90 \
 	src/readintools/readintools.f90 \
 	src/output/output.f90 \
-	src/mesh/mesh_refine.f90 \
-	src/mesh/meshfromp4est.f90
+	src/mesh/mesh_refine.f90
 
 ## Please keep this if condition.  Files that rely on HDF5 go here.
 if HOPEST_WITH_HDF5
@@ -38,12 +37,12 @@ libhopest_compiled_sources += \
 	src/io_hdf5/hdf5_input.f90 \
 	src/io_hdf5/hdf5_output.f90 \
 	src/output/output_hdf5.f90 \
+	src/mesh/mesh.f90 \
 	src/mesh/mesh_readin.f90 \
 	src/mesh/mesh_refine.f90 \
 	src/mesh/meshfromp4est.f90 \
-	src/mesh/mesh.f90 \
-	src/hopest_mesh.f90 \
-	src/hopest_solver.f90
+	src/hopest_solver.f90 \
+	src/hopest_mesh.f90
 endif
 
 libhopest_installed_headers += src/hopest_hdf5.h
