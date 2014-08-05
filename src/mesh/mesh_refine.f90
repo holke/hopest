@@ -196,7 +196,7 @@ INTEGER(KIND=C_INT) :: refineAll
 refineAll=1
 END FUNCTION RefineAll
 
-FUNCTION RefineByList(x,y,z,tree,level) BIND(C)
+FUNCTION RefineByList(x,y,z,tree,level,childID) BIND(C)
 !===================================================================================================================================
 ! Subroutine to refine the the mesh
 !===================================================================================================================================
@@ -210,14 +210,16 @@ IMPLICIT NONE
 INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: x,y,z
 INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: tree
 INTEGER(KIND=C_INT8_T ),INTENT(IN),VALUE :: level
+INTEGER(KIND=C_INT ),INTENT(IN),VALUE :: childID
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! OUTPUT VARIABLES
 INTEGER(KIND=C_INT)                      :: refineByList
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
-IF (level.NE.0) WRITE(*,*) 2**19/x
+
 IF (level.EQ.0) RefineByList=SUM(TreeToQuadRefine(:,tree))
+IF (level.GE.1) RefineByList=TreeToQuadRefine(childID,tree)
 END FUNCTION RefineByList
 
 

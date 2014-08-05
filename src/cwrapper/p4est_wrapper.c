@@ -89,12 +89,13 @@ refine_hopest (p4est_t * p4est, p4est_topidx_t which_tree,
                p4est_quadrant_t * q)
 {
   // Call HOPEST refinemtn routines
-  return refine_f(q->x,q->y,q->z,which_tree+1,q->level);
+  int childID= p8est_quadrant_child_id (q);
+  return refine_f(q->x,q->y,q->z,which_tree+1,q->level,childID);
 }
 
 void p4est_refine_mesh (p4est_t  *p4est,
                         int     (*myrefine_f)
-                                (p4est_qcoord_t,p4est_qcoord_t,p4est_qcoord_t,p4est_topidx_t,int8_t),
+                                (p4est_qcoord_t,p4est_qcoord_t,p4est_qcoord_t,p4est_topidx_t,int8_t,int),
                         int     refine_level,
                         p4est_mesh_t  **mesh_out )
 {
