@@ -15,6 +15,10 @@ INTERFACE BuildMeshFromP4EST
   MODULE PROCEDURE BuildMeshFromP4EST
 END INTERFACE
 
+INTERFACE getHFlip
+  MODULE PROCEDURE getHFlip
+END INTERFACE
+
 INTERFACE BuildHOMesh
   MODULE PROCEDURE BuildHOMesh
 END INTERFACE
@@ -24,6 +28,7 @@ INTERFACE BuildBCs
 END INTERFACE
 
 PUBLIC::BuildMeshFromP4EST
+PUBLIC::getHFlip
 PUBLIC::BuildHOMesh
 PUBLIC::BuildBCs
 !===================================================================================================================================
@@ -143,7 +148,7 @@ DO iQuad=1,nQuadrants
         nbQuad=>Quads(nbQuadInd)%ep
         nbSide=P2H_FaceMap(PnbSide)
         aSide%MortarSide(iMortar)%sp=>nbQuad%side(nbSide)%sp
-        aSide%MortarSide(iMortar)%sp%flip=HFlip
+        aSide%MortarSide(iMortar)%sp%flip=0
       END DO ! iMortar
     ELSE
       nbQuadInd=QuadToQuad(PSide+1,iQuad)+1

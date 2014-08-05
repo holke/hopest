@@ -27,7 +27,7 @@ SUBROUTINE ReadBCs()
 !===================================================================================================================================
 ! MODULES
 USE MOD_Globals
-USE MOD_Mesh_Vars,ONLY:BoundaryName,BoundaryType,nBCs
+USE MOD_Mesh_Vars,ONLY:BoundaryName,BoundaryType,nBCs,nUserBCs
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -36,32 +36,63 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER                        :: iBC
+INTEGER, ALLOCATABLE           :: BCMapping(:),BCType(:,:)
+CHARACTER(LEN=255), ALLOCATABLE:: BCNames(:)
+INTEGER                        :: iBC,iUserBC
 INTEGER                        :: Offset=0 ! Every process reads all BCs
 !===================================================================================================================================
-offset=0
 ! Read boundary names from data file
 CALL GetDataSize(File_ID,'BCNames',nDims,HSize)
 nBCs=HSize(1)
 DEALLOCATE(HSize)
-IF(ALLOCATED(BoundaryName)) DEALLOCATE(BoundaryName)
-IF(ALLOCATED(BoundaryType)) DEALLOCATE(BoundaryType)
-ALLOCATE(BoundaryName(nBCs))
-CALL ReadArray('BCNames',1,(/nBCs/),Offset,1,StrArray=BoundaryName)  
+ALLOCATE(BCNames(nBCs))
+ALLOCATE(BCMapping(nBCs))
+CALL ReadArray('BCNames',1,(/nBCs/),Offset,1,StrArray=BCNames)  ! Type is a dummy type only
+! User may have redefined boundaries in the ini file. So we have to create mappings for the boundaries.
+BCMapping=0
+IF(nUserBCs .GT. 0)THEN
+  DO iBC=1,nBCs
+    DO iUserBC=1,nUserBCs
+      IF(INDEX(TRIM(BCNames(iBC)),TRIM(BoundaryName(iUserBC))) .NE.0) BCMapping(iBC)=iUserBC
+    END DO
+  END DO
+END IF
 
 ! Read boundary types from data file
 CALL GetDataSize(File_ID,'BCType',nDims,HSize)
 IF(HSize(1).NE.nBCs) STOP 'Problem in readBC'
 DEALLOCATE(HSize)
-ALLOCATE(BoundaryType(nBCs,4))
-CALL ReadArray('BCType',2,(/nBCs,4/),Offset,1,IntegerArray=BoundaryType)
-
+ALLOCATE(BCType(nBCs,4))
+offset=0
+CALL ReadArray('BCType',2,(/nBCs,4/),Offset,1,IntegerArray=BCType)
+! Now apply boundary mappings
+IF(nUserBCs .GT. 0)THEN
+  DO iBC=1,nBCs
+    IF(BCMapping(iBC) .NE. 0)THEN
+      SWRITE(Unit_StdOut,'(A,A)')    ' |     Boundary in HDF file found |  ',TRIM(BCNames(iBC))
+      SWRITE(Unit_StdOut,'(A,I2,I2)')' |                            was | ',BCType(iBC,1),BCType(iBC,3)
+      SWRITE(Unit_StdOut,'(A,I2,I2)')' |                      is set to | ',BoundaryType(BCMapping(iBC),1:2)
+      BCType(iBC,1) = BoundaryType(BCMapping(iBC),1)
+      BCType(iBC,3) = BoundaryType(BCMapping(iBC),2)
+    END IF
+  END DO
+END IF
+IF(ALLOCATED(BoundaryName)) DEALLOCATE(BoundaryName)
+IF(ALLOCATED(BoundaryType)) DEALLOCATE(BoundaryType)
+ALLOCATE(BoundaryName(nBCs))
+ALLOCATE(BoundaryType(nBCs,BC_SIZE))
+BoundaryName = BCNames
+BoundaryType(:,BC_TYPE)  = BCType(:,BC_TYPE)  
+BoundaryType(:,BC_CURVED)= BCType(:,BC_CURVED)
+BoundaryType(:,BC_STATE) = BCType(:,BC_STATE) 
+BoundaryType(:,BC_ALPHA) = BCType(:,BC_ALPHA) 
 SWRITE(UNIT_StdOut,'(132("."))')
-SWRITE(Unit_StdOut,'(A,A16,A20,A10,A10,A10,A10)')'BOUNDARY CONDITIONS','|','Name','Type','CurveInd','State','Alpha'
+SWRITE(Unit_StdOut,'(A,A16,A20,A10,A10,A10,A10)')'BOUNDARY CONDITIONS','|','Name','Type','Curved','State','Alpha'
 DO iBC=1,nBCs
   SWRITE(*,'(A,A33,A20,I10,I10,I10,I10)')' |','|',TRIM(BoundaryName(iBC)),BoundaryType(iBC,:)
 END DO
 SWRITE(UNIT_StdOut,'(132("."))')
+DEALLOCATE(BCNames,BCType,BCMapping)
 END SUBROUTINE ReadBCs
 
 
@@ -73,6 +104,7 @@ SUBROUTINE ReadMeshFromHDF5(FileString)
 USE MOD_Globals
 USE MOD_Mesh_Vars
 USE MOD_p4estBinding
+USE MOD_MeshFromP4EST, ONLY:getHFlip
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -106,8 +138,10 @@ INTEGER                        :: nNodeIDs,nSideIDs
 ! p4est interface
 INTEGER                        :: num_vertices
 INTEGER                        :: num_trees
+INTEGER                        :: num_periodics,iPeriodic,PFlip,HFlip,HFlip_test
 INTEGER,ALLOCATABLE            :: tree_to_vertex(:,:)
 REAL,ALLOCATABLE               :: vertices(:,:)
+INTEGER,ALLOCATABLE            :: JoinFaces(:,:)
 !===================================================================================================================================
 IF(MESHInitIsDone) RETURN
 INQUIRE (FILE=TRIM(FileString), EXIST=fileExists)
@@ -343,6 +377,8 @@ END IF
 CALL CloseDataFile() 
 
 DEALLOCATE(ElemCurvedNode)
+
+
 ! P4est MESH connectivity (should be replaced by connectivity information ?)
 
 ! needs unique corner nodes for mesh connectivity
@@ -380,14 +416,74 @@ DO iElem=1,nElems
     tree_to_vertex(iNode,iElem)=aElem%Node(H2P_VertexMap(iNode)+1)%np%tmp-1
   END DO
 END DO
-CALL p4_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex,p4est_ptr%p4est)
+
+!periodic Boundaries
+num_periodics=0
+DO iElem=1,nElems
+  aElem=>Elems(iElem)%ep
+  DO iLocSide=1,6
+    aSide=>aElem%Side(iLocSide)%sp
+    IF(aSide%BCIndex.EQ.0) CYCLE ! NO Boundary Condition
+    IF((BoundaryType(aSide%BCIndex,BC_TYPE).EQ.1).AND.(aSide%flip.EQ.0))THEN !periodic side 
+      num_periodics=num_periodics+1
+    END IF
+  END DO !iLocSide
+END DO !iElem
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
+! FOR SECURITY NO PERIODICITY
+WRITE(*,*)'num_periodics set =0  for security !!! ',num_periodics
+num_periodics=0
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
+
+IF(num_periodics.GT.0) THEN
+  ALLOCATE(JoinFaces(5,num_periodics))
+  DO iElem=1,nElems
+    aElem=>Elems(iElem)%ep
+    DO iLocSide=1,6
+      aElem%Side(iLocSide)%sp%tmp=H2P_FaceMap(iLocSide)  !local Face ID in p4est
+    END DO
+  END DO
+  
+  iperiodic=0
+  DO iElem=1,nElems
+    aElem=>Elems(iElem)%ep
+    DO iLocSide=1,6
+      aSide=>aElem%Side(iLocSide)%sp
+      IF(aSide%BCIndex.EQ.0) CYCLE ! NO Boundary Condition
+      IF((BoundaryType(aSide%BCIndex,BC_TYPE).EQ.1).AND.(aSide%flip.EQ.0))THEN !periodic side 
+        HFlip=aSide%connection%flip
+        iperiodic=iperiodic+1
+        bSide=>aSide%connection
+        IF(aSide%tmp.GT.bSide%tmp)THEN
+          aSide=>aSide%connection
+        END IF
+        bSide=>aSide%connection
+        !WRITE(*,*)'DEBUG,aSide%tmp,bSide%tmp:',aSide%tmp,bSide%tmp
+        JoinFaces(1,iPeriodic)=aSide%Elem%ind-1  !treeID of face with smaller p4est locfaceID
+        JoinFaces(2,iPeriodic)=bSide%Elem%ind-1  ! neighbor tree id
+        JoinFaces(3,iPeriodic)=aSide%tmp         ! p4est locSideID
+        JoinFaces(4,iPeriodic)=bSide%tmp         ! p4est neighbor locSideID
+        DO PFlip=0,3
+          Hflip_test=getHflip(aSide%tmp,bSide%tmp,PFlip)
+          IF(HFlip_test.EQ.HFlip) EXIT
+        END DO
+        JoinFaces(5,iPeriodic)=PFlip
+        !  WRITE(*,*)'DEBUG,JoinFaces,iPeriodic',iPeriodic,JoinFaces(:,iPeriodic)
+      END IF
+    END DO !iLocSide
+  END DO !iElem
+END IF !num_periodics>0
+
+CALL p4_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex, &
+                                num_periodics,JoinFaces,p4est_ptr%p4est)
 
 DEALLOCATE(Vertices,tree_to_vertex)
+IF(num_periodics.GT.0) DEALLOCATE(JoinFaces) 
  
 
 ! COUNT SIDES
 
- 
 nBCSides=0
 nSides=0
 nPeriodicSides=0

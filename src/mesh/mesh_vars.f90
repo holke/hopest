@@ -30,6 +30,7 @@ INTEGER             :: nMortarSides=0      !
 INTEGER             :: nBCSides=0          ! BCSide index range: sideID \in [1:nBCSides]
 INTEGER             :: nNodes=0            ! SIZE of Nodes pointer array, number of unique nodes
 INTEGER             :: nBCs=0              ! number of BCs in mesh
+INTEGER             :: nUserBCs=0     
 INTEGER             :: nCurvedNodes=0      ! number of curved nodes per element = (Ngeo+1)^3
 !-----------------------------------------------------------------------------------------------------------------------------------
 CHARACTER(LEN=255),ALLOCATABLE   :: BoundaryName(:)

@@ -45,7 +45,8 @@ INTERFACE
   END SUBROUTINE p4_loadmesh 
 
 
-  SUBROUTINE p4_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex,p4est) BIND(C)
+  SUBROUTINE p4_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex,&
+                                        num_periodics,JoinFaces,p4est) BIND(C)
   !=================================================================================================================================
   ! builds up p4est connectivit, using only element connectivity and vertex positions
   !=================================================================================================================================
@@ -59,6 +60,8 @@ INTERFACE
   INTEGER( KIND = C_INT),VALUE     :: num_trees 
   REAL( KIND = C_DOUBLE )          :: Vertices(3,num_vertices)
   INTEGER( KIND = C_INT)           :: tree_to_vertex(8*num_trees) 
+  INTEGER( KIND = C_INT),VALUE     :: num_periodics 
+  INTEGER( KIND = C_INT)           :: JoinFaces(5*num_periodics) 
   !---------------------------------------------------------------------------------------------------------------------------------
   ! OUTPUT VARIABLES
   TYPE(C_PTR)                      :: p4est

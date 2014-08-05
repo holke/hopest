@@ -49,11 +49,13 @@ void p4_loadmesh(char    filename[],
 
 
 // Build p4est data structures with existing connectivity from HDF5 mesh
-void p4_connectivity_treevertex(p4est_topidx_t num_vertices,
-                                    p4est_topidx_t num_trees,
-                                    double         *vertices,
-                                    p4est_topidx_t *tree_to_vertex,
-                                    p4est_t        **p4est_out )
+void p4_connectivity_treevertex (p4est_topidx_t num_vertices,
+                                 p4est_topidx_t num_trees,
+                                 double         *vertices,
+                                 p4est_topidx_t *tree_to_vertex,
+                                 p4est_topidx_t num_periodics,
+                                 p4est_topidx_t *join_faces,
+                                 p4est_t        **p4est_out )
 {
   p4est_t              *p4est;
   p4est_topidx_t        tree;
@@ -77,6 +79,7 @@ void p4_connectivity_treevertex(p4est_topidx_t num_vertices,
    * Fill tree_to_tree and tree_to_face to make sure we have a valid
    * connectivity.
    */
+
   for (tree = 0; tree < conn->num_trees; ++tree) {
     for (face = 0; face < P4EST_FACES; ++face) {
       conn->tree_to_tree[P4EST_FACES * tree + face] = tree;
@@ -87,6 +90,16 @@ void p4_connectivity_treevertex(p4est_topidx_t num_vertices,
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 
   p4est_connectivity_complete (conn);
+
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+  // Join Faces
+  if ( num_periodics>0) {
+    for (i=0; i < num_periodics; ++i){
+      p8est_connectivity_join_faces(conn,join_faces[5*i],join_faces[5*i+1], 
+                                         join_faces[5*i+2],join_faces[5*i+3],
+                                         join_faces[5*i+4]);
+    } 
+  }
 
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 
