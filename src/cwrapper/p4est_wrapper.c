@@ -123,16 +123,8 @@ void p4_get_bcs(p4est_t        *p4est,
                 int16_t        **bcelemmap)
 {
   
-  int itree,iside;
   p8est_connectivity_t *conn=p4est->connectivity;
-  bcelemmap=(int16_t*) conn->tree_to_attr;
-
-  //for(itree=0; itree<num_trees; itree++) {
-  //  for(iside=0; iside<6; iside++) {
-  //    bcelemmap[itree*6+iside]=((int16_t*) conn->tree_to_attr)[itree*6+iside];
-////      printf("Test2 %d %d %d \n",itree,iside,((int16_t*) conn->tree_to_attr)[itree*6+iside]);
-  //  }
-  //}
+  *bcelemmap=(int16_t*) conn->tree_to_attr;
 }
 
 

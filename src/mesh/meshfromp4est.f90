@@ -121,8 +121,8 @@ END DO
 
 DO iQuad=1,nQuadrants
   aQuad=>Quads(iQuad)%ep
-  Tree=>Elems(QuadToTree(iQuad)+1)%ep
-  aQuad%type=Tree%type
+  !Tree=>Elems(QuadToTree(iQuad)+1)%ep
+  !aQuad%type=Tree%type
   DO iLocSide=1,6
     aSide=>aQuad%Side(iLocSide)%sp
     ! Get P4est local side
@@ -150,7 +150,7 @@ DO iQuad=1,nQuadrants
       nbSide=P2H_FaceMap(PnbSide)
       IF((nbQuadInd.EQ.iQuad).AND.(nbSide.EQ.iLocSide))THEN
         ! this is a boundary side: 
-        BCindex=Tree%Side(iLocSide)%sp%BCindex 
+        BCindex=TreeToBC(PSide+1,QuadToTree(iQuad)+1)
         IF(BCIndex.EQ.0) STOP 'Problem in Boundary assignment'
         aSide%BCIndex=BCIndex
         NULLIFY(aSide%connection)
@@ -177,7 +177,6 @@ DO iQuad=1,nQuadrants
     END IF
   END DO
 END DO
-
 
 !sanity check
 DO iQuad=1,nQuadrants
@@ -319,7 +318,6 @@ USE, INTRINSIC :: ISO_C_BINDING
 USE MOD_Globals
 USE MOD_Mesh_Vars
 USE MOD_p4estBinding
-USE MOD_Output_Vars, ONLY:Projectname
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
