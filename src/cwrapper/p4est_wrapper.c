@@ -1,5 +1,5 @@
 // P4est Bindings
- 
+
 #include <sc_io.h>
 #include <p8est_connectivity.h>
 #include <p8est_bits.h>
@@ -61,15 +61,15 @@ void p4_connectivity_treevertex(p4est_topidx_t num_vertices,
   p4est_connectivity_t *conn = NULL;
 
 
-  P4EST_GLOBAL_PRODUCTIONF ("creating connectivity from tree to vertex only...%d %d \n",num_vertices,num_trees);
+  P4EST_GLOBAL_PRODUCTIONF
+    ("creating connectivity from tree to vertex only...%d %d \n",
+     num_vertices, num_trees);
 
-  conn = p4est_connectivity_new (num_vertices, num_trees,
-                                 0, 0,
-                                 0, 0);
-  for (i=0; i < 3*num_vertices; ++i){
+  conn = p4est_connectivity_new (num_vertices, num_trees, 0, 0, 0, 0);
+  for (i = 0; i < 3 * num_vertices; ++i) {
     conn->vertices[i] = vertices[i];
   }
-  for (i=0; i < 8*num_trees; ++i){
+  for (i = 0; i < 8 * num_trees; ++i) {
     conn->tree_to_vertex[i] = tree_to_vertex[i];
   }
 
@@ -155,15 +155,15 @@ void p4_refine_mesh(p4est_t  *p4est,
   int                 level;
   int                 balance;
 
-  P4EST_GLOBAL_PRODUCTIONF
-    ("DEBUG: refine_level  %d \n",refine_level);
+  P4EST_GLOBAL_PRODUCTIONF ("DEBUG: refine_level  %d \n", refine_level);
   P4EST_GLOBAL_PRODUCTIONF
     ("DEBUG: New connectivity with %lld trees and %lld vertices\n",
-     (long long) p4est->connectivity->num_trees, (long long) p4est->connectivity->num_vertices);
+     (long long) p4est->connectivity->num_trees,
+     (long long) p4est->connectivity->num_vertices);
 
   // Set refinement function pointer called by refine_hopest to function provided by HOPEST
-  refine_f=myrefine_f;
-  
+  refine_f = myrefine_f;
+
   /* Refine the forest iteratively, load balancing at each iteration.
    * This is important when starting with an unrefined forest */
   for (level = 0; level < refine_level; ++level) {
@@ -179,36 +179,31 @@ void p4_refine_mesh(p4est_t  *p4est,
    * Note that this balance step is not strictly necessary since we are using
    * uniform refinement but may be required for other types of refinement.
    */
-  P4EST_GLOBAL_PRODUCTIONF
-    ("DEBUG: before first vtk \n",0);
+  P4EST_GLOBAL_PRODUCTIONF ("DEBUG: before first vtk %i  \n", p4est);
 
   p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_afterrefine");
-  P4EST_GLOBAL_PRODUCTIONF
-    ("DEBUG: after first vtk %d  \n",0);
+  P4EST_GLOBAL_PRODUCTIONF ("DEBUG: after first vtk %d  \n", 0);
 
   balance = 1;
   if (balance) {
     p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
     p4est_partition (p4est, 0, NULL);
   }
-  P4EST_GLOBAL_PRODUCTIONF
-    ("DEBUG: before vtk %d  \n",0);
+  P4EST_GLOBAL_PRODUCTIONF ("DEBUG: before vtk %d  \n", 0);
 
   /* Write the forest to disk for visualization, one file per processor. */
   p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_afterbalance");
 
-  P4EST_GLOBAL_PRODUCTIONF
-    ("DEBUG: before ghosts %d  \n",0);
+  P4EST_GLOBAL_PRODUCTIONF ("DEBUG: before ghosts %d  \n", 0);
 
   /* create ghost layer and mesh */
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
   mesh = p4est_mesh_new_ext (p4est, ghost, 1,1,P4EST_CONNECT_FULL);
 
   //return mesh as pointer adress;
-  *mesh_out=(p4est_mesh_t *)mesh;
+  *mesh_out = (p4est_mesh_t *) mesh;
 
-  P4EST_GLOBAL_PRODUCTIONF
-    ("DEBUG: REFINE FINISHED %d  \n",0);
+  P4EST_GLOBAL_PRODUCTIONF ("DEBUG: REFINE FINISHED %d  \n", 0);
 }
 
 void p4_get_mesh_info ( p4est_t        *p4est,
@@ -247,29 +242,29 @@ void p4_get_quadrants( p4est_t       *p4est,
 
   P4EST_ASSERT (global_num_quadrants == p4est->local_num_quadrants);
   for (iquad = 0; iquad < mesh->local_num_quadrants; iquad++) {
-    tree = p8est_tree_array_index (p4est->trees,mesh->quad_to_tree[iquad]);
+    tree = p8est_tree_array_index (p4est->trees, mesh->quad_to_tree[iquad]);
     quadrants = &(tree->quadrants);
     iquadloc = iquad - tree->quadrants_offset;
-    q = p8est_quadrant_array_index(quadrants, iquadloc);
-    quadlevel [iquad    ] = q->level;
-    quadcoords[iquad*3  ] = q->x;
-    quadcoords[iquad*3+1] = q->y;
-    quadcoords[iquad*3+2] = q->z;
+    q = p8est_quadrant_array_index (quadrants, iquadloc);
+    quadlevel[iquad] = q->level;
+    quadcoords[iquad * 3] = q->x;
+    quadcoords[iquad * 3 + 1] = q->y;
+    quadcoords[iquad * 3 + 2] = q->z;
   }
 
-  *quad_to_tree=mesh->quad_to_tree;
-  *quad_to_quad=mesh->quad_to_quad;
-  *quad_to_face=mesh->quad_to_face;
+  *quad_to_tree = mesh->quad_to_tree;
+  *quad_to_quad = mesh->quad_to_quad;
+  *quad_to_face = mesh->quad_to_face;
 
-  if(num_half_faces>0) *quad_to_half=mesh->quad_to_half->array;
+  if (num_half_faces > 0)
+    *quad_to_half = mesh->quad_to_half->array;
 }
-
 
 
 void p4_save_all ( char    filename[],
                    p4est_t *p4est)
 {
-  p4est_save(filename,p4est,0);
+  p4est_save (filename, p4est, 0);
 }
 
 
