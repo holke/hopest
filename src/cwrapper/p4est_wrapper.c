@@ -82,7 +82,7 @@ void p4est_connectivity_treevertex (p4est_topidx_t num_vertices,
    The actual refinement functions are in HOPEST, called through refine_f.
 */
 
-int (*refine_f) (p4est_qcoord_t,p4est_qcoord_t,p4est_qcoord_t,p4est_topidx_t,int8_t);
+int (*refine_f) (p4est_qcoord_t,p4est_qcoord_t,p4est_qcoord_t,p4est_topidx_t,int8_t,int);
 
 static int
 refine_hopest (p4est_t * p4est, p4est_topidx_t which_tree,
