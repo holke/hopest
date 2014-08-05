@@ -435,7 +435,12 @@ DO iElem=1,nElems
   END DO !iLocSide
 END DO !iElem
 
-!WRITE(*,*)'DEBUG,num_periodics',num_periodics
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
+! FOR SECURITY NO PERIODICITY
+WRITE(*,*)'num_periodics set =0  for security !!! ',num_periodics
+num_periodics=0
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
+
 IF(num_periodics.GT.0) THEN
   ALLOCATE(JoinFaces(5,num_periodics))
   DO iElem=1,nElems
