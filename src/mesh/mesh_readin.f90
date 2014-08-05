@@ -76,8 +76,8 @@ IF(nUserBCs .GT. 0)THEN
       SWRITE(Unit_StdOut,'(A,A)')    ' |     Boundary in HDF file found |  ',TRIM(BCNames(iBC))
       SWRITE(Unit_StdOut,'(A,I2,I2)')' |                            was | ',BCType(iBC,1),BCType(iBC,3)
       SWRITE(Unit_StdOut,'(A,I2,I2)')' |                      is set to | ',BoundaryType(BCMapping(iBC),1:2)
-      BCType(iBC,1) = BoundaryType(BCMapping(iBC),BC_TYPE)
-      BCType(iBC,3) = BoundaryType(BCMapping(iBC),BC_STATE)
+      BCType(iBC,1) = BoundaryType(BCMapping(iBC),1)
+      BCType(iBC,3) = BoundaryType(BCMapping(iBC),2)
     END IF
   END DO
 END IF

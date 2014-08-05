@@ -138,7 +138,7 @@ DO iQuad=1,nQuadrants
         nbQuad=>Quads(nbQuadInd)%ep
         nbSide=P2H_FaceMap(PnbSide)
         aSide%MortarSide(iMortar)%sp=>nbQuad%side(nbSide)%sp
-        aSide%MortarSide(iMortar)%sp%flip=HFlip
+        aSide%MortarSide(iMortar)%sp%flip=0
       END DO ! iMortar
     ELSE
       nbQuadInd=QuadToQuad(PSide+1,iQuad)+1
