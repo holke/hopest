@@ -38,6 +38,7 @@ USE MOD_Output_Vars, ONLY:Projectname
 USE MOD_p4estBinding
 !-----------------------------------------------------------------------------------------------------------------------------------
 USE MOD_Mesh_ReadIn,        ONLY:readMeshFromHDF5
+USE MOD_Basis,              ONLY:BarycentricWeights
 USE MOD_Mesh_Refine,        ONLY:RefineMesh
 USE MOD_MeshFromP4EST,      ONLY:BuildMeshFromP4EST,BuildHOMesh
 USE MOD_Output_HDF5,        ONLY:writeMeshToHDF5
@@ -50,6 +51,7 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
+INTEGER :: i
 !===================================================================================================================================
 IF(MeshInitIsDone)&
   CALL abort(__STAMP__,&
@@ -62,6 +64,14 @@ SWRITE(UNIT_stdOut,'(A)') ' INIT MESH...'
 MeshFile = GETSTR('MeshFile')
 ProjectName=Meshfile(1:INDEX(Meshfile,'_mesh.h5')-1)
 CALL readMeshFromHDF5(MeshFile) !set nElems
+
+ALLOCATE(Xi_Ngeo(0:Ngeo))
+ALLOCATE(wBary_Ngeo(0:Ngeo))
+
+DO i=0,NGeo
+  Xi_Ngeo(i)=-1+REAL(i)*2./REAL(NGeo)
+END DO
+CALL BarycentricWeights(Ngeo,xi_Ngeo,wBary_Ngeo)
 
 CALL RefineMesh()
 CALL p4_save_all(TRIM(ProjectName)//'.p4est'//C_NULL_CHAR,p4est_ptr%p4est)

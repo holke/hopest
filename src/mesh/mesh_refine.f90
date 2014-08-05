@@ -57,6 +57,8 @@ RefineList=0
 SELECT CASE(refineType)
 CASE(1)
   refineFunc=C_FUNLOC(RefineAll)
+CASE(11)
+  refineFunc=C_FUNLOC(RefineFirst)
 CASE(2)
   refineFunc=C_FUNLOC(RefineByList)
 CASE(3)
@@ -153,5 +155,31 @@ INTEGER(KIND=C_INT)                      :: refineByGeom
 RefineByGeom=1
 END FUNCTION RefineByGeom
 
+
+FUNCTION RefineFirst(x,y,z,tree,level) BIND(C)
+!===================================================================================================================================
+! Subroutine to refine the the mesh
+!===================================================================================================================================
+! MODULES
+USE, INTRINSIC :: ISO_C_BINDING
+! IMPLICIT VARIABLE HANDLING
+IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: x,y,z
+INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: tree
+INTEGER(KIND=C_INT8_T ),INTENT(IN),VALUE :: level
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+INTEGER(KIND=C_INT)                      :: refineFirst
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+IF(tree.EQ.1)THEN
+  refineFirst=1
+ELSE
+  refineFirst=0
+END IF
+END FUNCTION RefineFirst
 
 END MODULE MOD_Mesh_Refine

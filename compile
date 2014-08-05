@@ -1,5 +1,14 @@
 #!/bin/bash
 
+cat <<EOF
++++
++++   NOTE: this script is only needed once (FIRST=T).
++++         (Unless there are really big changes to the code.)
++++         Subsequently just type: make V=0
++++         That should be a LOT faster!
++++
+EOF
+
 FIRST=
 COMPILER='GNU_DEBUG'
 
@@ -20,15 +29,17 @@ if [[ $COMPILER == *GNU* ]]; then
   cd ..
   if [[ $COMPILER == *DEBUG* ]]; then
     #FOR DEBUGGING
-    ./configure CFLAGS="-Wall -O0 -g" FCFLAGS="-cpp -fdefault-real-8 -fdefault-double-8 -fbackslash -g -O0 -ggdb3 -fbounds-check -finit-real=nan -fbacktrace -DGNU" --disable-shared --with-hdf5=hdf5/hdf5-1.8.13/hdf5  --enable-debug
+    ./configure CFLAGS="-Wall -Wuninitialized -O0 -g" FCFLAGS="-cpp -fdefault-real-8 -fdefault-double-8 -fbackslash -g -O0 -ggdb3 -fbounds-check -finit-real=nan -fbacktrace -DGNU" --with-hdf5=hdf5/hdf5-1.8.13/hdf5 --enable-debug --disable-shared
   else
     #FOR OPTIMIZATION
-    ./configure CFLAGS="-Wall -O2" FCFLAGS="-cpp -fdefault-real-8 -fdefault-double-8 -fbackslash -O2 " --with-hdf5=hdf5/hdf5-1.8.13/hdf5;
+    ./configure CFLAGS="-Wall -Wuninitialized -O2" FCFLAGS="-cpp -fdefault-real-8 -fdefault-double-8 -fbackslash -O2" --with-hdf5=hdf5/hdf5-1.8.13/hdf5
   fi
 elif [[ $COMPILER == *INTEL* ]]; then
   make CC=icc FC=ifort
   cd ..
 fi
 
-# Compile stuff
-make V=0 -j 4
+# Compile stuff.  V=0 cleans up the compiler messages.
+make V=0 -j4 -C sc
+make V=0 -j4 -C p4est
+make V=0

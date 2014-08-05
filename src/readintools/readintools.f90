@@ -18,6 +18,7 @@ PUBLIC::GETINTARRAY
 PUBLIC::GETREALARRAY
 PUBLIC::DeleteStrings
 PUBLIC::IgnoredStrings
+PUBLIC::FillStrings
 
 !===================================================================================================================================
 

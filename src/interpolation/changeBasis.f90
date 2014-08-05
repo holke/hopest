@@ -22,8 +22,13 @@ INTERFACE ChangeBasis2D
   MODULE PROCEDURE ChangeBasis2D
 END INTERFACE
 
+INTERFACE ChangeBasis3D_var 
+  MODULE PROCEDURE ChangeBasis3D_var
+END INTERFACE
+
 PUBLIC :: ChangeBasis3D
 PUBLIC :: ChangeBasis2D
+PUBLIC :: ChangeBasis3D_var
 !===================================================================================================================================
 
 CONTAINS
@@ -133,5 +138,68 @@ DO jN_In=0,N_In
   END DO
 END DO
 END SUBROUTINE ChangeBasis2D
+
+
+
+SUBROUTINE ChangeBasis3D_var(Dim1,N_In,N_Out,Vdm_xi,Vdm_eta,Vdm_zeta,X3D_In,X3D_Out)
+!===================================================================================================================================
+! interpolate a 3D tensor product Lagrange basis defined by (N_in+1) 1D interpolation point positions xi_In(0:N_In)
+! to another 3D tensor product node positions (number of nodes N_out+1) 
+! defined by (N_out+1) interpolation point  positions xi_Out(0:N_Out)
+!  xi is defined in the 1DrefElem xi=[-1,1]
+!===================================================================================================================================
+! MODULES
+! IMPLICIT VARIABLE HANDLING
+IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+INTEGER,INTENT(IN)  :: Dim1,N_In,N_Out
+REAL,INTENT(IN)     :: X3D_In(1:Dim1,0:N_In,0:N_In,0:N_In)
+REAL,INTENT(IN)     :: Vdm_xi(0:N_Out,0:N_In)
+REAL,INTENT(IN)     :: Vdm_eta(0:N_Out,0:N_In)
+REAL,INTENT(IN)     :: Vdm_zeta(0:N_Out,0:N_In)
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+REAL,INTENT(OUT)    :: X3D_Out(1:Dim1,0:N_Out,0:N_Out,0:N_Out)
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES 
+INTEGER             :: iN_In,jN_In,kN_In,iN_Out,jN_Out,kN_Out
+REAL                :: X3D_Buf1(1:Dim1,0:N_Out,0:N_In,0:N_In)  ! first intermediate results from 1D interpolations
+REAL                :: X3D_Buf2(1:Dim1,0:N_Out,0:N_Out,0:N_In) ! second intermediate results from 1D interpolations
+!===================================================================================================================================
+X3D_buf1=0.
+! first direction iN_In
+DO kN_In=0,N_In
+  DO jN_In=0,N_In
+    DO iN_In=0,N_In
+      DO iN_Out=0,N_Out
+        X3D_Buf1(:,iN_Out,jN_In,kN_In)=X3D_Buf1(:,iN_Out,jN_In,kN_In)+Vdm_xi(iN_Out,iN_In)*X3D_In(:,iN_In,jN_In,kN_In)
+      END DO
+    END DO
+  END DO
+END DO
+X3D_buf2=0.
+! second direction jN_In
+DO kN_In=0,N_In
+  DO jN_In=0,N_In
+    DO jN_Out=0,N_Out
+      DO iN_Out=0,N_Out
+        X3D_Buf2(:,iN_Out,jN_Out,kN_In)=X3D_Buf2(:,iN_Out,jN_Out,kN_In)+Vdm_eta(jN_Out,jN_In)*X3D_Buf1(:,iN_Out,jN_In,kN_In)
+      END DO
+    END DO
+  END DO
+END DO
+X3D_Out=0.
+! last direction kN_In
+DO kN_In=0,N_In
+  DO kN_Out=0,N_Out
+    DO jN_Out=0,N_Out
+      DO iN_Out=0,N_Out
+        X3D_Out(:,iN_Out,jN_Out,kN_Out)=X3D_Out(:,iN_Out,jN_Out,kN_Out)+Vdm_zeta(kN_Out,kN_In)*X3D_Buf2(:,iN_Out,jN_Out,kN_In)
+      END DO
+    END DO
+  END DO
+END DO
+END SUBROUTINE ChangeBasis3D_var
 
 END MODULE MOD_changeBasis
