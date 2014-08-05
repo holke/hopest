@@ -61,6 +61,7 @@ include src/Makefile.am
 include test/Makefile.am
 include example/hopest/Makefile.am
 include example/hello/Makefile.am
+include example/hopest_p4est_geom/Makefile.am
 include deplist
 
 # automatically builds a dependency list deplist.mk from srcfiles.mk uing the tool builddeps
