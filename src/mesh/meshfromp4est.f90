@@ -127,8 +127,11 @@ END DO
 
 DO iQuad=1,nQuadrants
   aQuad=>Quads(iQuad)%ep
-  !Tree=>Elems(QuadToTree(iQuad)+1)%ep
-  !aQuad%type=Tree%type
+  IF(useCurveds)THEN
+    aQuad%type=208 ! fully curved
+  ELSE
+    aQuad%type=118 ! trilinear
+  END IF
   DO iLocSide=1,6
     aSide=>aQuad%Side(iLocSide)%sp
     ! Get P4est local side

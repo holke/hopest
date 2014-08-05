@@ -37,7 +37,11 @@ CHARACTER(LEN=255),ALLOCATABLE   :: BoundaryName(:)
 CHARACTER(LEN=255)               :: MeshFile        ! name of hdf5 meshfile (write with ending .h5!)
 INTEGER                          :: refineLevel
 INTEGER                          :: refineType
+INTEGER                          :: refineListType
+INTEGER                          :: refineBCIndex
 INTEGER,ALLOCATABLE              :: RefineList(:)
+REAL,ALLOCATABLE                 :: refineBoundary(:)
+INTEGER,ALLOCATABLE                 :: TreeToQuadRefine(:,:)
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! USER DEFINED TYPES 
 TYPE tNodePtr
