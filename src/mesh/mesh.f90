@@ -42,7 +42,7 @@ USE MOD_Mesh_ReadIn,        ONLY:readMesh
 USE MOD_Mesh_Refine,        ONLY:RefineMesh
 USE MOD_MeshFromP4EST,      ONLY:BuildMeshFromP4EST,BuildHOMesh
 USE MOD_Output_HDF5,        ONLY:writeMeshToHDF5
-USE MOD_ReadInTools,        ONLY:GETINT,GETSTR
+USE MOD_ReadInTools,        ONLY:GETINT,GETSTR,GETINTARRAY,CNTSTR
 IMPLICIT NONE
 ! INPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -63,6 +63,18 @@ SWRITE(UNIT_stdOut,'(A)') ' INIT MESH...'
 ! prepare pointer structure (get nElems, etc.)
 MeshFile = GETSTR('MeshFile')
 ProjectName=Meshfile(1:INDEX(Meshfile,'_mesh.h5')-1)
+
+! read in boundary conditions, will overwrite BCs from meshfile!
+nUserBCs = CNTSTR('BoundaryName',0)
+IF(nUserBCs.GT.0)THEN
+  ALLOCATE(BoundaryName(1:nUserBCs))
+  ALLOCATE(BoundaryType(1:nUserBCs,2))
+  DO i=1,nUserBCs
+    BoundaryName(i)   = GETSTR('BoundaryName')
+    BoundaryType(i,:) = GETINTARRAY('BoundaryType',2) !(/Type,State/)
+  END DO
+END IF !nUserBCs>0
+
 CALL readMesh(MeshFile) !set nElems
 
 ALLOCATE(Xi_Ngeo(0:Ngeo))

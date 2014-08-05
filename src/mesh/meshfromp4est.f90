@@ -15,11 +15,16 @@ INTERFACE BuildMeshFromP4EST
   MODULE PROCEDURE BuildMeshFromP4EST
 END INTERFACE
 
-INTERFACE BuildHOMeh
+INTERFACE getHFlip
+  MODULE PROCEDURE getHFlip
+END INTERFACE
+
+INTERFACE BuildHOMesh
   MODULE PROCEDURE BuildHOMesh
 END INTERFACE
 
 PUBLIC::BuildMeshFromP4EST
+PUBLIC::getHFlip
 PUBLIC::BuildHOMesh
 !===================================================================================================================================
 
