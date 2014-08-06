@@ -47,7 +47,11 @@ SUBROUTINE InitP4EST()
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
-USE MOD_p4estBinding
+USE MOD_Globals,       ONLY: hopestMode
+USE MOD_P4EST_Vars,    ONLY: p4estFile
+USE MOD_P4EST_Binding, ONLY: p4_initvars
+USE MOD_Output_Vars,   ONLY: Projectname
+USE MOD_ReadInTools,   ONLY: GETSTR
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -58,6 +62,11 @@ IMPLICIT NONE
 ! LOCAL VARIABLES
 !===================================================================================================================================
 CALL p4_initvars()
+IF(hopestMode.EQ.2)THEN
+  p4estFile = GETSTR('p4estFile')
+ELSE
+  p4estFile = TRIM(ProjectName)//'.p4est'
+END IF
 
 END SUBROUTINE InitP4EST
 

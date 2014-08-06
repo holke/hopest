@@ -34,9 +34,9 @@ SUBROUTINE HopestSolver()
 ! MODULES
 USE MOD_Globals
 USE MOD_IO_HDF5
-USE MOD_P4EST_Vars,         ONLY: p4est
+USE MOD_P4EST_Vars,         ONLY: p4est,p4estFile
 USE MOD_P4EST,              ONLY: InitP4EST,BuildMeshFromP4EST
-USE MOD_P4EST_Binding,      ONLY: p4_initvars,p4_loadmesh
+USE MOD_P4EST_Binding,      ONLY: p4_loadmesh
 USE MOD_Mesh_Vars
 USE MOD_Mesh,               ONLY: InitMesh,BuildHOMesh
 USE MOD_Mesh_ReadIn,        ONLY: ReadGeoFromHDF5
@@ -50,16 +50,15 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER :: i
 !===================================================================================================================================
 SWRITE(UNIT_StdOut,'(132("-"))')
 SWRITE(UNIT_stdOut,'(A)') ' INIT MESH...'
 
+CALL InitMesh()
 CALL InitP4EST()
 CALL InitIO()
-CALL InitMesh()
 
-CALL p4_loadmesh(MeshFile,p4est)
+CALL p4_loadmesh(TRIM(p4estFile)//C_NULL_CHAR,p4est)
 !CALL p4_partition_info !start and end tree and quadrants
 CALL BuildMeshFromP4EST()
 

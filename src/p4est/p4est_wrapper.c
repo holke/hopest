@@ -6,6 +6,7 @@
 #include <p8est_vtk.h>
 #include <p8est_mesh.h>
 #include <p8est.h>
+#include <p8est_extended.h>
 // 3D mode
 #include <p4est_to_p8est.h>
 
@@ -34,14 +35,12 @@ void p4_loadmesh(char    filename[],
                  p4est_t **p4est_out )
 {
   p4est_t              *p4est;
-  size_t               data_size=0; 
-  int                  load_data=0;
   p4est_connectivity_t *conn = NULL;
 
-  p4est_load(filename,mpicomm,data_size,load_data,NULL,&conn);
-  /* Create a forest that is not refined; it consists of the root octant. */
-  p4est = p4est_new (mpicomm, conn, 0, NULL, NULL);
-  *p4est_out=*(&p4est);
+  p4est=p4est_load_ext(filename,mpicomm,0,0,1,0,NULL,&conn);
+  P4EST_ASSERT (p4est_is_valid (p4est));
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+  *p4est_out=p4est;
 }
 
 
@@ -210,7 +209,18 @@ void p4_get_quadrants( p4est_t       *p4est,
 void p4_savemesh ( char    filename[],
                    p4est_t *p4est)
 {
+  p4est_t              *p4est2;
+  p4est_connectivity_t *conn2 = NULL;
+  int ip,ic;
+  
   p4est_save(filename,p4est,0);
+  p4est2=p4est_load_ext(filename,mpicomm,0,0,1,0,NULL,&conn2);
+  // TODO: optional check
+  ic = p4est_connectivity_is_equal(p4est->connectivity,conn2);
+  ip = p4est_is_equal(p4est,p4est2);
+  printf("Conn, p4est %i %i \n",ic,ip);
+  p4est_destroy(p4est2);
+  p4est_connectivity_destroy(conn2);
 }
 
 

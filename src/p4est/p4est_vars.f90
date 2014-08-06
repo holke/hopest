@@ -12,6 +12,8 @@ SAVE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! P4EST related data structures 
 !-----------------------------------------------------------------------------------------------------------------------------------
+CHARACTER(LEN=255)          :: p4estFile          ! name of hdf5 meshfile (write with ending .h5!)
+
 TYPE(C_PTR)                 :: p4est              ! c pointers to p4est structures
 TYPE(C_PTR)                 :: mesh               ! 
 TYPE(C_PTR)                 :: connectivity       ! 
