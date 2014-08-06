@@ -64,17 +64,12 @@ CALL BuildMeshFromP4EST()
 
 !STOP 'Weiter gehts nicht'
 CALL ReadGeoFromHDF5(MeshFile)
-
 CALL BuildHOMesh()
 
 !CALL FlexiPrepareMesh() ! Suggestion
 
-
-! dealloacte pointers
 SWRITE(UNIT_stdOut,'(A)') "NOW CALLING deleteMeshPointer..."
-CALL deleteMeshPointer()
 
-CALL FinalizeHopestSolver()
 SWRITE(UNIT_stdOut,'(A)')' INIT MESH DONE!'
 SWRITE(UNIT_StdOut,'(132("-"))')
 END SUBROUTINE HopestSolver
@@ -85,7 +80,8 @@ SUBROUTINE FinalizeHopestSolver()
 ! Deallocate all global interpolation variables.
 !============================================================================================================================
 ! MODULES
-USE MOD_P4EST,ONLY: FinalizeP4EST
+USE MOD_Mesh_Vars,ONLY: deleteMeshPointer
+USE MOD_P4EST,    ONLY: FinalizeP4EST
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !----------------------------------------------------------------------------------------------------------------------------
@@ -95,6 +91,7 @@ IMPLICIT NONE
 !----------------------------------------------------------------------------------------------------------------------------
 !local variables
 !============================================================================================================================
+CALL deleteMeshPointer()
 CALL FinalizeP4EST()
 END SUBROUTINE FinalizeHopestSolver
 

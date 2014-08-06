@@ -106,6 +106,8 @@ INTEGER(KIND=C_INT16_T),POINTER :: TreeToBC(:,:)
 SWRITE(UNIT_stdOut,'(A)')'GENERATE HOPEST MESH FROM P4EST ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
 
+! build p4est mesh
+CALL p4_build_mesh(p4est,mesh)
 ! Get arrays from p4est: use pointers for c arrays (QT,QQ,..), duplicate data for QuadCoords,Level
 CALL p4_get_mesh_info(p4est,mesh,nQuadrants,nHalfFaces,nElems)
 

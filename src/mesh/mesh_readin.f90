@@ -633,8 +633,7 @@ ELSE
  END DO !iElem=1,nElems
 END IF
 
-DEALLOCATE(ElemInfo,NodeInfo)
-
+DEALLOCATE(ElemInfo,NodeInfo,NodeCoords)
 
 
 END SUBROUTINE ReadGeoFromHDF5

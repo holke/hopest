@@ -143,6 +143,20 @@ void p4_build_bcs(p4est_t        *p4est,
 }
 
 
+void p4_build_mesh(p4est_t  *p4est,
+                   p4est_mesh_t  **mesh_out )
+{
+  p4est_mesh_t       *mesh;
+  p4est_ghost_t      *ghost;
+
+  /* create ghost layer and mesh */
+  ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
+  mesh = p4est_mesh_new_ext (p4est, ghost, 1,1,P4EST_CONNECT_FULL);
+
+  //return mesh as pointer adress;
+  *mesh_out=(p4est_mesh_t *)mesh;
+}
+
 void p4_get_bcs(p4est_t        *p4est,
                 int16_t        **bcelemmap)
 {
