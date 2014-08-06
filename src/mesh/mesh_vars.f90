@@ -4,7 +4,7 @@ MODULE MOD_Mesh_Vars
 ! Contains global variables provided by the mesh routines
 !===================================================================================================================================
 ! MODULES
-USE MOD_p4estBindingTypes
+USE,INTRINSIC :: ISO_C_BINDING
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 PUBLIC
@@ -95,7 +95,9 @@ INTEGER,ALLOCATABLE            :: HexMapInv(:,:)
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! P4EST related data structures 
 !-----------------------------------------------------------------------------------------------------------------------------------
-TYPE(t_p4est_ptr) :: p4est_ptr              ! c pointer derived data type, see MOD_P4estBindingTypes
+TYPE(C_PTR)                :: p4est         ! c pointers to p4est structures
+TYPE(C_PTR)                :: mesh          ! 
+TYPE(C_PTR)                :: connectivity  ! 
 
 TYPE(tElemPtr),ALLOCATABLE  :: Quads(:)           ! new element list elements are "quadrants/octants"        
 INTEGER                     :: nQuadrants         ! local number of quadrants (here no MPI => all) 

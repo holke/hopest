@@ -26,6 +26,7 @@ StartTime=RUNTIME()
 hopestMode=GETINT('HopestMode')
 SELECT CASE(hopestMode)
 CASE(1) ! HOPEST reads HDF5 builds P4EST + static refinement
+  IF(.NOT.MPIRoot) STOP 'HOPEST Mesh only runs in single mode!' 
   CALL HopestMesh()
 CASE(2) ! use HOPEST as INPUT for Flexi
   CALL HopestSolver()

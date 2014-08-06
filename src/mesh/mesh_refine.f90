@@ -71,8 +71,8 @@ CASE DEFAULT
   STOP 'refineType is not defined'
 END SELECT
 
-CALL p4_refine_mesh(p4est_ptr%p4est,refineFunc,refineLevel,& !IN
-                    p4est_ptr%mesh)                          !OUT
+CALL p4_refine_mesh(p4est,refineFunc,refineLevel,& !IN
+                    mesh)                          !OUT
 SDEALLOCATE(RefineList)
 END SUBROUTINE RefineMesh
 

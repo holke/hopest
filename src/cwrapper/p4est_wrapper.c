@@ -46,8 +46,6 @@ void p4_loadmesh(char    filename[],
 
 
 
-
-
 // Build p4est data structures with existing connectivity from HDF5 mesh
 void p4_connectivity_treevertex (p4est_topidx_t num_vertices,
                                  p4est_topidx_t num_trees,
@@ -55,9 +53,8 @@ void p4_connectivity_treevertex (p4est_topidx_t num_vertices,
                                  p4est_topidx_t *tree_to_vertex,
                                  p4est_topidx_t num_periodics,
                                  p4est_topidx_t *join_faces,
-                                 p4est_t        **p4est_out )
+                                 p4est_connectivity_t **conn_out )
 {
-  p4est_t              *p4est;
   p4est_topidx_t        tree;
   int                   face,i;
   p4est_connectivity_t *conn = NULL;
@@ -107,10 +104,22 @@ void p4_connectivity_treevertex (p4est_topidx_t num_vertices,
     ("New connectivity with %lld trees and %lld vertices\n",
      (long long) conn->num_trees, (long long) conn->num_vertices);
 
+  *conn_out=conn;
+  printf("connectivity %p \n",conn);
+}
+
+void p4_build_p4est ( p4est_connectivity_t *conn,
+                      p4est_t              **p4est_out )
+{
+  p4est_t* p4est;
+
+  printf("connectivity %p \n",conn);
+  fflush(stdout);
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
   /* Create a forest that is not refined; it consists of the root octant. */
   p4est = p4est_new (mpicomm, conn, 0, NULL, NULL);
-  *p4est_out=*(&p4est);
-
+  printf("p4est %p \n",p4est);
+  *p4est_out=p4est;
 }
 
 
@@ -119,10 +128,13 @@ void p4_build_bcs(p4est_t        *p4est,
                   int16_t        *bcelemmap)
 {
   int itree,iside;
+
   p8est_connectivity_t *conn=p4est->connectivity;
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 
   P4EST_ASSERT (p4est->trees->elem_count == num_trees);
   p4est_connectivity_set_attr(conn,6*sizeof(int16_t));
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
   
   for(itree=0; itree<num_trees; itree++) {
     for(iside=0; iside<6; iside++) {
@@ -278,7 +290,7 @@ void p4_get_quadrants( p4est_t       *p4est,
 }
 
 
-void p4_save_all ( char    filename[],
+void p4_savemesh ( char    filename[],
                    p4est_t *p4est)
 {
   p4est_save(filename,p4est,0);
