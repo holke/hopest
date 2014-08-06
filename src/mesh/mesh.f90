@@ -21,12 +21,17 @@ INTERFACE SetCurvedInfo
   MODULE PROCEDURE SetCurvedInfo
 END INTERFACE
 
+INTERFACE BuildHOMesh
+  MODULE PROCEDURE BuildHOMesh
+END INTERFACE
+
 INTERFACE FinalizeMesh
   MODULE PROCEDURE FinalizeMesh
 END INTERFACE
 
 PUBLIC::InitMesh
 PUBLIC::SetCurvedInfo
+PUBLIC::BuildHOMesh
 PUBLIC::FinalizeMesh
 !===================================================================================================================================
 
@@ -117,6 +122,60 @@ ELSE
 END IF
 
 END SUBROUTINE SetCurvedInfo
+
+
+SUBROUTINE BuildHOMesh()
+!===================================================================================================================================
+! uses XGeo High order data from trees and interpolates it to the quadrants 
+!===================================================================================================================================
+! MODULES
+USE MOD_Globals
+USE MOD_Mesh_Vars,   ONLY: Ngeo,nElems,nQuadrants,Xgeo,XgeoQuad
+USE MOD_Mesh_Vars,   ONLY: wBary_Ngeo,xi_Ngeo
+USE MOD_P4EST_Vars,  ONLY: TreeToQuad,QuadCoords,QuadLevel,sIntSize
+USE MOD_Basis,       ONLY: LagrangeInterpolationPolys 
+USE MOD_ChangeBasis, ONLY: ChangeBasis3D_XYZ 
+! IMPLICIT VARIABLE HANDLING
+IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES
+REAL                          :: xi0(3)
+REAL                          :: dxi,length
+REAL,DIMENSION(0:Ngeo,0:Ngeo) :: Vdm_xi,Vdm_eta,Vdm_zeta
+INTEGER                       :: StartQuad,EndQuad,nQuads
+INTEGER                       :: i,iQuad,iElem 
+!===================================================================================================================================
+ALLOCATE(XgeoQuad(3,0:Ngeo,0:Ngeo,0:Ngeo,nQuadrants))
+
+DO iElem=1,nElems
+  StartQuad = TreeToQuad(1,iElem)+1
+  EndQuad   = TreeToQuad(2,iElem)
+  nQuads    = TreeToQuad(2,iElem)-TreeToQuad(1,iElem)
+  IF(nQuads.EQ.1)THEN !no refinement in this tree
+    XgeoQuad(:,:,:,:,StartQuad)=Xgeo(:,:,:,:,iElem)
+  ELSE
+    DO iQuad=StartQuad,EndQuad
+      ! transform p4est first corner coordinates (integer from 0... intsize) to [-1,1] reference element
+      xi0(:)=-1.+2.*REAL(QuadCoords(:,iQuad))*sIntSize
+      ! length of each quadrant in integers
+      length=2./REAL(2**QuadLevel(iQuad))
+      ! Build Vandermonde matrices for each parameter range in xi, eta,zeta
+      DO i=0,Ngeo
+        dxi=0.5*(xi_Ngeo(i)+1.)*Length
+        CALL LagrangeInterpolationPolys(xi0(1) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_xi(i,:)) 
+        CALL LagrangeInterpolationPolys(xi0(2) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_eta(i,:)) 
+        CALL LagrangeInterpolationPolys(xi0(3) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_zeta(i,:)) 
+      END DO
+      !interpolate tree HO mapping to quadrant HO mapping
+      CALL ChangeBasis3D_XYZ(3,Ngeo,Ngeo,Vdm_xi,Vdm_eta,Vdm_zeta,XGeo(:,:,:,:,iElem),XgeoQuad(:,:,:,:,iQuad))
+    END DO !iQuad=StartQuad,EndQuad
+  END IF !nQuads==1
+END DO !iElem=1,nElems
+END SUBROUTINE BuildHOMesh
 
 
 SUBROUTINE FinalizeMesh()

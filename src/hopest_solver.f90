@@ -34,15 +34,13 @@ SUBROUTINE HopestSolver()
 ! MODULES
 USE MOD_Globals
 USE MOD_IO_HDF5
+USE MOD_P4EST_Vars,         ONLY: p4est
+USE MOD_P4EST,              ONLY: InitP4EST,BuildMeshFromP4EST
+USE MOD_P4EST_Binding,      ONLY: p4_initvars,p4_loadmesh
 USE MOD_Mesh_Vars
-USE MOD_Mesh,               ONLY:InitMesh
-USE MOD_Output_Vars,        ONLY:Projectname
-USE MOD_p4estBinding,       ONLY:p4_initvars,p4_loadmesh
-USE MOD_Basis,              ONLY:BarycentricWeights
-USE MOD_Mesh_ReadIn,        ONLY:ReadGeoFromHDF5
-USE MOD_MeshFromP4EST,      ONLY:BuildMeshFromP4EST,BuildHOMesh
-USE MOD_Output_HDF5,        ONLY:writeMeshToHDF5
-USE MOD_ReadInTools,        ONLY:GETINT,GETSTR
+USE MOD_Mesh,               ONLY: InitMesh,BuildHOMesh
+USE MOD_Mesh_ReadIn,        ONLY: ReadGeoFromHDF5
+USE MOD_ReadInTools,        ONLY: GETINT,GETSTR
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! INPUT VARIABLES
@@ -54,15 +52,11 @@ IMPLICIT NONE
 ! LOCAL VARIABLES
 INTEGER :: i
 !===================================================================================================================================
-IF(MeshInitIsDone)&
- CALL abort(__STAMP__,&
- 'InitMesh not ready to be called or already called.')
-
 SWRITE(UNIT_StdOut,'(132("-"))')
 SWRITE(UNIT_stdOut,'(A)') ' INIT MESH...'
 
+CALL InitP4EST()
 CALL InitIO()
-CALL p4_initvars()
 CALL InitMesh()
 
 CALL p4_loadmesh(MeshFile,p4est)
@@ -81,8 +75,6 @@ CALL BuildHOMesh()
 SWRITE(UNIT_stdOut,'(A)') "NOW CALLING deleteMeshPointer..."
 CALL deleteMeshPointer()
 
-MeshInitIsDone=.TRUE.
-
 CALL FinalizeHopestSolver()
 SWRITE(UNIT_stdOut,'(A)')' INIT MESH DONE!'
 SWRITE(UNIT_StdOut,'(132("-"))')
@@ -94,8 +86,7 @@ SUBROUTINE FinalizeHopestSolver()
 ! Deallocate all global interpolation variables.
 !============================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Mesh_Vars
+USE MOD_P4EST,ONLY: FinalizeP4EST
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !----------------------------------------------------------------------------------------------------------------------------
@@ -105,11 +96,8 @@ IMPLICIT NONE
 !----------------------------------------------------------------------------------------------------------------------------
 !local variables
 !============================================================================================================================
-! Deallocate global variables, needs to go somewhere else later
-SDEALLOCATE(Xi_NGeo)
-SDEALLOCATE(BoundaryName)
-SDEALLOCATE(BoundaryType)
-MeshInitIsDone = .FALSE.
+CALL FinalizeP4EST()
 END SUBROUTINE FinalizeHopestSolver
+
 
 END MODULE MOD_HopestSolver

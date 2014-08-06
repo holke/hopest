@@ -60,7 +60,6 @@ DISTCLEANFILES += \
 include src/Makefile.am
 include test/Makefile.am
 include example/hopest/Makefile.am
-include example/hello/Makefile.am
 include deplist.mk
 
 # automatically builds a dependency list deplist.mk from srcfiles.mk uing the tool builddeps
