@@ -20,7 +20,7 @@ void p4est_connectivity_treevertex (p4est_topidx_t num_vertices,
                                     p4est_topidx_t *tree_to_vertex,
                                     p4est_topidx_t num_periodics,
                                     p4est_topidx_t *join_faces,
-                                    p4est_t        **conn_out )
+                                    p4est_connectivity_t        **conn_out )
 {
   p4est_topidx_t        tree;
   int                   face,i;
@@ -83,6 +83,14 @@ void p4est_connectivity_treevertex (p4est_topidx_t num_vertices,
      (long long) conn->num_trees, (long long) conn->num_vertices);
 
   *conn_out=*(&conn);
+  printf("In p4est_connectivity_treevertex saved connectivity at adress %p\n",conn);
+  {
+      char *mem=(char*)conn;
+      printf("[%i]",(int)(mem[0]));
+      printf("\n");
+  }
+  P4EST_ASSERT (p4est_connectivity_is_valid (*conn_out));
+  printf("In p4est_connectivity_treevertex is the connectivity valid\n");
 }
 
 void p4_build_p4est ( p4est_connectivity_t *conn,
@@ -91,6 +99,7 @@ void p4_build_p4est ( p4est_connectivity_t *conn,
   p4est_t              *p4est;
   /* Create a forest that is not refined; it consists of the root octant. */
   p4est = p4est_new (mpicomm, conn, 0, NULL, NULL);
+  printf("p4_build_p4est got connectivity at address %p\n",conn);
   *p4est_out=p4est;
 }
 

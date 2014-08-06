@@ -39,7 +39,8 @@ libhopest_compiled_sources += \
 	src/io_hdf5/hdf5_output.f90 \
 	src/output/output_hdf5.f90 \
 	src/mesh/mesh_readin.f90 \
-	src/mesh/mesh.f90
+	src/mesh/mesh.f90 \
+	src/fortranwrap.f90
 endif
 
 libhopest_installed_headers += src/hopest_hdf5.h

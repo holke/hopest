@@ -19,11 +19,33 @@
 !  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 ! This file wraps some fortran routines to be called by C-Code
-! It is important that this is not a Fortran Module
+! It is important that this is NOT a Fortran Module
 
-SUBROUTINE wrapinitmesh()
+!USE MOD_ReadInTools
+!USE MOD_Mesh
+!USE MOD_MeshVars
+
+! To pass strings from C to Fortran 2003 we pass the string as char* and its
+! length as an integer
+SUBROUTINE wrapinitmesh(hdf5file,hdf5file_len,conn)
     USE MOD_Mesh
-    call InitMesh()
+    USE MOD_Mesh_Vars
+    USE MOD_Mesh_ReadIn
+    USE MOD_IO_HDF5
+    USE MOD_MPI,          ONLY:InitMPI
+
+    integer(C_INT), VALUE :: hdf5file_len
+    character(hdf5file_len,kind=C_CHAR), intent(IN) :: hdf5file
+    TYPE(C_PTR)           :: conn
+
+    CALL InitMPI()
+    call InitIO()
+    print *,"calling read mesh with file ", hdf5file
+    call ReadMesh(hdf5file)
+    conn=p4est_ptr%connectivity
+    !p4est=p4est_ptr%p4est
+    !print *,"Address of p4est ", p4est
+    !p4est=p4est_from_initmesh
 END SUBROUTINE wrapinitmesh
 
 ! To pass strings from C to Fortran 2003 we pass the string as char* and its
