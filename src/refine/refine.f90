@@ -31,7 +31,7 @@ USE MOD_Refine_Vars
 USE MOD_Refine_Binding,ONLY: p4_refine_mesh
 USE MOD_Mesh_Vars,     ONLY: nElems
 USE MOD_P4EST_Vars,    ONLY: p4est,mesh
-USE MOD_Readintools,   ONLY: GETINT
+USE MOD_Readintools,   ONLY: CNTSTR,GETINT
 USE, INTRINSIC :: ISO_C_BINDING
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
@@ -42,37 +42,46 @@ IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 TYPE(C_FUNPTR)              :: refineFunc
+INTEGER                     :: iRefine,nRefines
+INTEGER,ALLOCATABLE         :: refineType(:)
 !===================================================================================================================================
 SWRITE(UNIT_stdOut,'(A)')'BUILD P4EST MESH AND REFINE ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
 
-refineLevel=GETINT('refineLevel','1')
-refineType =GETINT('refineType','1') ! default conform refinement
+!ALLOCATE(RefineList(nElems))
+!RefineList=0
 
-ALLOCATE(RefineList(nElems))
-RefineList=0
+nRefines=CNTSTR('refineType',1)
+SWRITE(UNIT_stdOut,'(A,I0)')'Number of refines : ',nRefines
+ALLOCATE(refineType(nRefines))
 
-! Transform input mesh to adapted mesh
-! Do refinement and save p4est refine
-SELECT CASE(refineType)
-CASE(1)  ! conform refinement of the whole mesh
-  refineFunc=C_FUNLOC(RefineAll)
-CASE(2)  ! Boundary Element refinement
-  refineBCIndex=GETINT('refineBCIndex','1')
-  CALL InitRefineBoundaryElems()
-  refineFunc=C_FUNLOC(RefineByList)
-CASE(3)
-  CALL InitRefineGeom()
-  refineFunc=C_FUNLOC(RefineByGeom)
-CASE(11)
-  refineFunc=C_FUNLOC(RefineFirst)
-CASE DEFAULT
-  STOP 'refineType is not defined'
-END SELECT
 
-CALL p4_refine_mesh(p4est,refineFunc,refineLevel,& !IN
-                    mesh)                          !OUT
-SDEALLOCATE(RefineList)
+DO iRefine=1,nRefines
+  refineType =GETINT('refineType','1') ! default conform refinement
+  refineLevel=GETINT('refineLevel','1')
+  ! Transform input mesh to adapted mesh
+  ! Do refinement and save p4est refine
+  SELECT CASE(refineType(iRefine))
+  CASE(1)  ! conform refinement of the whole mesh
+    refineFunc=C_FUNLOC(RefineAll)
+  CASE(2)  ! Boundary Element refinement
+    refineBCIndex=GETINT('refineBCIndex','1')
+    CALL InitRefineBoundaryElems()
+    refineFunc=C_FUNLOC(RefineByList)
+  CASE(3)
+    CALL InitRefineGeom()
+    refineFunc=C_FUNLOC(RefineByGeom)
+  CASE(11)
+    refineFunc=C_FUNLOC(RefineFirst)
+  CASE DEFAULT
+    STOP 'refineType is not defined'
+  END SELECT
+   CALL p4_refine_mesh(p4est,refineFunc,refineLevel,& !IN
+                      mesh)                          !OUT
+   SDEALLOCATE(TreeToQuadRefine)
+END DO
+
+!SDEALLOCATE(RefineList)
 END SUBROUTINE RefineMesh
 
 
@@ -83,7 +92,8 @@ SUBROUTINE InitRefineBoundaryElems()
 ! MODULES
 USE MOD_Globals
 USE MOD_Refine_Vars, ONLY: TreeToQuadRefine,refineBCIndex
-USE MOD_Mesh_Vars,  ONLY: Elems,nElems
+USE MOD_P4EST_Vars,  ONLY: P2H_FaceMap
+USE MOD_Mesh_Vars,   ONLY: Elems,nElems
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -95,40 +105,49 @@ IMPLICIT NONE
 INTEGER                     :: iElem,iSide
 !===================================================================================================================================
 ! These are the refinement functions which are called by p4est
-ALLOCATE(TreeToQuadRefine(1:8,1:nElems))
+ALLOCATE(TreeToQuadRefine(0:5,1:nElems))
+TreeToQuadRefine=0
+!DO iElem=1,nElems
+!  DO iSide=1,6
+!    IF (Elems(iElem)%ep%Side(iSide)%sp%BCIndex.EQ.refineBCIndex) THEN
+!      SELECT CASE (iSide)
+!        CASE (1) 
+!          TreeToQuadRefine(1:4,iElem)=1
+!        CASE (2) 
+!          TreeToQuadRefine(1,iElem)=1
+!          TreeToQuadRefine(2,iElem)=1
+!          TreeToQuadRefine(5,iElem)=1
+!          TreeToQuadRefine(6,iElem)=1
+!        CASE (3) 
+!          TreeToQuadRefine(2,iElem)=1
+!          TreeToQuadRefine(4,iElem)=1
+!          TreeToQuadRefine(6,iElem)=1
+!          TreeToQuadRefine(8,iElem)=1
+!        CASE (4) 
+!          TreeToQuadRefine(3,iElem)=1
+!          TreeToQuadRefine(4,iElem)=1
+!          TreeToQuadRefine(7,iElem)=1
+!          TreeToQuadRefine(8,iElem)=1
+!        CASE (5) 
+!          TreeToQuadRefine(1,iElem)=1
+!          TreeToQuadRefine(3,iElem)=1
+!          TreeToQuadRefine(5,iElem)=1
+!          TreeToQuadRefine(7,iElem)=1
+!        CASE (6) 
+!          TreeToQuadRefine(5:8,iElem)=1
+!      END SELECT
+!    END IF
+!  END DO
+!END DO
 TreeToQuadRefine=0
 DO iElem=1,nElems
-  DO iSide=1,6
-    IF (Elems(iElem)%ep%Side(iSide)%sp%BCIndex.EQ.refineBCIndex) THEN
-      SELECT CASE (iSide)
-        CASE (1) 
-          TreeToQuadRefine(1:4,iElem)=1
-        CASE (2) 
-          TreeToQuadRefine(1,iElem)=1
-          TreeToQuadRefine(2,iElem)=1
-          TreeToQuadRefine(5,iElem)=1
-          TreeToQuadRefine(6,iElem)=1
-        CASE (3) 
-          TreeToQuadRefine(2,iElem)=1
-          TreeToQuadRefine(4,iElem)=1
-          TreeToQuadRefine(6,iElem)=1
-          TreeToQuadRefine(8,iElem)=1
-        CASE (4) 
-          TreeToQuadRefine(3,iElem)=1
-          TreeToQuadRefine(4,iElem)=1
-          TreeToQuadRefine(7,iElem)=1
-          TreeToQuadRefine(8,iElem)=1
-        CASE (5) 
-          TreeToQuadRefine(1,iElem)=1
-          TreeToQuadRefine(3,iElem)=1
-          TreeToQuadRefine(5,iElem)=1
-          TreeToQuadRefine(7,iElem)=1
-        CASE (6) 
-          TreeToQuadRefine(5:8,iElem)=1
-      END SELECT
+  DO iSide=0,5
+    IF (Elems(iElem)%ep%Side(P2H_FaceMap(iSide))%sp%BCIndex.EQ.refineBCIndex) THEN
+      TreeToQuadRefine(iSide,iElem)=1
     END IF
   END DO
 END DO
+
 
 END SUBROUTINE InitRefineBoundaryElems
 
@@ -172,6 +191,7 @@ FUNCTION RefineAll(x,y,z,tree,level) BIND(C)
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
+USE MOD_Refine_Vars, ONLY: RefineLevel
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -185,6 +205,8 @@ INTEGER(KIND=C_INT) :: refineAll
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
+RefineAll=0
+IF(level.GE.refineLevel) RETURN
 refineAll=1
 END FUNCTION RefineAll
 
@@ -194,7 +216,7 @@ FUNCTION RefineByList(x,y,z,tree,level,childID) BIND(C)
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
-USE MOD_Refine_Vars, ONLY: TreeToQuadRefine
+USE MOD_Refine_Vars, ONLY: refineLevel,TreeToQuadRefine
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -208,9 +230,34 @@ INTEGER(KIND=C_INT ),INTENT(IN),VALUE :: childID
 INTEGER(KIND=C_INT)                      :: refineByList
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
+INTEGER(KIND=C_INT32_T)  IntSize,length
 !-----------------------------------------------------------------------------------------------------------------------------------
-IF (level.EQ.0) RefineByList=SUM(TreeToQuadRefine(:,tree))
-IF (level.GE.1) RefineByList=TreeToQuadRefine(childID+1,tree)
+RefineByList=0
+IF(level.GE.refineLevel) RETURN
+!IF (level.EQ.0) RefineByList=SUM(TreeToQuadRefine(:,tree))
+!IF (level.GE.1) RefineByList=TreeToQuadRefine(childID+1,tree)
+
+IntSize = 2**19
+length  = 2**(19-level)
+IF(x.EQ.0) THEN
+  RefineByList=RefineBylist+TreeToQuadRefine(0,tree)
+END IF
+IF(y.EQ.0) THEN
+   RefineByList=RefineBylist+TreeToQuadRefine(2,tree)
+END IF
+IF(z.EQ.0) THEN
+  RefineByList=RefineBylist+TreeToQuadRefine(4,tree)
+END IF
+IF(x.EQ.intSize-length) THEN
+  RefineByList=RefineBylist+TreeToQuadRefine(1,tree)
+END IF
+IF(y.EQ.intSize-length) THEN
+  RefineByList=RefineBylist+TreeToQuadRefine(3,tree)
+END IF
+IF(z.EQ.intSize-length) THEN
+  RefineByList=RefineBylist+TreeToQuadRefine(5,tree)
+END IF
+
 END FUNCTION RefineByList
 
 
@@ -220,7 +267,7 @@ FUNCTION RefineByGeom(x,y,z,tree,level,childID) BIND(C)
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
-USE MOD_Refine_Vars, ONLY: RefineList,refineBoundary,refineGeomType
+USE MOD_Refine_Vars, ONLY: RefineList,refineBoundary,refineGeomType,refineLevel
 USE MOD_Refine_Vars, ONLY: sphereCenter,sphereRadius,boxBoundary
 USE MOD_Mesh_Vars,   ONLY: XGeo,Ngeo
 USE MOD_Mesh_Vars,   ONLY: wBary_Ngeo,xi_Ngeo
@@ -251,6 +298,7 @@ INTEGER(KIND=C_INT) :: refineByGeom
 ! LOCAL VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 refineByGeom = 0
+IF(level.GE.refineLevel) RETURN
 
 IntSize=2.**19 !TODO: use sIntSize from mesh_vars. not initialized at this stage yet
 sIntSize=1./IntSize
@@ -342,6 +390,7 @@ FUNCTION RefineFirst(x,y,z,tree,level) BIND(C)
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
+USE MOD_Refine_Vars, ONLY: refineLevel
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -355,6 +404,8 @@ INTEGER(KIND=C_INT)                      :: refineFirst
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
+refineFirst = 0
+IF(level.GE.refineLevel) RETURN
 IF(tree.EQ.1)THEN
   refineFirst=1
 ELSE

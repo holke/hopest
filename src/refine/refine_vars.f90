@@ -11,7 +11,6 @@ PUBLIC
 SAVE
 !-----------------------------------------------------------------------------------------------------------------------------------
 INTEGER                          :: refineLevel
-INTEGER                          :: refineType
 INTEGER                          :: refineGeomType
 INTEGER                          :: refineBCIndex
 INTEGER,ALLOCATABLE              :: RefineList(:)
