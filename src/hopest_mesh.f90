@@ -34,15 +34,16 @@ SUBROUTINE HopestMesh()
 ! MODULES
 USE MOD_Globals
 USE MOD_IO_HDF5
+USE MOD_P4EST_Vars,         ONLY: p4est
+USE MOD_P4EST,              ONLY: InitP4EST,BuildMeshFromP4EST,BuildBCs
+USE MOD_P4EST_Binding,      ONLY: p4_savemesh
 USE MOD_Mesh_Vars
-USE MOD_Mesh,               ONLY:InitMesh
-USE MOD_Output_Vars, ONLY:Projectname
-USE MOD_p4estBinding
+USE MOD_Mesh,               ONLY:InitMesh,BuildHOMesh
+USE MOD_Output_Vars,        ONLY:Projectname
+USE MOD_Output_HDF5,        ONLY:writeMeshToHDF5
 USE MOD_Mesh_ReadIn,        ONLY:readMeshFromHDF5
 USE MOD_Basis,              ONLY:BarycentricWeights
-USE MOD_Mesh_Refine,        ONLY:RefineMesh
-USE MOD_MeshFromP4EST,      ONLY:BuildMeshFromP4EST,BuildHOMesh,BuildBCs
-USE MOD_Output_HDF5,        ONLY:writeMeshToHDF5
+USE MOD_Refine,             ONLY:RefineMesh
 USE MOD_ReadInTools,        ONLY:GETINT,GETSTR,GETINTARRAY,CNTSTR
 IMPLICIT NONE
 ! INPUT VARIABLES
@@ -57,8 +58,8 @@ INTEGER :: i
 SWRITE(UNIT_StdOut,'(132("-"))')
 SWRITE(UNIT_stdOut,'(A)') ' START HOPEST MESH...'
 
+CALL InitP4EST()
 CALL InitIO()
-CALL p4_initvars()
 CALL InitMesh()
 
 CALL readMeshFromHDF5(MeshFile) !set nElems

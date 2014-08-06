@@ -1,6 +1,6 @@
 #include "hopest_f.h"
 
-MODULE MOD_MeshFromP4EST
+MODULE MOD_P4EST
 !===================================================================================================================================
 ! Add comments please!
 !===================================================================================================================================
@@ -11,6 +11,10 @@ IMPLICIT NONE
 ! Private Part ---------------------------------------------------------------------------------------------------------------------
 
 ! Public Part ----------------------------------------------------------------------------------------------------------------------
+INTERFACE InitP4EST
+  MODULE PROCEDURE InitP4EST
+END INTERFACE
+
 INTERFACE BuildMeshFromP4EST
   MODULE PROCEDURE BuildMeshFromP4EST
 END INTERFACE
@@ -19,21 +23,44 @@ INTERFACE getHFlip
   MODULE PROCEDURE getHFlip
 END INTERFACE
 
-INTERFACE BuildHOMesh
-  MODULE PROCEDURE BuildHOMesh
-END INTERFACE
-
 INTERFACE BuildBCs
   MODULE PROCEDURE BuildBCs
 END INTERFACE
 
+INTERFACE FinalizeP4EST
+  MODULE PROCEDURE FinalizeP4EST
+END INTERFACE
+
+PUBLIC::InitP4EST
 PUBLIC::BuildMeshFromP4EST
 PUBLIC::getHFlip
-PUBLIC::BuildHOMesh
 PUBLIC::BuildBCs
+PUBLIC::FinalizeP4EST
 !===================================================================================================================================
 
 CONTAINS
+
+
+SUBROUTINE InitP4EST()
+!===================================================================================================================================
+! Subroutine to translate p4est mesh datastructure to HOPR datastructure
+!===================================================================================================================================
+! MODULES
+USE, INTRINSIC :: ISO_C_BINDING
+USE MOD_p4estBinding
+! IMPLICIT VARIABLE HANDLING
+IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES
+!===================================================================================================================================
+CALL p4_initvars()
+
+END SUBROUTINE InitP4EST
+
 
 
 SUBROUTINE BuildMeshFromP4EST()
@@ -44,7 +71,8 @@ SUBROUTINE BuildMeshFromP4EST()
 USE, INTRINSIC :: ISO_C_BINDING
 USE MOD_Globals
 USE MOD_Mesh_Vars
-USE MOD_p4estBinding
+USE MOD_P4EST_Vars
+USE MOD_P4EST_Binding
 USE MOD_Output_Vars, ONLY:Projectname
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
@@ -66,7 +94,6 @@ INTEGER                     :: StartQuad,EndQuad
 INTEGER                     :: BClocSide,BCindex
 INTEGER(KIND=C_INT16_T),POINTER :: TreeToBC(:,:)
 !===================================================================================================================================
-IF(MESHInitIsDone) RETURN
 SWRITE(UNIT_stdOut,'(A)')'GENERATE HOPEST MESH FROM P4EST ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
 
@@ -266,7 +293,7 @@ FUNCTION GetHFlip(PSide0,PSide1,PFlip)
 ! Subroutine to read the mesh from a mesh data file
 !===================================================================================================================================
 ! MODULES
-USE MOD_Mesh_Vars,ONLY:P2H_FaceMap,H2P_FaceNodeMap,P2H_FaceNodeMap,P4R,P4Q,P4P
+USE MOD_P4EST_Vars,ONLY:P2H_FaceMap,H2P_FaceNodeMap,P2H_FaceNodeMap,P4R,P4Q,P4P
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -292,62 +319,6 @@ GetHFlip=P2H_FaceNodeMap(PNode1,PSide1)
 
 END FUNCTION GetHFlip
 
-SUBROUTINE BuildHOMesh()
-!===================================================================================================================================
-! uses XGeo High order data from trees and interpolates it to the quadrants 
-!===================================================================================================================================
-! MODULES
-USE MOD_Globals
-USE MOD_Mesh_Vars,   ONLY: refinelevel 
-USE MOD_Mesh_Vars,   ONLY: Ngeo,nQuadrants,nElems,Xgeo,XgeoQuad
-USE MOD_Mesh_Vars,   ONLY: sIntSize 
-USE MOD_Mesh_Vars,   ONLY: wBary_Ngeo,xi_Ngeo 
-USE MOD_Mesh_Vars,   ONLY: TreeToQuad,QuadCoords,QuadLevel
-USE MOD_Basis,       ONLY: LagrangeInterpolationPolys 
-USE MOD_ChangeBasis, ONLY: ChangeBasis3D_XYZ 
-! IMPLICIT VARIABLE HANDLING
-IMPLICIT NONE
-!-----------------------------------------------------------------------------------------------------------------------------------
-! INPUT VARIABLES
-!-----------------------------------------------------------------------------------------------------------------------------------
-! OUTPUT VARIABLES
-!-----------------------------------------------------------------------------------------------------------------------------------
-! LOCAL VARIABLES
-REAL                          :: xi0(3)
-REAL                          :: dxi,length
-REAL,DIMENSION(0:Ngeo,0:Ngeo) :: Vdm_xi,Vdm_eta,Vdm_zeta
-INTEGER                       :: StartQuad,EndQuad,nQuads
-INTEGER                       :: i,iQuad,iElem 
-!===================================================================================================================================
-ALLOCATE(XgeoQuad(3,0:Ngeo,0:Ngeo,0:Ngeo,nQuadrants))
-
-
-DO iElem=1,nElems
-  StartQuad = TreeToQuad(1,iElem)+1
-  EndQuad   = TreeToQuad(2,iElem)
-  nQuads    = TreeToQuad(2,iElem)-TreeToQuad(1,iElem)
-  IF(nQuads.EQ.1)THEN !no refinement in this tree
-    XgeoQuad(:,:,:,:,StartQuad)=Xgeo(:,:,:,:,iElem)
-  ELSE
-    DO iQuad=StartQuad,EndQuad
-      ! transform p4est first corner coordinates (integer from 0... intsize) to [-1,1] reference element
-      xi0(:)=-1.+2.*REAL(QuadCoords(:,iQuad))*sIntSize
-      ! length of each quadrant in integers
-      length=2./REAL(2**QuadLevel(iQuad))
-      ! Build Vandermonde matrices for each parameter range in xi, eta,zeta
-      DO i=0,Ngeo
-        dxi=0.5*(xi_Ngeo(i)+1.)*Length
-        CALL LagrangeInterpolationPolys(xi0(1) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_xi(i,:)) 
-        CALL LagrangeInterpolationPolys(xi0(2) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_eta(i,:)) 
-        CALL LagrangeInterpolationPolys(xi0(3) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_zeta(i,:)) 
-      END DO
-      !interpolate tree HO mapping to quadrant HO mapping
-      CALL ChangeBasis3D_XYZ(3,Ngeo,Ngeo,Vdm_xi,Vdm_eta,Vdm_zeta,XGeo(:,:,:,:,iElem),XgeoQuad(:,:,:,:,iQuad))
-    END DO !iQuad=StartQuad,EndQuad
-  END IF !nQuads==1
-END DO !iElem=1,nElems
-END SUBROUTINE BuildHOMesh
-
 
 SUBROUTINE BuildBCs()
 !===================================================================================================================================
@@ -356,8 +327,9 @@ SUBROUTINE BuildBCs()
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
 USE MOD_Globals
-USE MOD_Mesh_Vars
-USE MOD_p4estBinding
+USE MOD_P4EST_Vars,   ONLY: H2P_FaceMap,p4est
+USE MOD_Mesh_Vars,    ONLY: tElem,tSide,nElems,Elems
+USE MOD_P4EST_Binding,ONLY: p4_build_bcs
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -379,10 +351,35 @@ DO iELem=1,nElems
     BCElemMap(H2P_FaceMap(iSide),iElem)=Side%BCIndex
   END DO
 END DO
-
 CALL p4_build_bcs(p4est,nElems,BCElemMap)
-
 END SUBROUTINE BuildBCs
 
 
-END MODULE MOD_MeshFromP4EST
+SUBROUTINE FinalizeP4EST()
+!===================================================================================================================================
+! Subroutine to translate p4est mesh datastructure to HOPR datastructure
+!===================================================================================================================================
+! MODULES
+USE, INTRINSIC :: ISO_C_BINDING
+USE MOD_P4EST_Vars,    ONLY: TreeToQuad,QuadCoords,QuadLevel
+USE MOD_P4EST_Binding
+! IMPLICIT VARIABLE HANDLING
+IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES
+!===================================================================================================================================
+! TODO: DEALLOCATE P4EST BC POINTER ARRAY
+! TODO: DEALLOCATE P4EST / CONNECTIVITY THEMSELVES
+SDEALLOCATE(TreeToQuad)
+SDEALLOCATE(QuadCoords)
+SDEALLOCATE(QuadLevel)
+! TO NOT TOUCH QuadToTree/Quad/Face/Half -> belongs to p4est
+
+END SUBROUTINE FinalizeP4EST
+
+
+END MODULE MOD_P4EST
