@@ -16,7 +16,12 @@ INTERFACE ReadMeshFromHDF5
   MODULE PROCEDURE ReadMeshFromHDF5
 END INTERFACE
 
+INTERFACE ReadGeoFromHDF5
+  MODULE PROCEDURE ReadGeoFromHDF5
+END INTERFACE
+
 PUBLIC::ReadMeshFromHDF5
+PUBLIC::ReadGeoFromHDF5
 !===================================================================================================================================
 
 CONTAINS
@@ -96,6 +101,38 @@ DEALLOCATE(BCNames,BCType,BCMapping)
 END SUBROUTINE ReadBCs
 
 
+SUBROUTINE ReadMeshHeader()
+!===================================================================================================================================
+! Subroutine to read the mesh from a mesh data file
+!===================================================================================================================================
+! MODULES
+USE MOD_Globals
+USE MOD_Mesh_Vars,ONLY: NGeo,useCurveds,nGlobalElems
+USE MOD_Mesh,     ONLY: SetCurvedInfo
+! IMPLICIT VARIABLE HANDLING
+IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES
+INTEGER :: BoundaryOrder_mesh
+!===================================================================================================================================
+CALL GetDataSize(File_ID,'ElemInfo',nDims,HSize)
+nGlobalElems=HSize(1) !global number of elements
+DEALLOCATE(HSize)
+
+CALL ReadAttribute(File_ID,'BoundaryOrder',1,IntegerScalar=BoundaryOrder_mesh)
+NGeo = BoundaryOrder_mesh-1
+CALL ReadAttribute(File_ID,'CurvedFound',1,LogicalScalar=useCurveds)
+
+CALL readBCs()
+CALL SetCurvedInfo()
+
+END SUBROUTINE ReadMeshHeader
+
+
 SUBROUTINE ReadMeshFromHDF5(FileString)
 !===================================================================================================================================
 ! Subroutine to read the mesh from a mesh data file
@@ -103,8 +140,9 @@ SUBROUTINE ReadMeshFromHDF5(FileString)
 ! MODULES
 USE MOD_Globals
 USE MOD_Mesh_Vars
-USE MOD_p4estBinding
-USE MOD_MeshFromP4EST, ONLY:getHFlip
+USE MOD_P4EST_Vars,    ONLY: connectivity,p4est,H2P_VertexMap,H2P_FaceMap
+USE MOD_P4EST_Binding, ONLY: p4_connectivity_treevertex,p4_build_p4est
+USE MOD_P4EST,         ONLY: getHFlip
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -149,39 +187,18 @@ IF(.NOT.FileExists)  &
     CALL abort(__STAMP__, &
        'readMesh from data file "'//TRIM(FileString)//'" does not exist')
 
-
 SWRITE(UNIT_stdOut,'(A)')'READ MESH FROM DATA FILE "'//TRIM(FileString)//'" ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
 ! Open data file
 CALL OpenDataFile(FileString,create=.FALSE.,single=.FALSE.)
 
-CALL GetDataSize(File_ID,'ElemInfo',nDims,HSize)
-nGlobalElems=HSize(1) !global number of elements
-DEALLOCATE(HSize)
-nElems=nGlobalElems   !local number of Elements 
+CALL ReadMeshHeader()
 
-CALL GetDataSize(File_ID,'NodeCoords',nDims,HSize)
-nNodes=HSize(1) !global number of unique nodes
-DEALLOCATE(HSize)
-
-CALL readBCs()
-
-CALL ReadAttribute(File_ID,'BoundaryOrder',1,IntegerScalar=BoundaryOrder_mesh)
-NGeo = BoundaryOrder_mesh-1
-CALL ReadAttribute(File_ID,'CurvedFound',1,LogicalScalar=useCurveds)
-
-! mapping form one-dimensional list [1 ; (Ngeo+1)^3] to tensor-product 0 <= i,j,k <= Ngeo and back
-ALLOCATE(HexMap(0:Ngeo,0:Ngeo,0:Ngeo),HexMapInv(3,(Ngeo+1)**3))
-l=0
-DO k=0,Ngeo ; DO j=0,Ngeo ; DO i=0,Ngeo
-  l=l+1
-  HexMap(i,j,k)=l
-  HexMapInv(:,l)=(/i,j,k/)
-END DO ; END DO ; END DO
 !----------------------------------------------------------------------------------------------------------------------------
 !                              ELEMENTS
 !----------------------------------------------------------------------------------------------------------------------------
 
+nElems=nGlobalElems   !local number of Elements 
 !read local ElemInfo from data file
 ALLOCATE(ElemInfo(1:nElems,ELEM_InfoSize))
 CALL ReadArray('ElemInfo',2,(/nElems,ELEM_InfoSize/),0,1,IntegerArray=ElemInfo)
@@ -207,14 +224,11 @@ nNodeIDs=ElemInfo(nElems,ELEM_LastNodeInd)-ElemInfo(1,ELEM_FirstNodeInd)
 ALLOCATE(NodeInfo(1:nNodeIDs))
 CALL ReadArray('NodeInfo',1,(/nNodeIDs/),0,1,IntegerArray=NodeInfo)
 
-
-IF(NGeo.GT.1)THEN
-  nCurvedNodes=(NGeo+1)**3
-ELSE
-  nCurvedNodes=0
-END IF
-
 ALLOCATE(ElemCurvedNode(nCurvedNodes,nElems))
+
+CALL GetDataSize(File_ID,'NodeCoords',nDims,HSize)
+nNodes=HSize(1) !global number of unique nodes
+DEALLOCATE(HSize)
 
 ALLOCATE(Nodes(1:nNodes)) ! pointer list, entry is known by NodeCoords
 DO iNode=1,nNodes
@@ -476,7 +490,9 @@ IF(num_periodics.GT.0) THEN
 END IF !num_periodics>0
 
 CALL p4_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex, &
-                                num_periodics,JoinFaces,p4est_ptr%p4est)
+                                num_periodics,JoinFaces,connectivity)
+
+CALL p4_build_p4est(connectivity,p4est)
 
 DEALLOCATE(Vertices,tree_to_vertex)
 IF(num_periodics.GT.0) DEALLOCATE(JoinFaces) 
@@ -528,112 +544,104 @@ WRITE(*,*)'-------------------------------------------------------'
 END SUBROUTINE ReadMeshFromHDF5
 
 
-!SUBROUTINE ReadMeshFromP4EST(FileString)
-!!===================================================================================================================================
-!! Subroutine to read the mesh from a mesh data file
-!!===================================================================================================================================
-!! MODULES
-!USE MOD_Globals
-!USE MOD_Mesh_Vars
-!USE MOD_p4estBinding
-!! IMPLICIT VARIABLE HANDLING
-!IMPLICIT NONE
-!!-----------------------------------------------------------------------------------------------------------------------------------
-!! INPUT VARIABLES
-!CHARACTER(LEN=*),INTENT(IN)  :: FileString
-!!-----------------------------------------------------------------------------------------------------------------------------------
-!! OUTPUT VARIABLES
-!!-----------------------------------------------------------------------------------------------------------------------------------
-!! LOCAL VARIABLES
-!INTEGER                     :: i,j,k,l
-!INTEGER                     :: iQuad,iMortar,iLocSide,iTree
-!INTEGER                     :: nbQuadInd
-!TYPE(C_PTR)                 :: QT,QQ,QF,QH
-!TYPE(tElem),POINTER         :: aQuad,nbQuad,Tree
-!TYPE(tSide),POINTER         :: aSide,nbSide
-!INTEGER                     :: PMortar,PFlip,HFlip,QHInd
-!INTEGER                     :: BClocSide,BCindex
-!!-----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE ReadGeoFromHDF5(FileString)
+!===================================================================================================================================
+! Subroutine to read the mesh from a mesh data file
+!===================================================================================================================================
+! MODULES
+USE MOD_Globals
+USE MOD_Mesh_Vars, ONLY: nElems,XGeo,Ngeo,nNodes,HexMap
+! IMPLICIT VARIABLE HANDLING
+IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+CHARACTER(LEN=*),INTENT(IN)  :: FileString
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES
+INTEGER                        :: i,j,k
+INTEGER                        :: iElem
+INTEGER                        :: nNodeIDs
+INTEGER                        :: FirstNodeInd,LastNodeInd
+LOGICAL                        :: fileExists
+INTEGER,ALLOCATABLE            :: ElemInfo(:,:),NodeInfo(:)
+REAL,ALLOCATABLE               :: NodeCoords(:,:)
+!-----------------------------------------------------------------------------------------------------------------------------------
+INQUIRE (FILE=TRIM(FileString), EXIST=fileExists)
+IF(.NOT.FileExists)  &
+    CALL abort(__STAMP__, &
+       'readMesh from data file "'//TRIM(FileString)//'" does not exist')
 
-!! Load p4est mesh from file
-!CALL p4_loadmesh(FileString,p4est_ptr%p4est)
-!CALL p4_get_mesh_info(p4est_ptr%p4est,p4est_ptr%mesh,nQuadrants,nHalfFaces)
-!ALLOCATE(QuadCoords(3,nQuadrants),QuadLevel(nQuadrants)) ! big to small flip
-!QuadCoords=0
-!QuadLevel=0
-!CALL p4_get_quadrants(p4est_ptr%p4est,p4est_ptr%mesh,nQuadrants,nHalfFaces,& !IN
-                      !intsize,QT,QQ,QF,QH,QuadCoords,QuadLevel)              !OUT
+SWRITE(UNIT_stdOut,'(A)')'READ GEOMETRY DATA FROM DATA FILE "'//TRIM(FileString)//'" ...'
+SWRITE(UNIT_StdOut,'(132("-"))')
+! Open data file
+CALL OpenDataFile(FileString,create=.FALSE.,single=.FALSE.)
 
-!CALL C_F_POINTER(QT,QuadToTree,(/nQuadrants/))
-!CALL C_F_POINTER(QQ,QuadToQuad,(/6,nQuadrants/))
-!CALL C_F_POINTER(QF,QuadToFace,(/6,nQuadrants/))
-!IF(nHalfFaces.GT.0) CALL C_F_POINTER(QH,QuadToHalf,(/4,nHalfFaces/))
+CALL ReadMeshHeader()
 
-!!----------------------------------------------------------------------------------------------------------------------------
-!!             Start to build p4est datastructure in HOPEST
-!!----------------------------------------------------------------------------------------------------------------------------
-!!                              ELEMENTS
-!!----------------------------------------------------------------------------------------------------------------------------
+CALL GetDataSize(File_ID,'NodeCoords',nDims,HSize)
+nNodes=HSize(1) !global number of unique nodes
+DEALLOCATE(HSize)
 
-!!read local ElemInfo from data file
-!ALLOCATE(Quads(1:nQuadrants))
-!DO iQuad=1,nQuadrants
-  !Quads(iQuad)%ep=>GETNEWELEM()
-  !aQuad=>Quads(iQuad)%ep
-  !aQuad%Ind    = iQuad
-  !CALL CreateSides(aQuad)
-  !DO iLocSide=1,6
-    !aQuad%Side(iLocSide)%sp%flip=-999
-  !END DO
-!END DO
+!----------------------------------------------------------------------------------------------------------------------------
+!                              ELEMENTS
+!----------------------------------------------------------------------------------------------------------------------------
+
+!read local ElemInfo from data file
+ALLOCATE(ElemInfo(1:nElems,ELEM_InfoSize))
+CALL ReadArray('ElemInfo',2,(/nElems,ELEM_InfoSize/),0,1,IntegerArray=ElemInfo)
+
+!----------------------------------------------------------------------------------------------------------------------------
+!                              NODES
+!----------------------------------------------------------------------------------------------------------------------------
+
+!read local Node Info from data file 
+nNodeIDs=ElemInfo(nElems,ELEM_LastNodeInd)-ElemInfo(1,ELEM_FirstNodeInd)
+ALLOCATE(NodeInfo(1:nNodeIDs))
+CALL ReadArray('NodeInfo',1,(/nNodeIDs/),0,1,IntegerArray=NodeInfo)
 
 
-!DO iQuad=1,nQuadrants
-  !aQuad=>Quads(iQuad)%ep
-  !aQuad%type=0
-  !DO iLocSide=1,6
-    !aSide=>aQuad%Side(iLocSide)%sp
-    !! Get P4est local side
-    !PSide=H2P_FaceMap(iLocSide)
-    !! Get P4est neighbour side/flip/morter
-    !CALL EvalP4ESTConnectivity(QuadToFace(PSide+1,iQuad),PnbSide,PFlip,PMortar)
-    !! transform p4est orientation to HOPR flip (magic)
-    !HFlip=GetHFlip(PSide,PnbSide,PFlip)  !Hflip of neighbor side!!!
-    !IF(PMortar.EQ.4)THEN
-      !! Neighbour side is mortar (4 sides), all neighbour element sides have same orientation and local side ind
-      !QHInd=QuadToQuad(PSide+1,iQuad)+1
-      !aSide%nMortars=4
-      !aSide%MortarType=1             ! 1->4 case
-      !ALLOCATE(aSide%MortarSide(4))
-      !DO iMortar=1,4
-        !nbQuadInd=QuadToHalf(iMortar,QHInd)+1
-        !nbQuad=>Quads(nbQuadInd)%ep
-        !nbSide=P2H_FaceMap(PnbSide)
-        !aSide%MortarSide(iMortar)%sp=>nbQuad%side(nbSide)%sp
-        !aSide%MortarSide(iMortar)%sp%flip=HFlip
-      !END DO ! iMortar
-    !ELSE
-      !nbQuadInd=QuadToQuad(PSide+1,iQuad)+1
-      !nbQuad=>Quads(nbQuadInd)%ep
-      !nbSide=P2H_FaceMap(PnbSide)
-      !IF((nbQuadInd.EQ.iQuad).AND.(nbSide.EQ.iLocSide))THEN
-        !! this is a boundary side: 
-        !BCindex=TreeBCMap(iLocSide,iTree)
-        !IF(BCIndex.EQ.0) STOP 'Problem in Boundary assignment'
-        !aSide%BCIndex=BCIndex
-        !NULLIFY(aSide%connection)
-        !aSide%Flip=0
-        
-      !ELSE
-        !aSide%connection=>nbQuad%side(nbSide)%sp
-        !aSide%connection%flip=HFlip
-      !END IF !BC side
-      !IF(PMortar.NE.-1) aSide%MortarType= - (PMortar+1)  ! Pmortar 0...3, small side belonging to  mortar group -> -1..-4
-    !END IF ! PMortar
-  !END DO
-!END DO
 
-!END SUBROUTINE ReadMeshFromP4EST
+
+! get physical coordinates
+
+ALLOCATE(NodeCoords(nNodes,3))
+
+CALL ReadArray('NodeCoords',2,(/nNodes,3/),0,1,RealArray=NodeCoords)
+
+CALL CloseDataFile() 
+
+ALLOCATE(Xgeo(1:3,0:Ngeo,0:Ngeo,0:Ngeo,nElems))
+IF(Ngeo.EQ.1)THEN !use the corner nodes
+  DO iElem=1,nElems
+    firstNodeInd=ElemInfo(iElem,ELEM_FirstNodeInd) !first index -1 in NodeInfo
+    Xgeo(:,0,0,0,iElem)=NodeCoords(NodeInfo(firstNodeInd+1),:)
+    Xgeo(:,1,0,0,iElem)=NodeCoords(NodeInfo(firstNodeInd+2),:)
+    Xgeo(:,1,1,0,iElem)=NodeCoords(NodeInfo(firstNodeInd+3),:)
+    Xgeo(:,0,1,0,iElem)=NodeCoords(NodeInfo(firstNodeInd+4),:)
+    Xgeo(:,0,0,1,iElem)=NodeCoords(NodeInfo(firstNodeInd+5),:)
+    Xgeo(:,1,0,1,iElem)=NodeCoords(NodeInfo(firstNodeInd+6),:)
+    Xgeo(:,1,1,1,iElem)=NodeCoords(NodeInfo(firstNodeInd+7),:)
+    Xgeo(:,0,1,1,iElem)=NodeCoords(NodeInfo(firstNodeInd+8),:)
+ END DO !iElem=1,nElems
+ELSE
+  DO iElem=1,nElems
+    firstNodeInd=ElemInfo(iElem,ELEM_FirstNodeInd) !first index -1 in NodeInfo
+    lastNodeInd=ElemInfo(iElem,ELEM_LastNodeInd)
+    IF(LastNodeInd-firstNodeInd-14.NE.(Ngeo+1)**3) STOP 'Problem with curved'
+    firstNodeInd=firstNodeInd +8
+    DO k=0,Ngeo; DO j=0,Ngeo; DO i=0,Ngeo
+      Xgeo(:,i,j,k,iElem)=NodeCoords(NodeInfo(firstNodeInd+HexMap(i,j,k)),:)
+    END DO ; END DO ; END DO 
+ END DO !iElem=1,nElems
+END IF
+
+DEALLOCATE(ElemInfo,NodeInfo)
+
+
+
+END SUBROUTINE ReadGeoFromHDF5
 
 
 END MODULE MOD_Mesh_ReadIn

@@ -4,7 +4,7 @@ MODULE MOD_Mesh_Vars
 ! Contains global variables provided by the mesh routines
 !===================================================================================================================================
 ! MODULES
-USE MOD_p4estBindingTypes
+USE,INTRINSIC :: ISO_C_BINDING
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 PUBLIC
@@ -21,10 +21,14 @@ REAL,ALLOCATABLE  :: XGeoQuad(:,:,:,:,:)              ! High order geometry node
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! GLOBAL VARIABLES 
 !-----------------------------------------------------------------------------------------------------------------------------------
-INTEGER,ALLOCATABLE :: BoundaryType(:,:)
+INTEGER,ALLOCATABLE              :: BoundaryType(:,:)
+CHARACTER(LEN=255),ALLOCATABLE   :: BoundaryName(:)
+CHARACTER(LEN=255)               :: MeshFile        ! name of hdf5 meshfile (write with ending .h5!)
 !-----------------------------------------------------------------------------------------------------------------------------------
 INTEGER             :: nGlobalElems=0      ! number of elements in mesh
 INTEGER             :: nElems=0            ! number of local elements
+INTEGER             :: nGlobalQuadrants    ! number of quadrants in mesh
+INTEGER             :: nQuadrants          ! local number of quadrants
 INTEGER             :: nSides=0            ! =nInnerSides+nBCSides
 INTEGER             :: nMortarSides=0      ! 
 INTEGER             :: nBCSides=0          ! BCSide index range: sideID \in [1:nBCSides]
@@ -32,10 +36,6 @@ INTEGER             :: nNodes=0            ! SIZE of Nodes pointer array, number
 INTEGER             :: nBCs=0              ! number of BCs in mesh
 INTEGER             :: nUserBCs=0     
 INTEGER             :: nCurvedNodes=0      ! number of curved nodes per element = (Ngeo+1)^3
-!-----------------------------------------------------------------------------------------------------------------------------------
-CHARACTER(LEN=255),ALLOCATABLE   :: BoundaryName(:)
-CHARACTER(LEN=255)               :: MeshFile        ! name of hdf5 meshfile (write with ending .h5!)
-INTEGER             :: refineLevel
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! USER DEFINED TYPES 
 TYPE tNodePtr
@@ -77,7 +77,7 @@ TYPE tSide
 END TYPE tSide
 
 TYPE tNode
-  INTEGER                      :: ind=0         ! global unique node index
+  INTEGER                      :: ind=0           ! global unique node index
   INTEGER                      :: tmp=0
   !REAL                         :: x(3)=0.
 END TYPE tNode
@@ -86,83 +86,8 @@ TYPE(tElemPtr),POINTER         :: Elems(:)
 TYPE(tNodePtr),POINTER         :: Nodes(:)
 INTEGER,ALLOCATABLE            :: HexMap(:,:,:)
 INTEGER,ALLOCATABLE            :: HexMapInv(:,:)
-!-----------------------------------------------------------------------------------------------------------------------------------
-! P4EST related data structures 
-!-----------------------------------------------------------------------------------------------------------------------------------
-TYPE(t_p4est_ptr) :: p4est_ptr              ! c pointer derived data type, see MOD_P4estBindingTypes
-
-TYPE(tElemPtr),ALLOCATABLE  :: Quads(:)           ! new element list elements are "quadrants/octants"        
-INTEGER                     :: nQuadrants         ! local number of quadrants (here no MPI => all) 
-INTEGER                     :: nHalfFaces         ! number of mortar sides
-INTEGER(KIND=4)             :: IntSize            ! used to transform INT coords/levels to REAL coords/levels: REAL=1/inssize*INT  [0. ; 1.]
-REAL                        :: sIntSize           ! 1./REAL(intsize)
-INTEGER(KIND=4),POINTER     :: QuadToTree(:)      ! from quadrant to tree ( ~ new element ID to old element ID) 
-INTEGER(KIND=4),ALLOCATABLE :: TreeToQuad(:,:) ! from tree to quad range (2,nElems), entry 1: firstInd-1, entry2:lastInd 
-INTEGER(KIND=4),POINTER     :: QuadToQuad(:,:)    ! p4est quadrant connectivity (1:6,1:nQuadrants) => neighbor quadrant
-INTEGER(KIND=1),POINTER     :: QuadToFace(:,:)    ! p4est face connectivity (1:6,1:nQuadrants) => neighbor faceId + orientation + non-conform info
-INTEGER(KIND=4),POINTER     :: QuadToHalf(:,:)    ! p4est face connectivity for mortars (1:4,1:nHalfFaces), ( ~small sides)
-INTEGER(KIND=4),ALLOCATABLE :: QuadCoords(:,:)    ! p4est Integer coordinates of first quadrant node (xyz,nQuadrants)
-INTEGER(KIND=1),ALLOCATABLE :: QuadLevel(:)       ! p4est Integer Level of quadrant (use to compute quadrant size
-
-!-----------------------------------------------------------------------------------------------------------------------------------
-INTEGER,PARAMETER   :: EdgeToElemNode(1:2,1:12) = RESHAPE((/ 1, 2,&  ! CGNS corner nodes mapped 
-                                                             4, 3,&  ! to p4est edges
-                                                             5, 6,&
-                                                             8, 7,&
-                                                             1, 4,&
-                                                             2, 3,&
-                                                             5, 8,&
-                                                             6, 7,&
-                                                             1, 5,&
-                                                             2, 6,&
-                                                             4, 8,&
-                                                             3, 7 /),(/2,12/))
-INTEGER,PARAMETER   :: H2P_FaceMap(1:6)     =  (/4,2,1,3,0,5/)     !mapping from local face order (CGNS) to p4est face
-INTEGER,PARAMETER   :: P2H_FaceMap(0:5)     =  (/5,3,2,4,1,6/)     !mapping from local face order (CGNS) to p4est face
-INTEGER,PARAMETER   :: H2P_VertexMap(1:8)   =  (/0,1,3,2,4,5,7,6/) !mapping from local node order (CGNS) to p4est node order 
-INTEGER,PARAMETER   :: P2H_VertexMap(0:7)   =  (/1,2,4,3,5,6,8,7/) !mapping from local node order (CGNS) to p4est node order 
-
-! mapping from HOPEST node of local sides to P4EST nodes of local sides
-INTEGER,PARAMETER   :: H2P_FaceNodeMap(1:4,1:6) = &
-                                      RESHAPE((/ 0,2,3,1,&
-                                                 0,1,3,2,&
-                                                 0,1,3,2,&
-                                                 1,0,2,3,&
-                                                 0,2,3,1,&
-                                                 0,1,3,2 /),(/4,6/))
-
-! mapping from P4EST node of local sides to HOPEST node of local sides
-INTEGER,PARAMETER   :: P2H_FaceNodeMap(0:3,0:5) = &
-                                      RESHAPE((/ 1,4,2,3,&
-                                                 1,2,4,3,&
-                                                 1,2,4,3,&
-                                                 2,1,3,4,&
-                                                 1,4,2,3,&
-                                                 1,2,4,3 /),(/4,6/))
-
-! Mapping matrices for computation of same node on adjacent face, see paper Burstedde p4est, 2011
-! Node1= P4P(P4Q(P4R(Face0,Face1),orientation),Node0)
-INTEGER,PARAMETER   :: P4R(0:5,0:5) = TRANSPOSE(RESHAPE((/ 0,1,1,0,0,1,&
-                                                           2,0,0,1,1,0,&
-                                                           2,0,0,1,1,0,&
-                                                           0,2,2,0,0,1,&
-                                                           2,0,0,2,2,0,&
-                                                           2,0,0,2,2,0 /),(/6,6/)))
-
-INTEGER,PARAMETER   :: P4Q(0:2,0:3) = TRANSPOSE(RESHAPE((/ 1,2,5,6,&
-                                                           0,3,4,7,&
-                                                           0,4,3,7 /),(/4,3/)))
-
-INTEGER,PARAMETER   :: P4P(0:7,0:3) = TRANSPOSE(RESHAPE((/ 0,1,2,3,&
-                                                           0,2,1,3,&
-                                                           1,0,3,2,&
-                                                           1,3,0,2,&
-                                                           2,0,3,1,&
-                                                           2,3,0,1,&
-                                                           3,1,2,0,&
-                                                           3,2,1,0 /),(/4,8/)))
-
-!-----------------------------------------------------------------------------------------------------------------------------------
+! DATA STRUCTURES BUILT USING P4EST CONNECTIVITY
+TYPE(tElemPtr),ALLOCATABLE     :: Quads(:)        ! new element list elements are "quadrants/octants"        
 !-----------------------------------------------------------------------------------------------------------------------------------
 LOGICAL          :: MeshInitIsDone =.FALSE.
 !===================================================================================================================================

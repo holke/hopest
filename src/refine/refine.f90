@@ -1,6 +1,6 @@
 #include "hopest_f.h"
 
-MODULE MOD_Mesh_Refine
+MODULE MOD_Refine
 !===================================================================================================================================
 ! Add comments please!
 !===================================================================================================================================
@@ -27,10 +27,11 @@ SUBROUTINE RefineMesh()
 !===================================================================================================================================
 ! MODULES
 USE MOD_Globals
-USE MOD_Mesh_Vars
 USE MOD_Refine_Vars
-USE MOD_p4estBinding
-USE MOD_Readintools,ONLY:GETINT
+USE MOD_Refine_Binding,ONLY: p4_refine_mesh
+USE MOD_Mesh_Vars,     ONLY: nElems
+USE MOD_P4EST_Vars,    ONLY: p4est,mesh
+USE MOD_Readintools,   ONLY: GETINT
 USE, INTRINSIC :: ISO_C_BINDING
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
@@ -42,7 +43,6 @@ IMPLICIT NONE
 ! LOCAL VARIABLES
 TYPE(C_FUNPTR)              :: refineFunc
 !===================================================================================================================================
-IF(MESHInitIsDone) RETURN
 SWRITE(UNIT_stdOut,'(A)')'BUILD P4EST MESH AND REFINE ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
 
@@ -70,8 +70,8 @@ CASE DEFAULT
   STOP 'refineType is not defined'
 END SELECT
 
-CALL p4_refine_mesh(p4est_ptr%p4est,refineFunc,refineLevel,& !IN
-                    p4est_ptr%mesh)                          !OUT
+CALL p4_refine_mesh(p4est,refineFunc,refineLevel,& !IN
+                    mesh)                          !OUT
 SDEALLOCATE(RefineList)
 END SUBROUTINE RefineMesh
 
@@ -82,8 +82,8 @@ SUBROUTINE InitRefineBoundaryElems()
 !===================================================================================================================================
 ! MODULES
 USE MOD_Globals
-USE MOD_Mesh_Vars,   ONLY: Elems,nElems
 USE MOD_Refine_Vars, ONLY: TreeToQuadRefine,refineBCIndex
+USE MOD_Mesh_Vars,  ONLY: Elems,nElems
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -223,9 +223,10 @@ USE, INTRINSIC :: ISO_C_BINDING
 USE MOD_Refine_Vars, ONLY: RefineList,refineBoundary,refineGeomType
 USE MOD_Refine_Vars, ONLY: sphereCenter,sphereRadius,boxBoundary
 USE MOD_Mesh_Vars,   ONLY: XGeo,Ngeo
-USE MOD_Mesh_Vars,   ONLY: wBary_Ngeo,xi_Ngeo,Quadcoords 
+USE MOD_Mesh_Vars,   ONLY: wBary_Ngeo,xi_Ngeo
+USE MOD_P4EST_Vars,  ONLY: Quadcoords 
 USE MOD_Basis,       ONLY: LagrangeInterpolationPolys 
-USE MOD_ChangeBasis, ONLY: ChangeBasis3D_var 
+USE MOD_ChangeBasis, ONLY: ChangeBasis3D_XYZ
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -268,7 +269,7 @@ DO i=0,Ngeo
   CALL LagrangeInterpolationPolys(xi0(3) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_zeta(i,:)) 
 END DO
 !interpolate tree HO mapping to quadrant HO mapping
-CALL ChangeBasis3D_var(3,Ngeo,Ngeo,Vdm_xi,Vdm_eta,Vdm_zeta,XGeo(:,:,:,:,tree),XgeoQuad(:,:,:,:))
+CALL ChangeBasis3D_XYZ(3,Ngeo,Ngeo,Vdm_xi,Vdm_eta,Vdm_zeta,XGeo(:,:,:,:,tree),XgeoQuad(:,:,:,:))
 
 
 ! Barycenter
@@ -361,4 +362,4 @@ ELSE
 END IF
 END FUNCTION RefineFirst
 
-END MODULE MOD_Mesh_Refine
+END MODULE MOD_Refine

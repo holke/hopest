@@ -46,8 +46,6 @@ void p4_loadmesh(char    filename[],
 
 
 
-
-
 // Build p4est data structures with existing connectivity from HDF5 mesh
 void p4_connectivity_treevertex (p4est_topidx_t num_vertices,
                                  p4est_topidx_t num_trees,
@@ -55,9 +53,8 @@ void p4_connectivity_treevertex (p4est_topidx_t num_vertices,
                                  p4est_topidx_t *tree_to_vertex,
                                  p4est_topidx_t num_periodics,
                                  p4est_topidx_t *join_faces,
-                                 p4est_t        **p4est_out )
+                                 p4est_connectivity_t **conn_out )
 {
-  p4est_t              *p4est;
   p4est_topidx_t        tree;
   int                   face,i;
   p4est_connectivity_t *conn = NULL;
@@ -107,10 +104,22 @@ void p4_connectivity_treevertex (p4est_topidx_t num_vertices,
     ("New connectivity with %lld trees and %lld vertices\n",
      (long long) conn->num_trees, (long long) conn->num_vertices);
 
+  *conn_out=conn;
+  printf("connectivity %p \n",conn);
+}
+
+void p4_build_p4est ( p4est_connectivity_t *conn,
+                      p4est_t              **p4est_out )
+{
+  p4est_t* p4est;
+
+  printf("connectivity %p \n",conn);
+  fflush(stdout);
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
   /* Create a forest that is not refined; it consists of the root octant. */
   p4est = p4est_new (mpicomm, conn, 0, NULL, NULL);
-  *p4est_out=*(&p4est);
-
+  printf("p4est %p \n",p4est);
+  *p4est_out=p4est;
 }
 
 
@@ -119,10 +128,13 @@ void p4_build_bcs(p4est_t        *p4est,
                   int16_t        *bcelemmap)
 {
   int itree,iside;
+
   p8est_connectivity_t *conn=p4est->connectivity;
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 
   P4EST_ASSERT (p4est->trees->elem_count == num_trees);
   p4est_connectivity_set_attr(conn,6*sizeof(int16_t));
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
   
   for(itree=0; itree<num_trees; itree++) {
     for(iside=0; iside<6; iside++) {
@@ -140,89 +152,6 @@ void p4_get_bcs(p4est_t        *p4est,
   *bcelemmap=(int16_t*) conn->tree_to_attr;
 }
 
-
-/* Theses functions are required for performing the mesh refinement in p4est.
-   The dummy function refine_hopest is used a refinement function for p4est.
-   The actual refinement functions are in HOPEST, called through refine_f.
-*/
-
-int (*refine_f) (p4est_qcoord_t,p4est_qcoord_t,p4est_qcoord_t,p4est_topidx_t,int8_t,int);
-
-static int
-refine_hopest (p4est_t * p4est, p4est_topidx_t which_tree,
-               p4est_quadrant_t * q)
-{
-  // Call HOPEST refinemtn routines
-  return refine_f(q->x,q->y,q->z,which_tree+1,q->level,p8est_quadrant_child_id(q));
-}
-
-void p4_refine_mesh(p4est_t  *p4est,
-                    int     (*myrefine_f)
-                            (p4est_qcoord_t,p4est_qcoord_t,p4est_qcoord_t,p4est_topidx_t,int8_t,int),
-                    int     refine_level,
-                    p4est_mesh_t  **mesh_out )
-{
-  p4est_mesh_t       *mesh;
-  p4est_ghost_t      *ghost;
-  p4est_connect_type_t mesh_btype;
-  int                 level;
-  int                 balance;
-
-  P4EST_GLOBAL_PRODUCTIONF
-    ("DEBUG: refine_level  %d \n",refine_level);
-  P4EST_GLOBAL_PRODUCTIONF
-    ("DEBUG: New connectivity with %lld trees and %lld vertices\n",
-     (long long) p4est->connectivity->num_trees, (long long) p4est->connectivity->num_vertices);
-
-  // Set refinement function pointer called by refine_hopest to function provided by HOPEST
-  refine_f=myrefine_f;
-  
-  /* Refine the forest iteratively, load balancing at each iteration.
-   * This is important when starting with an unrefined forest */
-  for (level = 0; level < refine_level; ++level) {
-    p4est_refine (p4est, 0, &refine_hopest, NULL);
-    /* Refinement has lead to up to 8x more elements; redistribute them. */
-    p4est_partition (p4est, 0, NULL);
-  }
-
-  /* If we call the 2:1 balance we ensure that neighbors do not differ in size
-   * by more than a factor of 2.  This can optionally include diagonal
-   * neighbors across edges or corners as well; see p4est.h.
-   *
-   * Note that this balance step is not strictly necessary since we are using
-   * uniform refinement but may be required for other types of refinement.
-   */
-  P4EST_GLOBAL_PRODUCTIONF
-    ("DEBUG: before first vtk %i  \n",p4est);
-
-  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_afterrefine");
-  P4EST_GLOBAL_PRODUCTIONF
-    ("DEBUG: after first vtk %d  \n",0);
-
-  balance = 1;
-  if (balance) {
-    p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
-    p4est_partition (p4est, 0, NULL);
-  }
-  P4EST_GLOBAL_PRODUCTIONF
-    ("DEBUG: before vtk %d  \n",0);
-
-  /* Write the forest to disk for visualization, one file per processor. */
-  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_afterbalance");
-
-  P4EST_GLOBAL_PRODUCTIONF
-    ("DEBUG: before ghosts %d  \n",0);
-
-  /* create ghost layer and mesh */
-  ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
-  mesh = p4est_mesh_new_ext (p4est, ghost, 1,1,P4EST_CONNECT_FULL);
-
-  //return mesh as pointer adress;
-  *mesh_out=(p4est_mesh_t *)mesh;
-
-  P4EST_GLOBAL_PRODUCTIONF
-    ("DEBUG: REFINE FINISHED %d  \n",0);
-}
 
 void p4_get_mesh_info ( p4est_t        *p4est,
                         p4est_mesh_t   *mesh,
@@ -278,7 +207,7 @@ void p4_get_quadrants( p4est_t       *p4est,
 }
 
 
-void p4_save_all ( char    filename[],
+void p4_savemesh ( char    filename[],
                    p4est_t *p4est)
 {
   p4est_save(filename,p4est,0);

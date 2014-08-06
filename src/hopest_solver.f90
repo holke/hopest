@@ -34,16 +34,15 @@ SUBROUTINE HopestSolver()
 ! MODULES
 USE MOD_Globals
 USE MOD_IO_HDF5
+USE MOD_P4EST_Vars,         ONLY: p4est
+USE MOD_P4EST,              ONLY: InitP4EST,BuildMeshFromP4EST
+USE MOD_P4EST_Binding,      ONLY: p4_initvars,p4_loadmesh
 USE MOD_Mesh_Vars
-USE MOD_Output_Vars, ONLY:Projectname
-USE MOD_p4estBinding
-!-----------------------------------------------------------------------------------------------------------------------------------
-!USE MOD_Mesh_ReadIn,        ONLY:readMeshFromP4EST
-USE MOD_Mesh_Refine,        ONLY:RefineMesh
-USE MOD_MeshFromP4EST,      ONLY:BuildMeshFromP4EST,BuildHOMesh
-USE MOD_Output_HDF5,        ONLY:writeMeshToHDF5
-USE MOD_ReadInTools,        ONLY:GETINT,GETSTR
+USE MOD_Mesh,               ONLY: InitMesh,BuildHOMesh
+USE MOD_Mesh_ReadIn,        ONLY: ReadGeoFromHDF5
+USE MOD_ReadInTools,        ONLY: GETINT,GETSTR
 IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
 ! INPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! INPUT/OUTPUT VARIABLES
@@ -51,35 +50,32 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
+INTEGER :: i
 !===================================================================================================================================
-!CALL InitIO()
+SWRITE(UNIT_StdOut,'(132("-"))')
+SWRITE(UNIT_stdOut,'(A)') ' INIT MESH...'
 
-!IF(MeshInitIsDone)&
-  !CALL abort(__STAMP__,&
-  !'InitMesh not ready to be called or already called.')
+CALL InitP4EST()
+CALL InitIO()
+CALL InitMesh()
 
-!SWRITE(UNIT_StdOut,'(132("-"))')
-!SWRITE(UNIT_stdOut,'(A)') ' INIT MESH...'
+CALL p4_loadmesh(MeshFile,p4est)
+!CALL p4_partition_info !start and end tree and quadrants
+CALL BuildMeshFromP4EST()
 
-!! prepare pointer structure (get nElems, etc.)
-!MeshFile = GETSTR('MeshFile')
-!ProjectName=Meshfile(1:INDEX(Meshfile,'_mesh.h5')-1)
-!CALL readMesh(MeshFile) !set nElems
+!STOP 'Weiter gehts nicht'
+CALL ReadGeoFromHDF5(MeshFile)
 
-!CALL RefineMesh()
-!CALL p4_save_all(TRIM(ProjectName)//'.p4est'//C_NULL_CHAR,p4est_ptr%p4est)
-!CALL BuildMeshFromP4EST()
+CALL BuildHOMesh()
 
-!CALL BuildHOMesh()
-!!output new mesh
-!CALL writeMeshToHDF5(TRIM(ProjectName)//'_mesh_p4est.h5')
-!! dealloacte pointers
-!SWRITE(UNIT_stdOut,'(A)') "NOW CALLING deleteMeshPointer..."
-!CALL deleteMeshPointer()
+!CALL FlexiPrepareMesh() ! Suggestion
 
-!MeshInitIsDone=.TRUE.
 
-!CALL FinalizeHopestSolver()
+! dealloacte pointers
+SWRITE(UNIT_stdOut,'(A)') "NOW CALLING deleteMeshPointer..."
+CALL deleteMeshPointer()
+
+CALL FinalizeHopestSolver()
 SWRITE(UNIT_stdOut,'(A)')' INIT MESH DONE!'
 SWRITE(UNIT_StdOut,'(132("-"))')
 END SUBROUTINE HopestSolver
@@ -90,8 +86,7 @@ SUBROUTINE FinalizeHopestSolver()
 ! Deallocate all global interpolation variables.
 !============================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Mesh_Vars
+USE MOD_P4EST,ONLY: FinalizeP4EST
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !----------------------------------------------------------------------------------------------------------------------------
@@ -101,11 +96,8 @@ IMPLICIT NONE
 !----------------------------------------------------------------------------------------------------------------------------
 !local variables
 !============================================================================================================================
-! Deallocate global variables, needs to go somewhere else later
-SDEALLOCATE(Xi_NGeo)
-SDEALLOCATE(BoundaryName)
-SDEALLOCATE(BoundaryType)
-MeshInitIsDone = .FALSE.
+CALL FinalizeP4EST()
 END SUBROUTINE FinalizeHopestSolver
+
 
 END MODULE MOD_HopestSolver
