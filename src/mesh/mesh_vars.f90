@@ -35,13 +35,7 @@ INTEGER             :: nCurvedNodes=0      ! number of curved nodes per element 
 !-----------------------------------------------------------------------------------------------------------------------------------
 CHARACTER(LEN=255),ALLOCATABLE   :: BoundaryName(:)
 CHARACTER(LEN=255)               :: MeshFile        ! name of hdf5 meshfile (write with ending .h5!)
-INTEGER                          :: refineLevel
-INTEGER                          :: refineType
-INTEGER                          :: refineListType
-INTEGER                          :: refineBCIndex
-INTEGER,ALLOCATABLE              :: RefineList(:)
-REAL,ALLOCATABLE                 :: refineBoundary(:)
-INTEGER,ALLOCATABLE                 :: TreeToQuadRefine(:,:)
+INTEGER             :: refineLevel
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! USER DEFINED TYPES 
 TYPE tNodePtr

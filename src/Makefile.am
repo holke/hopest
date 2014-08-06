@@ -22,6 +22,7 @@ libhopest_compiled_sources = \
 	src/readintools/isovaryingstring.f90 \
 	src/interpolation/changeBasis.f90 \
 	src/mesh/mesh_vars.f90 \
+	src/mesh/mesh_refine_vars.f90 \
 	src/output/output_vars.f90 \
 	src/mpi/mpi.f90 \
 	src/interpolation/basis.f90 \
