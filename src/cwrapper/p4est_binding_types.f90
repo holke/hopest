@@ -12,6 +12,7 @@ IMPLICIT NONE
 TYPE :: t_p4est_ptr
   TYPE(C_PTR)                :: p4est
   TYPE(C_PTR)                :: mesh
+  TYPE(C_PTR)                :: connectivity
 END TYPE t_p4est_ptr
 
 

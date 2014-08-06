@@ -12,6 +12,7 @@
 
 
 
+sc_MPI_Comm           mpicomm;
 
 void p4est_connectivity_treevertex (p4est_topidx_t num_vertices,
                                     p4est_topidx_t num_trees,
@@ -19,13 +20,11 @@ void p4est_connectivity_treevertex (p4est_topidx_t num_vertices,
                                     p4est_topidx_t *tree_to_vertex,
                                     p4est_topidx_t num_periodics,
                                     p4est_topidx_t *join_faces,
-                                    p4est_t        **p4est_out )
+                                    p4est_t        **conn_out )
 {
-  p4est_t              *p4est;
   p4est_topidx_t        tree;
   int                   face,i;
   p4est_connectivity_t *conn = NULL;
-  sc_MPI_Comm           mpicomm;
 
 
   /* Initialize MPI; see sc_mpi.h.
@@ -83,10 +82,16 @@ void p4est_connectivity_treevertex (p4est_topidx_t num_vertices,
     ("New connectivity with %lld trees and %lld vertices\n",
      (long long) conn->num_trees, (long long) conn->num_vertices);
 
+  *conn_out=*(&conn);
+}
+
+void p4_build_p4est ( p4est_connectivity_t *conn,
+                      p4est_t              **p4est_out )
+{
+  p4est_t              *p4est;
   /* Create a forest that is not refined; it consists of the root octant. */
   p4est = p4est_new (mpicomm, conn, 0, NULL, NULL);
-  *p4est_out=*(&p4est);
-
+  *p4est_out=p4est;
 }
 
 
@@ -164,7 +169,7 @@ void p4est_refine_mesh (p4est_t  *p4est,
 
   /* create ghost layer and mesh */
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
-  mesh = p4est_mesh_new (p4est, ghost, mesh_btype);
+  mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, P4EST_CONNECT_FULL);
   //return mesh as pointer adress;
   *mesh_out=(p4est_mesh_t *)mesh;
 

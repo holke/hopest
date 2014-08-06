@@ -11,8 +11,8 @@ IMPLICIT NONE
 
 INTERFACE 
 
-  SUBROUTINE p4est_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex,&
-                                           num_periodics,JoinFaces,p4est) BIND(C)
+  SUBROUTINE p4est_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex,num_periodics,JoinFaces,&
+                                           connectivity) BIND(C)
   !=================================================================================================================================
   ! builds up p4est connectivit, using only element connectivity and vertex positions
   !=================================================================================================================================
@@ -30,9 +30,27 @@ INTERFACE
   INTEGER( KIND = C_INT)           :: JoinFaces(5*num_periodics) 
   !---------------------------------------------------------------------------------------------------------------------------------
   ! OUTPUT VARIABLES
-  TYPE(C_PTR)                      :: p4est
+  TYPE(C_PTR),INTENT(OUT)          :: connectivity
   !=================================================================================================================================
   END SUBROUTINE p4est_connectivity_treevertex 
+
+
+  SUBROUTINE p4_build_p4est(connectivity,p4est) BIND(C)
+  !=================================================================================================================================
+  ! builds up p4est connectivit, using only element connectivity and vertex positions
+  !=================================================================================================================================
+  ! MODULES
+  USE, INTRINSIC :: ISO_C_BINDING  
+  ! IMPLICIT VARIABLE HANDLING
+  IMPLICIT NONE
+  !---------------------------------------------------------------------------------------------------------------------------------
+  ! INPUT VARIABLES
+  TYPE(C_PTR),INTENT(IN),VALUE     :: connectivity
+  !---------------------------------------------------------------------------------------------------------------------------------
+  ! OUTPUT VARIABLES
+  TYPE(C_PTR),INTENT(OUT)          :: p4est
+  !=================================================================================================================================
+  END SUBROUTINE p4_build_p4est
 
 
   SUBROUTINE p4est_refine_mesh(p4est,refine_function,refine_level,&

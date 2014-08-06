@@ -480,8 +480,8 @@ IF(num_periodics.GT.0) THEN
   END DO !iElem
 END IF !num_periodics>0
 
-CALL p4est_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex, &
-                                   num_periodics,JoinFaces,p4est_ptr%p4est)
+CALL p4est_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex,num_periodics,JoinFaces,p4est_ptr%connectivity)
+CALL p4_build_p4est(p4est_ptr%connectivity,p4est_ptr%p4est)
 
 DEALLOCATE(Vertices,tree_to_vertex)
 IF(num_periodics.GT.0) DEALLOCATE(JoinFaces) 
