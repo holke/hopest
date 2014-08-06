@@ -164,7 +164,7 @@ void p4est_refine_mesh (p4est_t  *p4est,
 
   /* create ghost layer and mesh */
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
-  mesh = p4est_mesh_new (p4est, ghost, mesh_btype);
+  mesh =  p4est_mesh_new_ext (p4est, ghost, 1,1,P4EST_CONNECT_FULL); 
   //return mesh as pointer adress;
   *mesh_out=(p4est_mesh_t *)mesh;
 
