@@ -71,13 +71,13 @@ SWRITE(UNIT_stdOut,'(A)')'GENERATE HOPEST MESH FROM P4EST ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
 
 ! Get arrays from p4est: use pointers for c arrays (QT,QQ,..), duplicate data for QuadCoords,Level
-CALL p4_get_mesh_info(p4est_ptr%p4est,p4est_ptr%mesh,nQuadrants,nHalfFaces,nElems)
+CALL p4_get_mesh_info(p4est,mesh,nQuadrants,nHalfFaces,nElems)
 
 ALLOCATE(QuadCoords(3,nQuadrants),QuadLevel(nQuadrants)) ! big to small flip
 QuadCoords=0
 QuadLevel=0
 
-CALL p4_get_quadrants(p4est_ptr%p4est,p4est_ptr%mesh,nQuadrants,nHalfFaces,& !IN
+CALL p4_get_quadrants(p4est,mesh,nQuadrants,nHalfFaces,& !IN
                       intsize,QT,QQ,QF,QH,QuadCoords,QuadLevel)              !OUT
 sIntSize=1./REAL(Intsize)
 
@@ -87,7 +87,7 @@ CALL C_F_POINTER(QF,QuadToFace,(/6,nQuadrants/))
 IF(nHalfFaces.GT.0) CALL C_F_POINTER(QH,QuadToHalf,(/4,nHalfFaces/))
 
 ! Get boundary conditions from p4est
-CALL p4_get_bcs(p4est_ptr%p4est,TB)
+CALL p4_get_bcs(p4est,TB)
 CALL C_F_POINTER(TB,TreeToBC,(/6,nElems/))
 
 ALLOCATE(TreeToQuad(2,nElems))
@@ -380,7 +380,7 @@ DO iELem=1,nElems
   END DO
 END DO
 
-CALL p4_build_bcs(p4est_ptr%p4est,nElems,BCElemMap)
+CALL p4_build_bcs(p4est,nElems,BCElemMap)
 
 END SUBROUTINE BuildBCs
 

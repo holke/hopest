@@ -37,7 +37,7 @@ USE MOD_IO_HDF5
 USE MOD_Mesh_Vars
 USE MOD_Mesh,               ONLY:InitMesh
 USE MOD_Output_Vars,        ONLY:Projectname
-USE MOD_p4estBinding,       ONLY: p4_initvars,p4_loadmesh
+USE MOD_p4estBinding,       ONLY:p4_initvars,p4_loadmesh
 USE MOD_Basis,              ONLY:BarycentricWeights
 USE MOD_Mesh_ReadIn,        ONLY:ReadGeoFromHDF5
 USE MOD_MeshFromP4EST,      ONLY:BuildMeshFromP4EST,BuildHOMesh
@@ -65,7 +65,7 @@ CALL InitIO()
 CALL p4_initvars()
 CALL InitMesh()
 
-CALL p4_loadmesh(MeshFile,p4est_ptr%p4est)
+CALL p4_loadmesh(MeshFile,p4est)
 !CALL p4_partition_info !start and end tree and quadrants
 CALL BuildMeshFromP4EST()
 

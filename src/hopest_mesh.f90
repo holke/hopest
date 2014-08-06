@@ -65,7 +65,7 @@ CALL readMeshFromHDF5(MeshFile) !set nElems
 
 CALL RefineMesh()
 CALL BuildBCs()
-CALL p4_savemesh(TRIM(ProjectName)//'.p4est'//C_NULL_CHAR,p4est_ptr%p4est)
+CALL p4_savemesh(TRIM(ProjectName)//'.p4est'//C_NULL_CHAR,p4est)
 CALL BuildMeshFromP4EST()
 
 CALL BuildHOMesh()

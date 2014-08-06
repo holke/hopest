@@ -51,10 +51,6 @@ IMPLICIT NONE
 ! LOCAL VARIABLES
 INTEGER :: i
 !===================================================================================================================================
-IF(MeshInitIsDone)&
-  CALL abort(__STAMP__,&
-  'InitMesh not ready to be called or already called.')
-
 SWRITE(UNIT_StdOut,'(132("-"))')
 SWRITE(UNIT_stdOut,'(A)') ' INIT MESH...'
 
@@ -73,7 +69,6 @@ IF(nUserBCs.GT.0)THEN
   END DO
 END IF !nUserBCs>0
 
-MeshInitIsDone=.TRUE.
 SWRITE(UNIT_stdOut,'(A)')' INIT MESH DONE!'
 SWRITE(UNIT_StdOut,'(132("-"))')
 END SUBROUTINE InitMesh
