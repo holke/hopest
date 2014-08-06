@@ -38,7 +38,7 @@ SUBROUTINE wrapinitmesh(hdf5file,hdf5file_len,conn)
     character(hdf5file_len,kind=C_CHAR), intent(IN) :: hdf5file
     TYPE(C_PTR)           :: conn
 
-    CALL InitMPI()
+    !CALL InitMPI()
     call InitIO()
     print *,"calling read mesh with file ", hdf5file
     call ReadMesh(hdf5file)

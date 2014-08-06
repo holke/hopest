@@ -38,7 +38,7 @@ extern              "C"         /* prevent C++ name mangling */
 #endif
 
 void FillStrings_FC(char *inifile,int inifile_len);
-void InitMesh_FC(char *hdf5file,int hdf5file_len,p4est_connectivity_t **conn);
+void InitMesh_FC(char *hdf5file,int hdf5file_len,p8est_connectivity_t **conn);
 
 #ifdef __cplusplus
 #if 0

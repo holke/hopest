@@ -6,7 +6,8 @@
 libhopest_generated_headers = src/hopest_config.h
 libhopest_installed_headers = \
         src/hopest.h \
-	src/hopest_fortran_test.h
+	src/hopest_fortran_test.h \
+	src/cwrapper/p4est_wrapper.h
 libhopest_internal_headers = \
 	src/hopest_f.h
 libhopest_compiled_sources = \
@@ -46,7 +47,7 @@ endif
 libhopest_installed_headers += src/hopest_hdf5.h
 
 # this variable is used for headers that are not publicly installed
-HOPEST_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS)
+HOPEST_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -I@top_builddir@/src
 
 lib_LTLIBRARIES += src/libhopest.la
 src_libhopest_la_SOURCES = \

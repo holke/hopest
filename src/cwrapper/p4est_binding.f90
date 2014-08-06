@@ -2,7 +2,7 @@
 
 MODULE MOD_P4estBinding
 !===================================================================================================================================
-! Fortran <-> C++ wrapper routine for the P4est Routines
+! Fortran <-> C wrapper routine for the p4est routines
 !===================================================================================================================================
 ! MODULES
 !USE MOD_P4estBindingTypes
@@ -11,7 +11,8 @@ IMPLICIT NONE
 
 INTERFACE 
 
-  SUBROUTINE p4est_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex,num_periodics,JoinFaces,&
+  SUBROUTINE p4est_connectivity_treevertex(num_vertices,num_trees,&
+                  vertices,tree_to_vertex,num_periodics,JoinFaces,&
                                            connectivity) BIND(C)
   !=================================================================================================================================
   ! builds up p4est connectivit, using only element connectivity and vertex positions
@@ -22,12 +23,12 @@ INTERFACE
   IMPLICIT NONE
   !---------------------------------------------------------------------------------------------------------------------------------
   ! INPUT VARIABLES
-  INTEGER( KIND = C_INT),VALUE     :: num_vertices 
-  INTEGER( KIND = C_INT),VALUE     :: num_trees 
+  P4EST_F90_TOPIDX,VALUE           :: num_vertices
+  P4EST_F90_TOPIDX,VALUE           :: num_trees
   REAL( KIND = C_DOUBLE )          :: Vertices(3,num_vertices)
-  INTEGER( KIND = C_INT)           :: tree_to_vertex(8*num_trees) 
-  INTEGER( KIND = C_INT),VALUE     :: num_periodics 
-  INTEGER( KIND = C_INT)           :: JoinFaces(5*num_periodics) 
+  P4EST_F90_TOPIDX                 :: tree_to_vertex(8*num_trees)
+  P4EST_F90_TOPIDX,VALUE           :: num_periodics
+  P4EST_F90_TOPIDX                 :: JoinFaces(5*num_periodics)
   !---------------------------------------------------------------------------------------------------------------------------------
   ! OUTPUT VARIABLES
   TYPE(C_PTR),INTENT(OUT)          :: connectivity
@@ -91,7 +92,8 @@ INTERFACE
   !=================================================================================================================================
   END SUBROUTINE p4est_save_all
 
-  SUBROUTINE p4est_get_mesh_info(p4est,mesh,global_num_quadrants,num_half_faces) BIND(C)
+  SUBROUTINE p4est_get_mesh_info(p4est,mesh,local_num_quadrants,&
+                                 num_half_faces) BIND(C)
   !=================================================================================================================================
   ! simple refine function, giving the level and if refine_elem < 0 then a conformal refinement is applied.
   !=================================================================================================================================
@@ -105,13 +107,13 @@ INTERFACE
   TYPE(C_PTR),VALUE                :: mesh
   !---------------------------------------------------------------------------------------------------------------------------------
   ! OUTPUT VARIABLES
-  INTEGER                          :: global_num_quadrants
-  INTEGER                          :: num_half_faces
+  P4EST_F90_LOCIDX                 :: local_num_quadrants
+  P4EST_F90_LOCIDX                 :: num_half_faces
   !=================================================================================================================================
   END SUBROUTINE p4est_get_mesh_info
 
 
-  SUBROUTINE p4est_get_quadrants(p4est,mesh,global_num_quadrants,num_half_faces,&
+  SUBROUTINE p4est_get_quadrants(p4est,mesh,local_num_quadrants,num_half_faces,&
                                  intsize,quad_to_tree,quad_to_quad,quad_to_face,quad_to_half,&
                                  quadcoords,quadlevel) BIND(C)
   !=================================================================================================================================
@@ -125,17 +127,17 @@ INTERFACE
   ! INPUT VARIABLES
   TYPE(C_PTR),VALUE         :: p4est
   TYPE(C_PTR),VALUE         :: mesh
-  INTEGER(KIND=C_INT),VALUE :: global_num_quadrants
-  INTEGER(KIND=C_INT),VALUE :: num_half_faces
+  P4EST_F90_LOCIDX,VALUE    :: local_num_quadrants
+  P4EST_F90_LOCIDX,VALUE    :: num_half_faces
   !---------------------------------------------------------------------------------------------------------------------------------
   ! OUTPUT VARIABLES
-  INTEGER(KIND=4),INTENT(OUT) :: intsize ! P4EST_ROOT_LEN -> int2real transform in parameter space, REAL=1/intsize*INT [0,1]
+  P4EST_F90_QCOORD,INTENT(OUT) :: intsize ! P4EST_ROOT_LEN -> int2real transform in parameter space, REAL=1/intsize*INT [0,1]
   TYPE(C_PTR),INTENT(OUT)     :: quad_to_tree
   TYPE(C_PTR),INTENT(OUT)     :: quad_to_quad
   TYPE(C_PTR),INTENT(OUT)     :: quad_to_face
   TYPE(C_PTR),INTENT(OUT)     :: quad_to_half
-  INTEGER(KIND=4),INTENT(OUT) :: quadcoords(  3,global_num_quadrants)
-  INTEGER(KIND=1),INTENT(OUT) :: quadlevel(     global_num_quadrants)
+  P4EST_F90_QCOORD,INTENT(OUT) :: quadcoords(  3,local_num_quadrants)
+  P4EST_F90_QLEVEL,INTENT(OUT) :: quadlevel(     local_num_quadrants)
   !=================================================================================================================================
   END SUBROUTINE p4est_get_quadrants
 

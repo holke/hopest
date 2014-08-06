@@ -1,18 +1,39 @@
-// P4est Bindings
+/*
+  This file is part of hopest.
+  hopest is a Fortran/C library and application for high-order mesh
+  preprocessing and interfacing to the p4est apaptive mesh library.
+
+  Copyright (C) 2014 by the developers.
+
+  hopest is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  hopest is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with hopest; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*/
+
+/* p4est bindings for hopest */
  
 #include <sc_io.h>
-#include <p8est_connectivity.h>
 #include <p8est_bits.h>
 #include <p8est_vtk.h>
 #include <p8est_mesh.h>
-#include <p8est.h>
-// 3D mode
+#include <p8est_extended.h>
+
+#include <cwrapper/p4est_wrapper.h>
+
+// 3D mode; must be included AFTER every other file
 #include <p4est_to_p8est.h>
 
-
-
-
-sc_MPI_Comm           mpicomm;
+static sc_MPI_Comm           mpicomm;
 
 void p4est_connectivity_treevertex (p4est_topidx_t num_vertices,
                                     p4est_topidx_t num_trees,
@@ -127,7 +148,6 @@ void p4est_refine_mesh (p4est_t  *p4est,
 {
   p4est_mesh_t       *mesh;
   p4est_ghost_t      *ghost;
-  p4est_connect_type_t mesh_btype;
   int                 level;
   int                 balance;
 
@@ -156,7 +176,7 @@ void p4est_refine_mesh (p4est_t  *p4est,
    * uniform refinement but may be required for other types of refinement.
    */
   P4EST_GLOBAL_PRODUCTIONF
-    ("DEBUG: before first vtk %i  \n",p4est);
+    ("DEBUG: before first vtk %p  \n",p4est);
 
   p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_afterrefine");
   P4EST_GLOBAL_PRODUCTIONF
@@ -188,21 +208,27 @@ void p4est_refine_mesh (p4est_t  *p4est,
 
 void p4est_get_mesh_info ( p4est_t        *p4est,
                            p4est_mesh_t   *mesh,
-                           int            *global_num_quadrants,
-                           int            *num_half_faces )
+                           p4est_locidx_t *local_num_quadrants,
+                           p4est_locidx_t *num_half_faces )
 {
-  *global_num_quadrants = p4est->global_num_quadrants;
+  *local_num_quadrants = p4est->local_num_quadrants;
   *num_half_faces = mesh->quad_to_half->elem_count;      // big face with 4 small neighbours
-  SC_CHECK_ABORTF (mesh->local_num_quadrants == p4est->global_num_quadrants,
-                   "Global quads %d and local quads %d mismatch ! ",
-                   p4est->global_num_quadrants,mesh->local_num_quadrants );
+  /* TODO:
+   * In parallel, local and global num_quadrants WILL be different.
+   * This check will then die.
+   */
+  SC_CHECK_ABORTF ((p4est_gloidx_t) mesh->local_num_quadrants
+                   == p4est->global_num_quadrants,
+                   "Global quads %lld and local quads %d mismatch ! ",
+                   (long long) p4est->global_num_quadrants,
+                   mesh->local_num_quadrants );
 
 }
 
 void p4est_get_quadrants ( p4est_t       *p4est,
                            p4est_mesh_t   *mesh,
-                           int            global_num_quadrants,
-                           int            num_half_faces,
+                           p4est_locidx_t  local_num_quadrants,
+                           p4est_locidx_t  num_half_faces,
                            p4est_qcoord_t  *intsize,
                            p4est_topidx_t **quad_to_tree,
                            p4est_locidx_t **quad_to_quad,
@@ -211,16 +237,13 @@ void p4est_get_quadrants ( p4est_t       *p4est,
                            p4est_qcoord_t *quadcoords,
                            int8_t         *quadlevel ) 
 {
-  int num_trees = p4est->connectivity->num_trees;
-  int iquad,iquadloc,iface,i;
+  int iquad,iquadloc;
   p8est_tree_t       *tree;
   p8est_quadrant_t   *q;
   sc_array_t         *quadrants;
-  p4est_locidx_t     *halfentries;
 
   *intsize = P4EST_ROOT_LEN;
 
-  P4EST_ASSERT (global_num_quadrants == p4est->local_num_quadrants);
   for (iquad = 0; iquad < mesh->local_num_quadrants; iquad++) {
     tree = p8est_tree_array_index (p4est->trees,mesh->quad_to_tree[iquad]);
     quadrants = &(tree->quadrants);
@@ -236,7 +259,8 @@ void p4est_get_quadrants ( p4est_t       *p4est,
   *quad_to_quad=mesh->quad_to_quad;
   *quad_to_face=mesh->quad_to_face;
 
-  if(num_half_faces>0) *quad_to_half=mesh->quad_to_half->array;
+  *quad_to_half = NULL;
+  if(num_half_faces>0) *quad_to_half= (p4est_locidx_t *) mesh->quad_to_half->array;
 }
 
 void p4est_save_all ( char    filename[],
