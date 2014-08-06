@@ -2,18 +2,23 @@
 
 cat <<EOF
 +++
-+++   NOTE: this script is only needed once.
++++   NOTE: this script is only needed once (FIRST=T).
 +++         (Unless there are really big changes to the code.)
 +++         Subsequently just type: make V=0
 +++         That should be a LOT faster!
 +++
 EOF
 
+FIRST=
 COMPILER='GNU_DEBUG'
 
 #First the bootstrapper:
-git submodule init && git submodule update
-./bootstrap
+if [[ $FIRST == T ]]; then
+  git submodule init && git submodule update
+  ./bootstrap
+fi
+
+
 if [[ $? != 0 ]]; then
   exit $?
 fi

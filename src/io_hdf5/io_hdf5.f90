@@ -103,6 +103,7 @@ END IF
 IF(create)THEN
   CALL H5FCREATE_F(TRIM(FileString), H5F_ACC_TRUNC_F, File_ID, iError, access_prp = Plist_ID)
 ELSE
+  write(*,*) FileString
   CALL H5FOPEN_F(  TRIM(FileString), H5F_ACC_RDWR_F,  File_ID, iError, access_prp = Plist_ID)
 END IF
 CALL H5PCLOSE_F(Plist_ID, iError)

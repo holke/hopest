@@ -6,37 +6,42 @@ PROGRAM Hopest
 !===================================================================================================================================
 ! MODULES
 USE MOD_Globals
-USE MOD_ReadInTools,  ONLY:IgnoredStrings
-USE MOD_Mesh,         ONLY:InitMesh,FinalizeMesh
-USE MOD_IO_HDF5,      ONLY:InitIO
+USE MOD_ReadInTools,  ONLY:IgnoredStrings,GETINT
+USE MOD_HopestMesh,   ONLY:HopestMesh
+USE MOD_HopestSolver, ONLY:HopestSolver,FinalizeHopestSolver
 USE MOD_MPI,          ONLY:InitMPI
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES 
-REAL :: Time
+REAL    :: Time
 !===================================================================================================================================
+! Init MPI in here, if used as lib for solver, this is done by the solver
 CALL InitMPI()
-CALL InitIO()
-
-! hier fehlt der HEADER
 
 ! Measure init duration
 StartTime=RUNTIME()
 
-! Initialization
-CALL InitMesh()
+hopestMode=GETINT('HopestMode')
+SELECT CASE(hopestMode)
+CASE(1) ! HOPEST reads HDF5 builds P4EST + static refinement
+  IF(.NOT.MPIRoot) STOP 'HOPEST Mesh only runs in single mode!' 
+  CALL HopestMesh()
+CASE(2) ! use HOPEST as INPUT for Flexi
+  CALL HopestSolver()
+  CALL FinalizeHopestSolver()
+CASE(3) ! HOPEST VTK ?!
+END SELECT
+
 CALL IgnoredStrings()
 
-!Finalize
-CALL FinalizeMesh()
 ! Measure simulation duration
 Time=RUNTIME()
 #ifdef MPI
 CALL MPI_FINALIZE(iError)
 IF(iError .NE. 0) &
   CALL abort(__STAMP__, &
-  'MPI finalize error',iError,999.)
+  'MPI finalize error',iError)
 #endif
 SWRITE(UNIT_stdOut,'(132("="))')
 SWRITE(UNIT_stdOut,'(A,F8.2,A)') ' HOPEST FINISHED! [',Time-StartTime,' sec ]'

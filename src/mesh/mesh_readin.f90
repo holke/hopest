@@ -12,15 +12,16 @@ IMPLICIT NONE
 ! Private Part ---------------------------------------------------------------------------------------------------------------------
 
 ! Public Part ----------------------------------------------------------------------------------------------------------------------
-INTERFACE ReadMesh
-  MODULE PROCEDURE ReadMesh
+INTERFACE ReadMeshFromHDF5
+  MODULE PROCEDURE ReadMeshFromHDF5
 END INTERFACE
 
-INTERFACE BuildEdges
-  MODULE PROCEDURE BuildEdges
+INTERFACE ReadGeoFromHDF5
+  MODULE PROCEDURE ReadGeoFromHDF5
 END INTERFACE
 
-PUBLIC::ReadMesh,BuildEdges
+PUBLIC::ReadMeshFromHDF5
+PUBLIC::ReadGeoFromHDF5
 !===================================================================================================================================
 
 CONTAINS
@@ -100,15 +101,48 @@ DEALLOCATE(BCNames,BCType,BCMapping)
 END SUBROUTINE ReadBCs
 
 
-SUBROUTINE ReadMesh(FileString)
+SUBROUTINE ReadMeshHeader()
+!===================================================================================================================================
+! Subroutine to read the mesh from a mesh data file
+!===================================================================================================================================
+! MODULES
+USE MOD_Globals
+USE MOD_Mesh_Vars,ONLY: NGeo,useCurveds,nGlobalElems
+USE MOD_Mesh,     ONLY: SetCurvedInfo
+! IMPLICIT VARIABLE HANDLING
+IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES
+INTEGER :: BoundaryOrder_mesh
+!===================================================================================================================================
+CALL GetDataSize(File_ID,'ElemInfo',nDims,HSize)
+nGlobalElems=HSize(1) !global number of elements
+DEALLOCATE(HSize)
+
+CALL ReadAttribute(File_ID,'BoundaryOrder',1,IntegerScalar=BoundaryOrder_mesh)
+NGeo = BoundaryOrder_mesh-1
+CALL ReadAttribute(File_ID,'CurvedFound',1,LogicalScalar=useCurveds)
+
+CALL readBCs()
+CALL SetCurvedInfo()
+
+END SUBROUTINE ReadMeshHeader
+
+
+SUBROUTINE ReadMeshFromHDF5(FileString)
 !===================================================================================================================================
 ! Subroutine to read the mesh from a mesh data file
 !===================================================================================================================================
 ! MODULES
 USE MOD_Globals
 USE MOD_Mesh_Vars
-USE MOD_p4estBinding
-USE MOD_MeshFromP4EST, ONLY:getHFlip
+USE MOD_P4EST_Vars,    ONLY: connectivity,p4est,H2P_VertexMap,H2P_FaceMap
+USE MOD_P4EST_Binding, ONLY: p4_connectivity_treevertex,p4_build_p4est
+USE MOD_P4EST,         ONLY: getHFlip
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -153,39 +187,18 @@ IF(.NOT.FileExists)  &
     CALL abort(__STAMP__, &
        'readMesh from data file "'//TRIM(FileString)//'" does not exist')
 
-
 SWRITE(UNIT_stdOut,'(A)')'READ MESH FROM DATA FILE "'//TRIM(FileString)//'" ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
 ! Open data file
 CALL OpenDataFile(FileString,create=.FALSE.,single=.FALSE.)
 
-CALL GetDataSize(File_ID,'ElemInfo',nDims,HSize)
-nGlobalElems=HSize(1) !global number of elements
-DEALLOCATE(HSize)
-nElems=nGlobalElems   !local number of Elements 
+CALL ReadMeshHeader()
 
-CALL GetDataSize(File_ID,'NodeCoords',nDims,HSize)
-nNodes=HSize(1) !global number of unique nodes
-DEALLOCATE(HSize)
-
-CALL readBCs()
-
-CALL ReadAttribute(File_ID,'BoundaryOrder',1,IntegerScalar=BoundaryOrder_mesh)
-NGeo = BoundaryOrder_mesh-1
-CALL ReadAttribute(File_ID,'CurvedFound',1,LogicalScalar=useCurveds)
-
-! mapping form one-dimensional list [1 ; (Ngeo+1)^3] to tensor-product 0 <= i,j,k <= Ngeo and back
-ALLOCATE(HexMap(0:Ngeo,0:Ngeo,0:Ngeo),HexMapInv(3,(Ngeo+1)**3))
-l=0
-DO k=0,Ngeo ; DO j=0,Ngeo ; DO i=0,Ngeo
-  l=l+1
-  HexMap(i,j,k)=l
-  HexMapInv(:,l)=(/i,j,k/)
-END DO ; END DO ; END DO
 !----------------------------------------------------------------------------------------------------------------------------
 !                              ELEMENTS
 !----------------------------------------------------------------------------------------------------------------------------
 
+nElems=nGlobalElems   !local number of Elements 
 !read local ElemInfo from data file
 ALLOCATE(ElemInfo(1:nElems,ELEM_InfoSize))
 CALL ReadArray('ElemInfo',2,(/nElems,ELEM_InfoSize/),0,1,IntegerArray=ElemInfo)
@@ -211,14 +224,11 @@ nNodeIDs=ElemInfo(nElems,ELEM_LastNodeInd)-ElemInfo(1,ELEM_FirstNodeInd)
 ALLOCATE(NodeInfo(1:nNodeIDs))
 CALL ReadArray('NodeInfo',1,(/nNodeIDs/),0,1,IntegerArray=NodeInfo)
 
-
-IF(NGeo.GT.1)THEN
-  nCurvedNodes=(NGeo+1)**3
-ELSE
-  nCurvedNodes=0
-END IF
-
 ALLOCATE(ElemCurvedNode(nCurvedNodes,nElems))
+
+CALL GetDataSize(File_ID,'NodeCoords',nDims,HSize)
+nNodes=HSize(1) !global number of unique nodes
+DEALLOCATE(HSize)
 
 ALLOCATE(Nodes(1:nNodes)) ! pointer list, entry is known by NodeCoords
 DO iNode=1,nNodes
@@ -233,7 +243,6 @@ DO iElem=1,nElems
     NodeID=ABS(NodeInfo(iNode))     !global, unique NodeID
     IF(.NOT.ASSOCIATED(Nodes(NodeID)%np))THEN
       ALLOCATE(Nodes(NodeID)%np) 
-      NULLIFY(Nodes(NodeID)%np%firstEdge) 
       Nodes(NodeID)%np%ind=NodeID 
     END IF
     aElem%Node(jNode)%np=>Nodes(NodeID)%np
@@ -435,11 +444,6 @@ DO iElem=1,nElems
   END DO !iLocSide
 END DO !iElem
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
-! FOR SECURITY NO PERIODICITY
-!WRITE(*,*)'num_periodics set =0  for security !!! ',num_periodics
-!num_periodics=0
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
 
 IF(num_periodics.GT.0) THEN
   ALLOCATE(JoinFaces(5,num_periodics))
@@ -480,9 +484,9 @@ IF(num_periodics.GT.0) THEN
   END DO !iElem
 END IF !num_periodics>0
 
-CALL p4est_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex, &
-                                   num_periodics,JoinFaces,p4est_ptr%connectivity)
-CALL p4_build_p4est(p4est_ptr%connectivity,p4est_ptr%p4est)
+CALL p4_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex, &
+                                   num_periodics,JoinFaces,connectivity)
+CALL p4_build_p4est(connectivity,p4est)
 
 DEALLOCATE(Vertices,tree_to_vertex)
 IF(num_periodics.GT.0) DEALLOCATE(JoinFaces) 
@@ -490,7 +494,6 @@ IF(num_periodics.GT.0) DEALLOCATE(JoinFaces)
 
 ! COUNT SIDES
 
- 
 nBCSides=0
 nSides=0
 nPeriodicSides=0
@@ -521,101 +524,113 @@ DO iElem=1,nElems
   END DO !iLocSide
 END DO !iElem
 
-CALL buildEdges()
-
 
 WRITE(*,*)'-------------------------------------------------------'
 WRITE(*,'(A22,I8)' )'NGeo:',NGeo
 WRITE(*,'(A22,X7L)')'useCurveds:',useCurveds
 WRITE(*,'(A22,I8)' )'nElems:',nElems
-WRITE(*,'(A22,I8)' )'nEdges:',nEdges
 WRITE(*,'(A22,I8)' )'nNodes:',nNodes
 WRITE(*,'(A22,I8)' )'nSides:',nSides
 WRITE(*,'(A22,I8)' )'nBCSides:',nBCSides
 WRITE(*,'(A22,I8)' )'nPeriodicSides:',nPeriodicSides
 WRITE(*,*)'-------------------------------------------------------'
 
-END SUBROUTINE ReadMesh
+END SUBROUTINE ReadMeshFromHDF5
 
 
-SUBROUTINE buildEdges()
+SUBROUTINE ReadGeoFromHDF5(FileString)
 !===================================================================================================================================
-! Create Edge datastructure, each edge is unique, and has a pointer from each side and from the node with the lower index.
-! on the node, a list beginning with node%firstEdge is build up. On the Element sides, a edge pointer array Edge(1:nNodes) is 
-! filled, together with their orientation inside the side. Very important: OrientedNodes are used!!!! 
-! If the edge is oriented, it goes from orientedNode(i)-> orientedNode(i+1), and 
-! If the edge is not  oriented, it goes from orientedNode(i+1)-> orientedNode(i)
+! Subroutine to read the mesh from a mesh data file
 !===================================================================================================================================
 ! MODULES
 USE MOD_Globals
-USE MOD_Mesh_Vars,ONLY:tElem,tSide,tEdge,tNode
-USE MOD_Mesh_Vars,ONLY:nElems,nEdges,Edges,Elems
-USE MOD_Mesh_Vars,ONLY:EdgeToElemNode
-USE MOD_Mesh_Vars,ONLY:GETNEWEDGE
+USE MOD_Mesh_Vars, ONLY: nElems,XGeo,Ngeo,nNodes,HexMap
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! INPUT VARIABLES
+CHARACTER(LEN=*),INTENT(IN)  :: FileString
+!-----------------------------------------------------------------------------------------------------------------------------------
 ! OUTPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER                      :: iNode,iEdge,iElem,EdgeInd
-TYPE(tElem),POINTER          :: Elem
-TYPE(tEdge),POINTER          :: Edge
-TYPE(tNode),POINTER          :: aNode,bNode
-INTEGER,ALLOCATABLE          :: Edge_nElems(:)
-LOGICAL                      :: edgeFound,isNew,isOriented
-!===================================================================================================================================
-WRITE(UNIT_stdOut,'(132("~"))')
-WRITE(UNIT_stdOut,'(A)')'BUILD EDGES ...'
+INTEGER                        :: i,j,k
+INTEGER                        :: iElem
+INTEGER                        :: nNodeIDs
+INTEGER                        :: FirstNodeInd,LastNodeInd
+LOGICAL                        :: fileExists
+INTEGER,ALLOCATABLE            :: ElemInfo(:,:),NodeInfo(:)
+REAL,ALLOCATABLE               :: NodeCoords(:,:)
+!-----------------------------------------------------------------------------------------------------------------------------------
+INQUIRE (FILE=TRIM(FileString), EXIST=fileExists)
+IF(.NOT.FileExists)  &
+    CALL abort(__STAMP__, &
+       'readMesh from data file "'//TRIM(FileString)//'" does not exist')
 
-EdgeInd=0
-DO iElem=1,nElems
-  Elem=>Elems(iElem)%ep
-  DO iEdge=1,12
-    aNode=>Elem%Node(EdgeToElemNode(1,iEdge))%np
-    bNode=>Elem%Node(EdgeToElemNode(2,iEdge))%np
-    Elem%Edge(iEdge)%edp => GETNEWEDGE(aNode,bNode,isNew,isOriented)
-    IF(isNew)THEN
-      EdgeInd=EdgeInd+1
-      Elem%Edge(iEdge)%edp%ind    = EdgeInd
-      Elem%Edge(iEdge)%isOriented = isOriented
-    END IF
-    Elem%Edge(iEdge)%edp%nNbElems=Elem%Edge(iEdge)%edp%nNbElems+1
-  END DO
-END DO !! ELEMS!!
-nEdges=EdgeInd
+SWRITE(UNIT_stdOut,'(A)')'READ GEOMETRY DATA FROM DATA FILE "'//TRIM(FileString)//'" ...'
+SWRITE(UNIT_StdOut,'(132("-"))')
+! Open data file
+CALL OpenDataFile(FileString,create=.FALSE.,single=.FALSE.)
 
-ALLOCATE(Edges(nEdges))
-DO iEdge=1,nEdges
-  NULLIFY(Edges(iEdge)%edp)
-END DO
+CALL ReadMeshHeader()
 
-DO iElem=1,nElems
-  Elem=>Elems(iElem)%ep
-  DO iEdge=1,12
-    Edge=>Elem%Edge(iEdge)%edp
-    EdgeInd=Edge%ind
-    IF(.NOT.ASSOCIATED(Edges(EdgeInd)%edp))THEN
-      Edges(EdgeInd)%edp=>Edge
-    END IF
-  END DO
-END DO
-DO iEdge=1,nEdges
-  ALLOCATE(Edges(iEdge)%edp%nbElem(Edges(iEdge)%edp%nNbElems))
-  Edges(iEdge)%edp%nNbElems=0
-END DO
+CALL GetDataSize(File_ID,'NodeCoords',nDims,HSize)
+nNodes=HSize(1) !global number of unique nodes
+DEALLOCATE(HSize)
 
-DO iElem=1,nElems
-  Elem=>Elems(iElem)%ep
-  DO iEdge=1,12
-    Edge=>Elem%Edge(iEdge)%edp
-    EdgeInd=Edge%ind
-    Edge%nNbElems=Edge%nNbElems+1
-    Edge%nbElem(Edge%nNbElems)%ep=>Elem
-  END DO
-END DO
+!----------------------------------------------------------------------------------------------------------------------------
+!                              ELEMENTS
+!----------------------------------------------------------------------------------------------------------------------------
 
-END SUBROUTINE buildEdges
+!read local ElemInfo from data file
+ALLOCATE(ElemInfo(1:nElems,ELEM_InfoSize))
+CALL ReadArray('ElemInfo',2,(/nElems,ELEM_InfoSize/),0,1,IntegerArray=ElemInfo)
+
+!----------------------------------------------------------------------------------------------------------------------------
+!                              NODES
+!----------------------------------------------------------------------------------------------------------------------------
+
+!read local Node Info from data file 
+nNodeIDs=ElemInfo(nElems,ELEM_LastNodeInd)-ElemInfo(1,ELEM_FirstNodeInd)
+ALLOCATE(NodeInfo(1:nNodeIDs))
+CALL ReadArray('NodeInfo',1,(/nNodeIDs/),0,1,IntegerArray=NodeInfo)
+
+! get physical coordinates
+ALLOCATE(NodeCoords(nNodes,3))
+
+CALL ReadArray('NodeCoords',2,(/nNodes,3/),0,1,RealArray=NodeCoords)
+
+CALL CloseDataFile() 
+
+ALLOCATE(Xgeo(1:3,0:Ngeo,0:Ngeo,0:Ngeo,nElems))
+IF(Ngeo.EQ.1)THEN !use the corner nodes
+  DO iElem=1,nElems
+    firstNodeInd=ElemInfo(iElem,ELEM_FirstNodeInd) !first index -1 in NodeInfo
+    Xgeo(:,0,0,0,iElem)=NodeCoords(NodeInfo(firstNodeInd+1),:)
+    Xgeo(:,1,0,0,iElem)=NodeCoords(NodeInfo(firstNodeInd+2),:)
+    Xgeo(:,1,1,0,iElem)=NodeCoords(NodeInfo(firstNodeInd+3),:)
+    Xgeo(:,0,1,0,iElem)=NodeCoords(NodeInfo(firstNodeInd+4),:)
+    Xgeo(:,0,0,1,iElem)=NodeCoords(NodeInfo(firstNodeInd+5),:)
+    Xgeo(:,1,0,1,iElem)=NodeCoords(NodeInfo(firstNodeInd+6),:)
+    Xgeo(:,1,1,1,iElem)=NodeCoords(NodeInfo(firstNodeInd+7),:)
+    Xgeo(:,0,1,1,iElem)=NodeCoords(NodeInfo(firstNodeInd+8),:)
+ END DO !iElem=1,nElems
+ELSE
+  DO iElem=1,nElems
+    firstNodeInd=ElemInfo(iElem,ELEM_FirstNodeInd) !first index -1 in NodeInfo
+    lastNodeInd=ElemInfo(iElem,ELEM_LastNodeInd)
+    IF(LastNodeInd-firstNodeInd-14.NE.(Ngeo+1)**3) STOP 'Problem with curved'
+    firstNodeInd=firstNodeInd +8
+    DO k=0,Ngeo; DO j=0,Ngeo; DO i=0,Ngeo
+      Xgeo(:,i,j,k,iElem)=NodeCoords(NodeInfo(firstNodeInd+HexMap(i,j,k)),:)
+    END DO ; END DO ; END DO 
+ END DO !iElem=1,nElems
+END IF
+
+DEALLOCATE(ElemInfo,NodeInfo,NodeCoords)
+
+
+END SUBROUTINE ReadGeoFromHDF5
 
 
 END MODULE MOD_Mesh_ReadIn

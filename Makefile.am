@@ -37,7 +37,8 @@ Makefile.hopest.mk : Makefile.hopest.pre
 
 # install hopest m4 macros in the correct directory
 hopestaclocaldir = $(datadir)/aclocal
-dist_hopestaclocal_DATA = config/hopest_include.m4
+dist_hopestaclocal_DATA = \
+        config/hopest_include.m4 config/hopest_hdf5.m4
 
 # setup test environment
 if HOPEST_MPIRUN
@@ -60,8 +61,7 @@ DISTCLEANFILES += \
 include src/Makefile.am
 include test/Makefile.am
 include example/hopest/Makefile.am
-include example/hello/Makefile.am
-include deplist
+include deplist.mk
 
 # automatically builds a dependency list deplist.mk from srcfiles.mk uing the tool builddeps
 # TODO automate the FC flags "-cpp -E -w" works only with GNU compiler 
@@ -75,7 +75,7 @@ Builddeps:
 		echo @top_srcdir@/$$outfile | sed -e 's/ /\n/g' >> @top_srcdir@/srcfiles_pp.mk; \
 		$(FC) -cpp -E -w -I@top_srcdir@/src @top_srcdir@/$$filename -o @top_srcdir@/$$outfile ; \
 	done;
-	@python @top_srcdir@/tools/builddeps --source=@top_srcdir@/srcfiles_pp.mk deplist.mk
+	@python @top_srcdir@/tools/builddeps --source=@top_srcdir@/srcfiles_pp.mk @top_srcdir@/deplist.mk
 	
 # revision control and ChangeLog
 ChangeLog:
