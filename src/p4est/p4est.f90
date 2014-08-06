@@ -47,7 +47,11 @@ SUBROUTINE InitP4EST()
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
-USE MOD_p4estBinding
+USE MOD_Globals,       ONLY: hopestMode
+USE MOD_P4EST_Vars,    ONLY: p4estFile
+USE MOD_P4EST_Binding, ONLY: p4_initvars
+USE MOD_Output_Vars,   ONLY: Projectname
+USE MOD_ReadInTools,   ONLY: GETSTR
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -58,6 +62,11 @@ IMPLICIT NONE
 ! LOCAL VARIABLES
 !===================================================================================================================================
 CALL p4_initvars()
+IF(hopestMode.EQ.2)THEN
+  p4estFile = GETSTR('p4estFile')
+ELSE
+  p4estFile = TRIM(ProjectName)//'.p4est'
+END IF
 
 END SUBROUTINE InitP4EST
 
@@ -97,6 +106,8 @@ INTEGER(KIND=C_INT16_T),POINTER :: TreeToBC(:,:)
 SWRITE(UNIT_stdOut,'(A)')'GENERATE HOPEST MESH FROM P4EST ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
 
+! build p4est mesh
+CALL p4_build_mesh(p4est,mesh)
 ! Get arrays from p4est: use pointers for c arrays (QT,QQ,..), duplicate data for QuadCoords,Level
 CALL p4_get_mesh_info(p4est,mesh,nQuadrants,nHalfFaces,nElems)
 

@@ -32,9 +32,6 @@ void p4_refine_mesh(p4est_t  *p4est,
                     int     refine_level,
                     p4est_mesh_t  **mesh_out )
 {
-  p4est_mesh_t       *mesh;
-  p4est_ghost_t      *ghost;
-  p4est_connect_type_t mesh_btype;
   int                 level;
   int                 balance;
 
@@ -82,15 +79,5 @@ void p4_refine_mesh(p4est_t  *p4est,
 
   P4EST_GLOBAL_PRODUCTIONF
     ("DEBUG: before ghosts %d  \n",0);
-
-  /* create ghost layer and mesh */
-  ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
-  mesh = p4est_mesh_new_ext (p4est, ghost, 1,1,P4EST_CONNECT_FULL);
-
-  //return mesh as pointer adress;
-  *mesh_out=(p4est_mesh_t *)mesh;
-
-  P4EST_GLOBAL_PRODUCTIONF
-    ("DEBUG: REFINE FINISHED %d  \n",0);
 }
 

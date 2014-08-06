@@ -9,6 +9,8 @@ libhopest_installed_headers = \
 libhopest_internal_headers = \
 	src/hopest_f.h
 libhopest_compiled_sources = \
+	src/globals/preprocessing.f90 \
+	src/globals/globals.f90 \
 	src/mesh/mesh_vars.f90 \
 	src/p4est/p4est_vars.f90 \
 	src/output/output_vars.f90 \
@@ -16,8 +18,6 @@ libhopest_compiled_sources = \
 	src/p4est/p4est_binding.f90 \
 	src/p4est/p4est_wrapper.c \
 	src/p4est/p4est.f90 \
-	src/globals/globals.f90 \
-	src/globals/preprocessing.f90 \
 	src/readintools/isovaryingstring.f90 \
 	src/interpolation/changeBasis.f90 \
 	src/mpi/mpi.f90 \
