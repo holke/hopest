@@ -63,8 +63,8 @@ void p4_get_mesh_info ( p8est_t        *p4est,
                         p4est_locidx_t *local_num_quadrants,
                         p4est_gloidx_t *global_num_quadrants,
                         p4est_gloidx_t *global_first_quadrant,
-                        int32_t         *num_half_faces,
-                        int32_t         *num_trees );
+                        p4est_locidx_t *num_half_faces,
+                        p4est_topidx_t *num_trees );
 
 void p4_get_quadrants( p8est_t       *p4est,
                        p8est_mesh_t   *mesh,
