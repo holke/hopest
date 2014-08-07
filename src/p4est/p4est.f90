@@ -395,7 +395,7 @@ IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! INPUT VARIABLES
 REAL( KIND = C_DOUBLE ),INTENT(IN),VALUE    :: a,b,c
-INTEGER (C_INT32_T),INTENT(IN)              :: tree
+INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE    :: tree
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! OUTPUT VARIABLES
 REAL( KIND = C_DOUBLE ),INTENT(OUT)         :: x,y,z
@@ -424,7 +424,6 @@ END DO
 x=HOabc(1)
 y=HOabc(2)
 z=HOabc(3)
-
 
 END SUBROUTINE buildHOp4GeometryX
 

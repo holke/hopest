@@ -43,7 +43,7 @@ extern              "C"         /* prevent C++ name mangling */
 #endif
 #endif
 
-void buildHOp4GeometryX_FC();
+void buildHOp4GeometryX_FC(double,double,double,double*,double*,double*,p4est_topidx_t);
 
 #ifdef __cplusplus
 #if 0

@@ -30,7 +30,8 @@ void p4_refine_mesh(p4est_t  *p4est,
                     int     (*myrefine_f)
                             (p4est_qcoord_t,p4est_qcoord_t,p4est_qcoord_t,p4est_topidx_t,int8_t,int),
                     int     refine_level,
-                    p4est_mesh_t  **mesh_out )
+                    p4est_geometry_t *geom,
+                    p4est_mesh_t  **mesh_out)
 {
   int                 level;
   int                 balance;
@@ -60,9 +61,10 @@ void p4_refine_mesh(p4est_t  *p4est,
    * uniform refinement but may be required for other types of refinement.
    */
   P4EST_GLOBAL_PRODUCTIONF
-    ("DEBUG: before first vtk %i  \n",p4est);
-
-  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_afterrefine");
+    ("DEBUG: before first vtk %p  \n",p4est);
+  printf("DEBUG: Got Geometry at adress %p\n",geom);
+  printf("DEBUG GEOMETRY %s\n",geom->name);
+  p4est_vtk_write_file (p4est,geom, P4EST_STRING "_afterrefine");
   P4EST_GLOBAL_PRODUCTIONF
     ("DEBUG: after first vtk %d  \n",0);
 
@@ -75,7 +77,7 @@ void p4_refine_mesh(p4est_t  *p4est,
     ("DEBUG: before vtk %d  \n",0);
 
   /* Write the forest to disk for visualization, one file per processor. */
-  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_afterbalance");
+  p4est_vtk_write_file (p4est, geom, P4EST_STRING "_afterbalance");
 
   P4EST_GLOBAL_PRODUCTIONF
     ("DEBUG: before ghosts %d  \n",0);

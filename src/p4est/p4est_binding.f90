@@ -87,7 +87,7 @@ INTERFACE
   END SUBROUTINE p4_build_mesh 
 
 
-  SUBROUTINE p4_build_p4est(connectivity,p4est) BIND(C)
+  SUBROUTINE p4_build_p4est(connectivity,p4est,geom) BIND(C)
   !=================================================================================================================================
   ! builds up p4est connectivit, using only element connectivity and vertex positions
   !=================================================================================================================================
@@ -101,6 +101,7 @@ INTERFACE
   !---------------------------------------------------------------------------------------------------------------------------------
   ! OUTPUT VARIABLES
   TYPE(C_PTR)                      :: p4est
+  TYPE(C_PTR)                      :: geom
   !=================================================================================================================================
   END SUBROUTINE p4_build_p4est
 

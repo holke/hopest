@@ -140,7 +140,7 @@ SUBROUTINE ReadMeshFromHDF5(FileString)
 ! MODULES
 USE MOD_Globals
 USE MOD_Mesh_Vars
-USE MOD_P4EST_Vars,    ONLY: connectivity,p4est,H2P_VertexMap,H2P_FaceMap
+USE MOD_P4EST_Vars,    ONLY: connectivity,p4est,H2P_VertexMap,H2P_FaceMap,geom
 USE MOD_P4EST_Binding, ONLY: p4_connectivity_treevertex,p4_build_p4est
 USE MOD_P4EST,         ONLY: getHFlip
 ! IMPLICIT VARIABLE HANDLING
@@ -486,7 +486,7 @@ END IF !num_periodics>0
 
 CALL p4_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex, &
                                    num_periodics,JoinFaces,connectivity)
-CALL p4_build_p4est(connectivity,p4est)
+CALL p4_build_p4est(connectivity,p4est,geom)
 
 DEALLOCATE(Vertices,tree_to_vertex)
 IF(num_periodics.GT.0) DEALLOCATE(JoinFaces) 

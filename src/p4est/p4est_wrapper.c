@@ -2,6 +2,7 @@
  
 #include <sc_io.h>
 #include <p8est_connectivity.h>
+#include <p8est_algorithms.h>
 #include <p8est_bits.h>
 #include <p8est_vtk.h>
 #include <p8est_mesh.h>
@@ -105,30 +106,30 @@ void p4_connectivity_treevertex (p4est_topidx_t num_vertices,
      (long long) conn->num_trees, (long long) conn->num_vertices);
 
   *conn_out=conn;
-  printf("connectivity %p \n",conn);
+  printf("DEBUG connectivity %p \n",conn);
 }
 
 void p4_build_p4est ( p4est_connectivity_t *conn,
-                      p4est_t              **p4est_out )
+                      p4est_t              **p4est_out,
+                      p4est_geometry_t     **geom_out)
 {
   p4est_t* p4est;
   p4est_geometry_t   *geom;
 
-  printf("connectivity %p \n",conn);
+  printf("DEBUG: connectivity %p \n",conn);
   fflush(stdout);
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
   /* Create a forest that is not refined; it consists of the root octant. */
   p4est = p4est_new (mpicomm, conn, 0, NULL, NULL);
 
-/*
-
   geom = P4EST_ALLOC_ZERO (p4est_geometry_t, 1);
   geom->name = "hopest_readfromhdf5";
   geom->X = p4_geometry_X;
 
-*/
-  printf("p4est %p \n",p4est);
+  printf("DEBUG: saved geometry at address %p\n",geom);
+  printf("DEBUG: p4est %p \n",p4est);
   *p4est_out=p4est;
+  *geom_out=geom;
 }
 
 
@@ -240,7 +241,7 @@ void p4_savemesh ( char    filename[],
   p4est2=p4est_load_ext(filename,mpicomm,0,0,1,0,NULL,&conn2);
   // TODO: optional check
   ic = p4est_connectivity_is_equal(p4est->connectivity,conn2);
-  ip = p4est_is_equal(p4est,p4est2);
+  ip = p4est_is_equal(p4est,p4est2,0);
   printf("Conn, p4est %i %i \n",ic,ip);
   p4est_destroy(p4est2);
   p4est_connectivity_destroy(conn2);

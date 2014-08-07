@@ -42,7 +42,7 @@ SUBROUTINE wrapbuildHOp4GeometryX(a,b,c,x,y,z,tree)
     USE MOD_P4EST,ONLY:buildHOp4GeometryX
     USE, intrinsic :: ISO_C_BINDING
     REAL( KIND = C_DOUBLE ),INTENT(IN),VALUE    :: a,b,c
-    INTEGER (C_INT32_T),INTENT(IN)              :: tree
+    INTEGER (KIND=C_INT32_T),INTENT(IN),VALUE   :: tree
     REAL( KIND = C_DOUBLE ),INTENT(OUT)         :: x,y,z
     call buildHOp4GeometryX(a,b,c,x,y,z,tree)
 END SUBROUTINE wrapbuildHOp4GeometryX
