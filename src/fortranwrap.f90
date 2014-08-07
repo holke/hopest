@@ -21,6 +21,8 @@
 ! This file wraps some fortran routines to be called by C-Code
 ! It is important that this is NOT a Fortran Module
 
+#include <hopest_f.h>
+
 SUBROUTINE wrapReadMeshFromHDF5(hdf5file,hdf5file_len,conn)
     USE MOD_Mesh_ReadIn
     USE MOD_IO_HDF5
@@ -47,7 +49,7 @@ SUBROUTINE wrapbuildHOp4GeometryX(a,b,c,x,y,z,tree)
     USE MOD_P4EST,ONLY:buildHOp4GeometryX
     USE, intrinsic :: ISO_C_BINDING
     REAL( KIND = C_DOUBLE ),INTENT(IN),VALUE    :: a,b,c
-    INTEGER (KIND=C_INT32_T),INTENT(IN),VALUE   :: tree
     REAL( KIND = C_DOUBLE ),INTENT(OUT)         :: x,y,z
+    P4EST_F90_TOPIDX,INTENT(IN),VALUE           :: tree
     call buildHOp4GeometryX(a,b,c,x,y,z,tree)
 END SUBROUTINE wrapbuildHOp4GeometryX
