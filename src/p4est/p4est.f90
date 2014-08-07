@@ -94,7 +94,7 @@ IMPLICIT NONE
 TYPE(C_PTR)                 :: QT,QQ,QF,QH,TB
 TYPE(tElem),POINTER         :: aQuad,nbQuad,Tree
 TYPE(tSide),POINTER         :: aSide
-INTEGER                     :: iQuad,iMortar,iElem
+INTEGER                     :: iQuad,iMortar,jMortar,iElem
 INTEGER                     :: PSide,PnbSide,nbSide
 INTEGER                     :: nbQuadInd
 INTEGER                     :: PMortar,PFlip,HFlip,QHInd
@@ -185,10 +185,13 @@ DO iQuad=1,nQuadrants
       aSide%MortarType=1             ! 1->4 case
       aSide%flip=HFlip
       ALLOCATE(aSide%MortarSide(4))
-      DO iMortar=1,4
-        nbQuadInd=QuadToHalf(iMortar,QHInd)+1
+      DO jMortar=0,3
+        nbQuadInd=QuadToHalf(jMortar+1,QHInd)+1
         nbQuad=>Quads(nbQuadInd)%ep
         nbSide=P2H_FaceMap(PnbSide)
+
+        iMortar=GetHMortar(jMortar,PSide,PnbSide,PFlip)
+
         aSide%MortarSide(iMortar)%sp=>nbQuad%side(nbSide)%sp
         aSide%MortarSide(iMortar)%sp%flip=HFlip
       END DO ! iMortar
@@ -210,8 +213,8 @@ DO iQuad=1,nQuadrants
       END IF !BC side
       IF(PMortar.NE.-1) aSide%MortarType= - (PMortar+1)  ! Pmortar 0...3, small side belonging to  mortar group -> -1..-4
     END IF ! PMortar
-  END DO
-END DO
+  END DO !iLocSide
+END DO !iQuad
 
 ! set master slave,  element with lower element ID is master (flip=0)
 DO iQuad=1,nQuadrants
@@ -311,7 +314,7 @@ END SUBROUTINE EvalP4ESTConnectivity
 
 FUNCTION GetHFlip(PSide0,PSide1,PFlip)
 !===================================================================================================================================
-! Subroutine to read the mesh from a mesh data file
+! transform an p4est orientation (r = PFlip)  in HOPR Flip, using local Side and neighbor side  
 !===================================================================================================================================
 ! MODULES
 USE MOD_P4EST_Vars,ONLY:P2H_FaceMap,H2P_FaceNodeMap,P2H_FaceNodeMap,P4R,P4Q,P4P
@@ -340,6 +343,43 @@ GetHFlip=P2H_FaceNodeMap(PNode1,PSide1)
 
 END FUNCTION GetHFlip
 
+
+FUNCTION GetHMortar(PMortar,PSide,PnbSide,PFlip)
+!===================================================================================================================================
+! Transform a p4est mortar ID to a HOPR mortar ID 
+!===================================================================================================================================
+! MODULES
+USE MOD_P4EST_Vars,ONLY:P2H_FaceMap,H2P_FaceNodeMap,P2H_FaceNodeMap,P4R,P4Q,P4P
+USE MOD_P4EST_Vars,ONLY:H_MortarCase,P2H_MortarMap
+! IMPLICIT VARIABLE HANDLING
+IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+INTEGER,INTENT(IN)   :: PMortar ! Index of mortar side: 0...3
+INTEGER,INTENT(IN)   :: PSide   ! local side ID of HOPEST
+INTEGER,INTENT(IN)   :: PnbSide ! P4EST neighbour local side id
+INTEGER,INTENT(IN)   :: PFlip   ! Neighbour side in p4est convention: 0..5
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+INTEGER              :: GetHMortar   ! Index of mortar side: 1..4
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES
+INTEGER              :: PNodeA,PNodeB,HNode1,HNode2
+!-----------------------------------------------------------------------------------------------------------------------------------
+
+! Side 1: neighbor
+!1. Get node a and b from node 0 and 1 of neighbor side P
+PNodeA=P4P(P4Q(P4R(PnbSide,PSide),PFlip),0)
+PNodeB=P4P(P4Q(P4R(PnbSide,PSide),PFlip),1)
+
+!2. Get CGNS node 1 and 2 from p4est node a and b 
+HNode1=P2H_FaceNodeMap(PNodeA,PSide)
+HNode2=P2H_FaceNodeMap(PNodeB,PSide)
+
+!3. 8 possible combinations (MortarCase),using node 1 and 2 and map PMortar index to Hmortar index
+GetHMortar = P2H_MortarMap(PMortar, H_MortarCase(HNode1,HNode2)) 
+
+END FUNCTION GetHMortar
 
 SUBROUTINE BuildBCs()
 !===================================================================================================================================

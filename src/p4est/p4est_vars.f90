@@ -86,7 +86,21 @@ INTEGER,PARAMETER   :: P4P(0:7,0:3) = TRANSPOSE(RESHAPE((/ 0,1,2,3,&
                                                            2,3,0,1,&
                                                            3,1,2,0,&
                                                            3,2,1,0 /),(/4,8/)))
-
+INTEGER,PARAMETER   :: H_MortarCase(1:4,1:4) = &                              !  first CGNS node and second CGNS node->Mortar Case [1:8]
+                                      TRANSPOSE(RESHAPE((/  0,1,0,2,&                         ! (1,2)->1, (1,4)->2
+                                                            3,0,4,0,&                         ! (2,1)->3, (2,3)->4
+                                                            0,5,0,6,&                         ! (3,2)->5, (3,4)->6
+                                                            7,0,8,0 /),(/4,4/)))              ! (4,1)->7, (4,3)->8
+INTEGER,PARAMETER   :: P2H_MortarMap(0:3,1:8) = &                 !p4est mortar ID, MortarCase -> iMortar CGNS
+                                      RESHAPE((/ 1,2,3,4,&        ! iMortar = P2H_MortarMap(iPMortar, H_MortarCase( node1, node2) ) 
+                                                 1,3,2,4,&
+                                                 2,1,4,3,&
+                                                 2,4,1,3,&
+                                                 4,2,3,1,&
+                                                 4,3,2,1,&
+                                                 3,1,4,2,&
+                                                 3,4,1,2 /),(/4,8/))
+                                    
 !===================================================================================================================================
 
 
