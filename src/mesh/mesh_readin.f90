@@ -158,7 +158,6 @@ INTEGER                        :: iElem,ElemID
 INTEGER                        :: iNode,jNode,NodeID,SideID
 INTEGER                        :: iLocSide,jLocSide
 INTEGER                        :: iSide
-INTEGER                        :: FirstNodeInd,LastNodeInd,FirstSideInd,LastSideInd
 INTEGER                        :: nCurvedNodes_loc
 LOGICAL                        :: oriented
 INTEGER                        :: nPeriodicSides 
@@ -171,7 +170,6 @@ TYPE(tNodePtr),POINTER         :: ElemCurvedNode(:,:)
 INTEGER,ALLOCATABLE            :: ElemInfo(:,:),SideInfo(:,:),NodeInfo(:)
 REAL,ALLOCATABLE               :: NodeCoords(:,:)
                                
-INTEGER                        :: BoundaryOrder_mesh
 INTEGER                        :: nNodeIDs,nSideIDs
 ! p4est interface
 INTEGER                        :: num_vertices

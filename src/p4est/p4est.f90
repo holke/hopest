@@ -87,7 +87,6 @@ USE MOD_Globals
 USE MOD_Mesh_Vars
 USE MOD_P4EST_Vars
 USE MOD_P4EST_Binding
-USE MOD_Output_Vars, ONLY:Projectname
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -97,7 +96,7 @@ IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 TYPE(C_PTR)                 :: QT,QQ,QF,QH,TB
-TYPE(tElem),POINTER         :: aQuad,nbQuad,Tree
+TYPE(tElem),POINTER         :: aQuad,nbQuad
 TYPE(tSide),POINTER         :: aSide
 INTEGER                     :: iQuad,iMortar,iElem
 INTEGER                     :: PSide,PnbSide,nbSide
@@ -105,7 +104,7 @@ INTEGER                     :: nbQuadInd
 INTEGER                     :: PMortar,PFlip,HFlip,QHInd
 INTEGER                     :: iLocSide
 INTEGER                     :: StartQuad,EndQuad
-INTEGER                     :: BClocSide,BCindex
+INTEGER                     :: BCindex
 INTEGER(KIND=C_INT16_T),POINTER :: TreeToBC(:,:)
 !===================================================================================================================================
 SWRITE(UNIT_stdOut,'(A)')'GENERATE HOPEST MESH FROM P4EST ...'

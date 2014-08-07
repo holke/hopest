@@ -48,9 +48,8 @@ TYPE(tElem),POINTER            :: master
 TYPE(tSide),POINTER            :: Side
 INTEGER,ALLOCATABLE            :: ElemInfo(:,:),SideInfo(:,:),NodeInfo(:)
 REAL,ALLOCATABLE               :: ElemBary(:,:)
-REAL,ALLOCATABLE               :: NodeCoords(:,:)
 REAL,ALLOCATABLE               :: ElemWeight(:)
-INTEGER                        :: iQuad,i,j,k
+INTEGER                        :: iQuad,i
 INTEGER                        :: NodeID,iNode
 INTEGER                        :: iSide,SideID,iLocSide,iMortar
 INTEGER                        :: ElemCounter(11,2)

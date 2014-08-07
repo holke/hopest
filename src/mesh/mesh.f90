@@ -44,7 +44,7 @@ SUBROUTINE InitMesh()
 ! MODULES
 USE MOD_Globals
 USE MOD_Output_Vars, ONLY: Projectname
-USE MOD_Mesh_Vars,   ONLY: BoundaryName,BoundaryType,MeshFile,nUserBCs,MeshInitIsDone
+USE MOD_Mesh_Vars,   ONLY: BoundaryName,BoundaryType,MeshFile,nUserBCs
 USE MOD_ReadInTools, ONLY: GETINT,GETSTR,GETINTARRAY,CNTSTR
 IMPLICIT NONE
 ! INPUT VARIABLES
