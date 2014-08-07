@@ -105,7 +105,7 @@ INTEGER                     :: PMortar,PFlip,HFlip,QHInd
 INTEGER                     :: iLocSide
 INTEGER                     :: StartQuad,EndQuad
 INTEGER                     :: BCindex
-INTEGER(KIND=C_INT16_T),POINTER :: TreeToBC(:,:)
+INTEGER(KIND=C_INT32_T),POINTER :: TreeToBC(:,:)
 !===================================================================================================================================
 SWRITE(UNIT_stdOut,'(A)')'GENERATE HOPEST MESH FROM P4EST ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
@@ -397,7 +397,7 @@ IMPLICIT NONE
 TYPE(tElem),POINTER         :: Elem
 TYPE(tSide),POINTER         :: Side
 INTEGER                     :: iElem,iSide
-INTEGER(KIND=C_INT16_T)     :: BCElemMap(0:5,nElems)
+INTEGER(KIND=C_INT32_T)     :: BCElemMap(0:5,nElems)
 !===================================================================================================================================
 BCElemMap=-1
 DO iELem=1,nElems

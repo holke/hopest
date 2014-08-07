@@ -153,7 +153,7 @@ void p4_build_p4est ( p4est_connectivity_t *conn,
 
 void p4_build_bcs(p4est_t        *p4est,
                   p4est_topidx_t num_trees,
-                  int16_t        *bcelemmap)
+                  int32_t        *bcelemmap)
 {
   int itree,iside;
 
@@ -161,12 +161,12 @@ void p4_build_bcs(p4est_t        *p4est,
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 
   P4EST_ASSERT (p4est->trees->elem_count == num_trees);
-  p4est_connectivity_set_attr(conn,6*sizeof(int16_t));
+  p4est_connectivity_set_attr(conn,6*sizeof(int32_t));
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
   
   for(itree=0; itree<num_trees; itree++) {
     for(iside=0; iside<6; iside++) {
-      ((int16_t*) conn->tree_to_attr)[itree*6+iside]=bcelemmap[itree*6+iside];
+      ((int32_t*) conn->tree_to_attr)[itree*6+iside]=bcelemmap[itree*6+iside];
     }
   }
 }
@@ -187,11 +187,11 @@ void p4_build_mesh(p4est_t  *p4est,
 }
 
 void p4_get_bcs(p4est_t        *p4est,
-                int16_t        **bcelemmap)
+                int32_t        **bcelemmap)
 {
   
   p8est_connectivity_t *conn=p4est->connectivity;
-  *bcelemmap=(int16_t*) conn->tree_to_attr;
+  *bcelemmap=(int32_t*) conn->tree_to_attr;
 }
 
 

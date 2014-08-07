@@ -50,10 +50,10 @@ void p4_build_p4est ( p8est_connectivity_t *conn,
 
 void p4_build_bcs(p8est_t        *p4est,
                   p4est_topidx_t num_trees,
-                  int16_t        *bcelemmap);
+                  int32_t        *bcelemmap);
 
 void p4_get_bcs(p8est_t        *p4est,
-                int16_t        **bcelemmap);
+                int32_t        **bcelemmap);
 
 void p4_build_mesh(p8est_t  *p4est,
                    p8est_mesh_t  **mesh_out );

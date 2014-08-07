@@ -118,7 +118,7 @@ INTERFACE
   ! INPUT VARIABLES
   TYPE(C_PTR),VALUE,INTENT(IN)       :: p4est
   INTEGER( KIND = C_INT),VALUE       :: num_trees 
-  INTEGER(KIND=C_INT16_T),INTENT(IN) :: bcelemmap(0:5,num_trees)
+  INTEGER(KIND=C_INT32_T),INTENT(IN) :: bcelemmap(0:5,num_trees)
   !---------------------------------------------------------------------------------------------------------------------------------
   ! OUTPUT VARIABLES
   !=================================================================================================================================
