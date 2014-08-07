@@ -10,6 +10,10 @@ IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! GLOBAL VARIABLES 
 !-----------------------------------------------------------------------------------------------------------------------------------
+INTEGER           ::HopestMode ! 1: Hopest run in serial preproc mode with mesh refinement/HDF5 output
+                               ! 2: Hopest run in parallel production mode for linking to solver 
+                               ! 3: Hopest run in VTK mode for high order visualization
+
 INTEGER,PARAMETER ::UNIT_stdOut=6
 INTEGER,PARAMETER ::UNIT_logOut=133
 INTEGER           ::UNIT_errOut=999

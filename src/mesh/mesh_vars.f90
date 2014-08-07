@@ -87,7 +87,7 @@ TYPE(tNodePtr),POINTER         :: Nodes(:)
 INTEGER,ALLOCATABLE            :: HexMap(:,:,:)
 INTEGER,ALLOCATABLE            :: HexMapInv(:,:)
 ! DATA STRUCTURES BUILT USING P4EST CONNECTIVITY
-TYPE(tElemPtr),ALLOCATABLE     :: Quads(:)        ! new element list elements are "quadrants/octants"        
+TYPE(tElemPtr),POINTER         :: Quads(:)        ! new element list elements are "quadrants/octants"        
 !-----------------------------------------------------------------------------------------------------------------------------------
 LOGICAL          :: MeshInitIsDone =.FALSE.
 !===================================================================================================================================
@@ -236,28 +236,47 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER             :: iElem,iLocSide,iNode,nAssocNodes
-TYPE(tElem),POINTER :: aElem
+INTEGER             :: iElem,iQuad,iLocSide,iNode,nAssocNodes
+TYPE(tElem),POINTER :: aElem,aQuad
 TYPE(tSide),POINTER :: aSide
 !===================================================================================================================================
-DO iElem=1,nElems
-  aElem=>Elems(iElem)%ep
-  DO iLocSide=1,6
-    aSide=>aElem%Side(iLocSide)%sp
-    DEALLOCATE(aSide)
+IF(ASSOCIATED(Elems))THEN
+  DO iElem=1,nElems
+    aElem=>Elems(iElem)%ep
+    DO iLocSide=1,6
+      aSide=>aElem%Side(iLocSide)%sp
+      DEALLOCATE(aSide)
+    END DO
+    DEALLOCATE(aElem)
   END DO
-  DEALLOCATE(aElem)
-END DO
-DEALLOCATE(Elems)
-nAssocNodes=0
-DO iNode=1,nNodes
-  IF(ASSOCIATED(Nodes(iNode)%np))THEN
-    DEALLOCATE(Nodes(iNode)%np)
-    nAssocNodes=nAssocNodes+1
-  END IF
-END DO
-!WRITE(*,*)'DEBUG,nAssocNodes',nAssocNodes
-DEALLOCATE(Nodes)
+  DEALLOCATE(Elems)
+  nAssocNodes=0
+  DO iNode=1,nNodes
+    IF(ASSOCIATED(Nodes(iNode)%np))THEN
+      DEALLOCATE(Nodes(iNode)%np)
+      nAssocNodes=nAssocNodes+1
+    END IF
+  END DO
+  DEALLOCATE(Nodes)
+END IF
+IF(ASSOCIATED(Quads))THEN
+  DO iQuad=1,nQuadrants
+    aQuad=>Quads(iQuad)%ep
+    DO iLocSide=1,6
+      aSide=>aQuad%Side(iLocSide)%sp
+      DEALLOCATE(aSide)
+    END DO
+    DEALLOCATE(aQuad)
+  END DO
+  DEALLOCATE(Quads)
+  nAssocNodes=0
+  DO iNode=1,nNodes
+    IF(ASSOCIATED(Nodes(iNode)%np))THEN
+      DEALLOCATE(Nodes(iNode)%np)
+      nAssocNodes=nAssocNodes+1
+    END IF
+  END DO
+END IF
 END SUBROUTINE deleteMeshPointer
 
 

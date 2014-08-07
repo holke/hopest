@@ -69,6 +69,24 @@ INTERFACE
   END SUBROUTINE p4_connectivity_treevertex 
 
 
+  SUBROUTINE p4_build_mesh(p4est,mesh) BIND(C)
+  !=================================================================================================================================
+  ! read p4est connectivity from file and build p4est
+  !=================================================================================================================================
+  ! MODULES
+  USE, INTRINSIC :: ISO_C_BINDING  
+  ! IMPLICIT VARIABLE HANDLING
+  IMPLICIT NONE
+  !---------------------------------------------------------------------------------------------------------------------------------
+  ! INPUT VARIABLES
+  TYPE(C_PTR),VALUE,INTENT(IN)        :: p4est
+  !---------------------------------------------------------------------------------------------------------------------------------
+  ! OUTPUT VARIABLES
+  TYPE(C_PTR),INTENT(OUT)             :: mesh
+  !=================================================================================================================================
+  END SUBROUTINE p4_build_mesh 
+
+
   SUBROUTINE p4_build_p4est(connectivity,p4est) BIND(C)
   !=================================================================================================================================
   ! builds up p4est connectivit, using only element connectivity and vertex positions

@@ -47,7 +47,11 @@ SUBROUTINE InitP4EST()
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
-USE MOD_p4estBinding
+USE MOD_Globals,       ONLY: hopestMode
+USE MOD_P4EST_Vars,    ONLY: p4estFile
+USE MOD_P4EST_Binding, ONLY: p4_initvars
+USE MOD_Output_Vars,   ONLY: Projectname
+USE MOD_ReadInTools,   ONLY: GETSTR
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -58,6 +62,11 @@ IMPLICIT NONE
 ! LOCAL VARIABLES
 !===================================================================================================================================
 CALL p4_initvars()
+IF(hopestMode.EQ.2)THEN
+  p4estFile = GETSTR('p4estFile')
+ELSE
+  p4estFile = TRIM(ProjectName)//'.p4est'
+END IF
 
 END SUBROUTINE InitP4EST
 
@@ -97,6 +106,8 @@ INTEGER(KIND=C_INT16_T),POINTER :: TreeToBC(:,:)
 SWRITE(UNIT_stdOut,'(A)')'GENERATE HOPEST MESH FROM P4EST ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
 
+! build p4est mesh
+CALL p4_build_mesh(p4est,mesh)
 ! Get arrays from p4est: use pointers for c arrays (QT,QQ,..), duplicate data for QuadCoords,Level
 CALL p4_get_mesh_info(p4est,mesh,nQuadrants,nHalfFaces,nElems)
 
@@ -172,13 +183,14 @@ DO iQuad=1,nQuadrants
       QHInd=QuadToQuad(PSide+1,iQuad)+1
       aSide%nMortars=4
       aSide%MortarType=1             ! 1->4 case
+      aSide%flip=HFlip
       ALLOCATE(aSide%MortarSide(4))
       DO iMortar=1,4
         nbQuadInd=QuadToHalf(iMortar,QHInd)+1
         nbQuad=>Quads(nbQuadInd)%ep
         nbSide=P2H_FaceMap(PnbSide)
         aSide%MortarSide(iMortar)%sp=>nbQuad%side(nbSide)%sp
-        aSide%MortarSide(iMortar)%sp%flip=0
+        aSide%MortarSide(iMortar)%sp%flip=HFlip
       END DO ! iMortar
     ELSE
       nbQuadInd=QuadToQuad(PSide+1,iQuad)+1
@@ -191,10 +203,10 @@ DO iQuad=1,nQuadrants
         aSide%BCIndex=BCIndex
         NULLIFY(aSide%connection)
         aSide%Flip=0
-        
       ELSE
+        !this is an inner side (either no mortar or small side mortar)
         aSide%connection=>nbQuad%side(nbSide)%sp
-        aSide%connection%flip=HFlip
+        aSide%flip=HFlip
       END IF !BC side
       IF(PMortar.NE.-1) aSide%MortarType= - (PMortar+1)  ! Pmortar 0...3, small side belonging to  mortar group -> -1..-4
     END IF ! PMortar
@@ -206,9 +218,18 @@ DO iQuad=1,nQuadrants
   aQuad=>Quads(iQuad)%ep
   DO iLocSide=1,6
     aSide=>aQuad%Side(iLocSide)%sp
-    IF(ASSOCIATED(aSide%connection))THEN
-      IF(aSide%connection%elem%ind.GT.iQuad)THEN
-        aSide%flip=0
+    IF(aSide%MortarType.GT.0)THEN
+      aSide%flip=0
+      DO iMortar=1,4
+        IF(aSide%MortarSide(iMortar)%sp%flip.EQ.0) STOP 'Mortarside flip = 0'
+      END DO
+    ELSE
+      IF(aSide%MortarType.EQ.0)THEN
+        IF(ASSOCIATED(aSide%connection))THEN
+          IF(aSide%connection%elem%ind.GT.iQuad)THEN
+            aSide%flip=0
+          END IF
+        END IF
       END IF
     END IF
   END DO
