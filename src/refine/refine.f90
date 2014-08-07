@@ -78,7 +78,7 @@ DO iRefine=1,nRefines
   END SELECT
    CALL p4_refine_mesh(p4est,refineFunc,refineLevel,& !IN
                       mesh)                          !OUT
-   SDEALLOCATE(TreeToQuadRefine)
+   SDEALLOCATE(TreeSidesToRefine)
 END DO
 
 !SDEALLOCATE(RefineList)
@@ -91,7 +91,7 @@ SUBROUTINE InitRefineBoundaryElems()
 !===================================================================================================================================
 ! MODULES
 USE MOD_Globals
-USE MOD_Refine_Vars, ONLY: TreeToQuadRefine,refineBCIndex
+USE MOD_Refine_Vars, ONLY: TreeSidesToRefine,refineBCIndex
 USE MOD_P4EST_Vars,  ONLY: P2H_FaceMap
 USE MOD_Mesh_Vars,   ONLY: Elems,nElems
 ! IMPLICIT VARIABLE HANDLING
@@ -105,45 +105,12 @@ IMPLICIT NONE
 INTEGER                     :: iElem,iSide
 !===================================================================================================================================
 ! These are the refinement functions which are called by p4est
-ALLOCATE(TreeToQuadRefine(0:5,1:nElems))
-TreeToQuadRefine=0
-!DO iElem=1,nElems
-!  DO iSide=1,6
-!    IF (Elems(iElem)%ep%Side(iSide)%sp%BCIndex.EQ.refineBCIndex) THEN
-!      SELECT CASE (iSide)
-!        CASE (1) 
-!          TreeToQuadRefine(1:4,iElem)=1
-!        CASE (2) 
-!          TreeToQuadRefine(1,iElem)=1
-!          TreeToQuadRefine(2,iElem)=1
-!          TreeToQuadRefine(5,iElem)=1
-!          TreeToQuadRefine(6,iElem)=1
-!        CASE (3) 
-!          TreeToQuadRefine(2,iElem)=1
-!          TreeToQuadRefine(4,iElem)=1
-!          TreeToQuadRefine(6,iElem)=1
-!          TreeToQuadRefine(8,iElem)=1
-!        CASE (4) 
-!          TreeToQuadRefine(3,iElem)=1
-!          TreeToQuadRefine(4,iElem)=1
-!          TreeToQuadRefine(7,iElem)=1
-!          TreeToQuadRefine(8,iElem)=1
-!        CASE (5) 
-!          TreeToQuadRefine(1,iElem)=1
-!          TreeToQuadRefine(3,iElem)=1
-!          TreeToQuadRefine(5,iElem)=1
-!          TreeToQuadRefine(7,iElem)=1
-!        CASE (6) 
-!          TreeToQuadRefine(5:8,iElem)=1
-!      END SELECT
-!    END IF
-!  END DO
-!END DO
-TreeToQuadRefine=0
+ALLOCATE(TreeSidesToRefine(0:5,1:nElems))
+TreeSidesToRefine=0
 DO iElem=1,nElems
   DO iSide=0,5
     IF (Elems(iElem)%ep%Side(P2H_FaceMap(iSide))%sp%BCIndex.EQ.refineBCIndex) THEN
-      TreeToQuadRefine(iSide,iElem)=1
+      TreeSidesToRefine(iSide,iElem)=1
     END IF
   END DO
 END DO
@@ -222,7 +189,7 @@ FUNCTION RefineByList(x,y,z,tree,level,childID) BIND(C)
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
-USE MOD_Refine_Vars, ONLY: refineLevel,TreeToQuadRefine
+USE MOD_Refine_Vars, ONLY: refineLevel,TreeSidesToRefine
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -240,28 +207,28 @@ INTEGER(KIND=C_INT32_T)  IntSize,length
 !-----------------------------------------------------------------------------------------------------------------------------------
 RefineByList=0
 IF(level.GE.refineLevel) RETURN
-!IF (level.EQ.0) RefineByList=SUM(TreeToQuadRefine(:,tree))
-!IF (level.GE.1) RefineByList=TreeToQuadRefine(childID+1,tree)
+!IF (level.EQ.0) RefineByList=SUM(TreeSidesToRefine(:,tree))
+!IF (level.GE.1) RefineByList=TreeSidesToRefine(childID+1,tree)
 
 IntSize = 2**19
 length  = 2**(19-level)
 IF(x.EQ.0) THEN
-  RefineByList=RefineBylist+TreeToQuadRefine(0,tree)
+  RefineByList=RefineBylist+TreeSidesToRefine(0,tree)
 END IF
 IF(y.EQ.0) THEN
-   RefineByList=RefineBylist+TreeToQuadRefine(2,tree)
+   RefineByList=RefineBylist+TreeSidesToRefine(2,tree)
 END IF
 IF(z.EQ.0) THEN
-  RefineByList=RefineBylist+TreeToQuadRefine(4,tree)
+  RefineByList=RefineBylist+TreeSidesToRefine(4,tree)
 END IF
 IF(x.EQ.intSize-length) THEN
-  RefineByList=RefineBylist+TreeToQuadRefine(1,tree)
+  RefineByList=RefineBylist+TreeSidesToRefine(1,tree)
 END IF
 IF(y.EQ.intSize-length) THEN
-  RefineByList=RefineBylist+TreeToQuadRefine(3,tree)
+  RefineByList=RefineBylist+TreeSidesToRefine(3,tree)
 END IF
 IF(z.EQ.intSize-length) THEN
-  RefineByList=RefineBylist+TreeToQuadRefine(5,tree)
+  RefineByList=RefineBylist+TreeSidesToRefine(5,tree)
 END IF
 
 END FUNCTION RefineByList

@@ -15,7 +15,7 @@ INTEGER                          :: refineGeomType
 INTEGER                          :: refineBCIndex
 INTEGER,ALLOCATABLE              :: RefineList(:)
 REAL,ALLOCATABLE                 :: refineBoundary(:)
-INTEGER,ALLOCATABLE              :: TreeToQuadRefine(:,:)
+INTEGER,ALLOCATABLE              :: TreeSidesToRefine(:,:)
 REAL                             :: sphereCenter(3),sphereRadius
 REAL                             :: shellCenter(3),shellRadius_inner,shellRadius_outer
 REAL                             :: boxBoundary(6)
