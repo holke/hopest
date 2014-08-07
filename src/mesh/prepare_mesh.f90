@@ -13,6 +13,10 @@ PRIVATE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! Public Part ----------------------------------------------------------------------------------------------------------------------
 
+INTERFACE countSides
+  MODULE PROCEDURE countSides
+END INTERFACE
+
 INTERFACE setLocalSideIDs
   MODULE PROCEDURE setLocalSideIDs
 END INTERFACE
@@ -21,7 +25,7 @@ INTERFACE fillMeshInfo
   MODULE PROCEDURE fillMeshInfo
 END INTERFACE
 
-PUBLIC::setLocalSideIDs,fillMeshInfo
+PUBLIC::countSides,setLocalSideIDs,fillMeshInfo
 
 #ifdef MPI
 INTERFACE exchangeFlip
@@ -34,6 +38,68 @@ PUBLIC::exchangeFlip
 
 CONTAINS
 
+
+SUBROUTINE countSides()
+!===================================================================================================================================
+! 
+!===================================================================================================================================
+! MODULES
+USE MOD_Globals
+USE MOD_Mesh_Vars,  ONLY: tElem,tSide,Quads
+USE MOD_Mesh_Vars,  ONLY: nQuads,nInnerSides,nSides,nBCSides
+#ifdef MPI
+USE MOD_Mesh_Vars,  ONLY: nMPISides
+#endif /*MPI*/
+IMPLICIT NONE
+! INPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT/OUTPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES
+TYPE(tElem),POINTER :: Quad
+TYPE(tSide),POINTER :: Side
+INTEGER             :: iQuad,iSide
+!-----------------------------------------------------------------------------------------------------------------------------------
+
+DO iQuad=1,nQuads
+  Quad=>Quads(iQuad)%ep
+  DO iSide=1,6
+    Side=>Quad%Side(iSide)%sp
+    Side%tmp=0
+    IF(ASSOCIATED(Side%Connection))THEN
+      Side%connection%tmp=0
+    END IF
+  END DO
+END DO
+
+nSides=0
+nInnerSides=0
+nBCSides=0
+DO iQuad=1,nQuads
+  Quad=>Quads(iQuad)%ep
+  DO iSide=1,6
+    Side=>Quad%Side(iSide)%sp
+    IF(Side%tmp.NE.0) CYCLE
+    Side%tmp=-1
+    IF(ASSOCIATED(Side%Connection))THEN
+      nInnerSides=nInnerSides+1
+      Side%connection%tmp=-1
+    ELSE
+      nBCSides=nBCSides+1
+    END IF
+#ifdef MPI
+    IF(Side%NbProc.NE.-1) THEN
+      nMPISides=nMPISides+1
+      MPISideCount(Side%NbProc)=MPISideCount(Side%NbProc)+1
+    END IF
+#endif /*MPI*/
+    nSides=nSides+1
+  END DO
+END DO
+
+END SUBROUTINE
 
 SUBROUTINE setLocalSideIDs()
 !===================================================================================================================================
@@ -76,8 +142,10 @@ CHARACTER(LEN=10)     :: formatstr
 LOGICAL               :: writePartitionInfo
 #endif
 !===================================================================================================================================
-FirstQuadInd= offsetQuad+1
-LastQuadInd = offsetQuad+nQuads
+!FirstQuadInd= offsetQuad+1
+!LastQuadInd = offsetQuad+nQuads
+FirstQuadInd= 1
+LastQuadInd = nQuads
 ! ----------------------------------------
 ! Set side IDs to arrange sides:
 ! 1. BC sides
@@ -153,7 +221,6 @@ DO iQuad=FirstQuadInd,LastQuadInd
     END DO !iMortar
   END DO ! iLocSide=1,6
 END DO !iQuad
-write(*,*) nInnerSides,nBCSides,nMortarSides
 IF(iSide.NE.nInnerSides+nBCSides+nMortarSides) STOP'not all SideIDs are set!'
 
 nMPISides_MINE=0
