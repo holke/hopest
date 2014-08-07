@@ -84,9 +84,6 @@ ChangeLog:
          cat .ChangeLog.tmp | @top_srcdir@/build-aux/git2cl > ChangeLog) ; \
         rm -f .ChangeLog.tmp
 
-install-exec-hook:
-	cp -f @top_builddir@/*.mod $(includedir)
-
 dist-hook:
 	echo $(VERSION) > $(distdir)/.tarball-version
 	test "x$(VERSION)" = "x`@top_srcdir@/build-aux/git-version-gen \
@@ -101,6 +98,12 @@ if HOPEST_DIST_DENY
 	rm -rf $(distdir)
 	@exit 1
 endif
+
+install-exec-local:
+	cp -f @top_builddir@/*.mod $(DESTDIR)$(includedir)
+
+uninstall-local:
+	rm -f $(DESTDIR)$(includedir)/*.mod
 
 mostlyclean-local:
 	rm -f @top_builddir@/*.mod
