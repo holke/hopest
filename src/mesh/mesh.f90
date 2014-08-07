@@ -61,7 +61,7 @@ SWRITE(UNIT_stdOut,'(A)') ' INIT MESH...'
 
 ! prepare pointer structure (get nElems, etc.)
 MeshFile = GETSTR('MeshFile')
-ProjectName=Meshfile(1:INDEX(Meshfile,'_mesh.h5')-1)
+ProjectName = GETSTR('ProjectName')
 
 ! read in boundary conditions, will overwrite BCs from meshfile!
 nUserBCs = CNTSTR('BoundaryName',0)
