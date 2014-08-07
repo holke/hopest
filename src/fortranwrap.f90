@@ -19,23 +19,51 @@
 !  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 ! This file wraps some fortran routines to be called by C-Code
-! It is important that this is not a Fortran Module
+! It is important that this is NOT a Fortran Module
 
-SUBROUTINE wrapinitmesh()
-    USE MOD_Mesh
-    call InitMesh()
-END SUBROUTINE wrapinitmesh
+#include <hopest_f.h>
+
+SUBROUTINE wrapReadMeshFromHDF5nobuildp4est(hdf5file,hdf5file_len,conn)
+!===================================================================================================================================
+! Subroutine to wrap the ReadMeshFromHDF5nobuildp4est routine
+!===================================================================================================================================
+! MODULES
+    USE MOD_Mesh_ReadIn
+    USE MOD_IO_HDF5
+    USE MOD_Mesh,          ONLY: InitMesh
+    USE MOD_P4EST_Vars,    ONLY: connectivity
+    USE MOD_P4EST,         ONLY: InitP4est
+    USE, intrinsic :: ISO_C_BINDING
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+    integer(C_INT), intent(IN), VALUE               :: hdf5file_len
+    character(hdf5file_len,kind=C_CHAR), intent(IN) :: hdf5file
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+    TYPE(C_PTR)                                     :: conn
+!-----------------------------------------------------------------------------------------------------------------------------------
+    CALL InitIO()
+    call ReadMeshFromHDF5nobuildp4est(hdf5file)
+    conn=connectivity
+END SUBROUTINE wrapReadMeshFromHDF5nobuildp4est
 
 ! To pass strings from C to Fortran 2003 we pass the string as char* and its
 ! length as an integer
-SUBROUTINE wrapfillstrings(inifile,inifile_len)
-    USE MOD_ReadInTools
+
+SUBROUTINE wrapbuildHOp4GeometryX(a,b,c,x,y,z,tree)
+!===================================================================================================================================
+! Subroutine to wrap the buildHOp4GeometryX routine
+!===================================================================================================================================
+! MODULES
+    USE MOD_P4EST,ONLY:buildHOp4GeometryX
     USE, intrinsic :: ISO_C_BINDING
-    implicit none
-    integer(C_INT), intent(IN), VALUE :: inifile_len
-    character(inifile_len,kind=C_CHAR), intent(IN) :: inifile
-    print *,"calling FillString routine with parameter ", inifile
-    call fillstrings(inifile)
-END SUBROUTINE wrapfillstrings
-
-
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+    REAL( KIND = C_DOUBLE ),INTENT(IN),VALUE    :: a,b,c
+    P4EST_F90_TOPIDX,INTENT(IN),VALUE           :: tree
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+    REAL( KIND = C_DOUBLE ),INTENT(OUT)         :: x,y,z
+!-----------------------------------------------------------------------------------------------------------------------------------
+    call buildHOp4GeometryX(a,b,c,x,y,z,tree)
+END SUBROUTINE wrapbuildHOp4GeometryX

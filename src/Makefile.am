@@ -7,7 +7,9 @@ libhopest_generated_headers = src/hopest_config.h
 libhopest_installed_headers = \
         src/hopest.h
 libhopest_internal_headers = \
-	src/hopest_f.h
+	src/hopest_f.h \
+	src/p4est/p4est_wrapper.h \
+	src/p4est/p4est_HO_geometry.h
 libhopest_compiled_sources = \
 	src/globals/preprocessing.f90 \
 	src/globals/globals.f90 \
@@ -15,14 +17,15 @@ libhopest_compiled_sources = \
 	src/p4est/p4est_vars.f90 \
 	src/output/output_vars.f90 \
 	src/refine/refine_vars.f90 \
+	src/mpi/mpi.f90 \
 	src/readintools/isovaryingstring.f90 \
 	src/readintools/readintools.f90 \
+	src/interpolation/changeBasis.f90 \
+	src/interpolation/basis.f90 \
 	src/p4est/p4est_binding.f90 \
 	src/p4est/p4est_wrapper.c \
 	src/p4est/p4est.f90 \
-	src/interpolation/changeBasis.f90 \
-	src/mpi/mpi.f90 \
-	src/interpolation/basis.f90 \
+	src/mesh/prepare_mesh.f90 \
 	src/output/output.f90 \
 	src/refine/refine_bindings.f90 \
 	src/refine/refine_wrapper.c \
@@ -38,11 +41,13 @@ libhopest_compiled_sources += \
 	src/mesh/mesh.f90 \
 	src/mesh/mesh_readin.f90 \
 	src/hopest_solver.f90 \
-	src/hopest_mesh.f90
+	src/hopest_mesh.f90 \
+	src/p4est/p4est_HO_geometry.c \
+	src/fortranwrap.f90
 endif
 
 # this variable is used for headers that are not publicly installed
-HOPEST_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS)
+HOPEST_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -I@top_builddir@/src
 
 lib_LTLIBRARIES += src/libhopest.la
 src_libhopest_la_SOURCES = \

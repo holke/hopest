@@ -61,6 +61,7 @@ DISTCLEANFILES += \
 include src/Makefile.am
 include test/Makefile.am
 include example/hopest/Makefile.am
+include example/hopest_p4est_geom/Makefile.am
 include deplist.mk
 
 # automatically builds a dependency list deplist.mk from srcfiles.mk uing the tool builddeps
@@ -97,6 +98,15 @@ if HOPEST_DIST_DENY
 	rm -rf $(distdir)
 	@exit 1
 endif
+
+install-exec-local:
+	cp -f @top_builddir@/*.mod $(DESTDIR)$(includedir)
+
+uninstall-local:
+	rm -f $(DESTDIR)$(includedir)/*.mod
+
+mostlyclean-local:
+	rm -f @top_builddir@/*.mod
 
 clean-local:
 	rm -f ChangeLog *vtu *.visit

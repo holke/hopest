@@ -20,21 +20,52 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/* This program uses the hopest routine ReadMeshFromHDF5 to read
+ * a p4est_connectivity from an hdf5-file
+ * using this connectivity we build a p4est and use
+ * the hopest routine buildHOp4GeometryX to get the Geometry information from the file */
+
 #include <hopest.h>
-#include <hopest_hdf5.h>
 #include <string.h>
+#include <p8est_extended.h>
+#include <p8est_vtk.h>
+#include <p4est/p4est_HO_geometry.h>
 #include "hopest_p4est_geom.h"
 
+#include <p4est_to_p8est.h>
+
 int main(int argc,char *argv[]){
-    char *IniFile;
-    int inifile_len;
+    char *HDF5File;
+    int HDF5file_len;
+    /* p4est_t *p4est; */
+    p4est_connectivity_t *conn;
+    p4est_t              *p4est;
+    p4est_geometry_t     *geom;
+    char vtkfilename[BUFSIZ],*vtkfilename_temp;
+    int mpiret;
+
+    mpiret = sc_MPI_Init (&argc, &argv);
+    SC_CHECK_MPI (mpiret);
     if(argc>1) {
-        IniFile=argv[1];
-        inifile_len=strlen(IniFile);
-        FillStrings_FC(IniFile,inifile_len);
-        /*InitMesh_FC();*/
+        HDF5File=argv[1];
+        HDF5file_len=strlen(HDF5File);
+        ReadMeshFromHDF5_FC(HDF5File,HDF5file_len,&conn);
+        P4EST_ASSERT(p4est_connectivity_is_valid(conn));
+        p4est=p4est_new_ext(sc_MPI_COMM_WORLD,conn,0,2,1,0,NULL,NULL);
+        geom = P4EST_ALLOC_ZERO (p4est_geometry_t, 1);
+        geom->name = "hopest_readfromhdf5";
+        geom->X = p4_geometry_X;
+        vtkfilename_temp=P4EST_STRDUP(HDF5File);
+        basename(vtkfilename_temp);
+        snprintf (vtkfilename, BUFSIZ, "%s", vtkfilename_temp);
+        p4est_vtk_write_file (p4est,geom,vtkfilename);
+        P4EST_FREE(vtkfilename_temp);
+        p4est_geometry_destroy(geom);
+        p4est_destroy(p4est);
+        p4est_connectivity_destroy(conn);
     }
-    /* connectivity holen und p4est bauen */
     else printf("no input file given.\n");
+    mpiret = sc_MPI_Finalize ();
+    SC_CHECK_MPI (mpiret);
     return 0;
 }

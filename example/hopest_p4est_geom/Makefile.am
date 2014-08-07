@@ -1,3 +1,6 @@
+
+if HOPEST_WITH_HDF5
+
 bin_PROGRAMS += \
     example/hopest_p4est_geom/hopest_p4est_geom
 
@@ -5,3 +8,5 @@ example_hopest_p4est_geom_hopest_p4est_geom_SOURCES = example/hopest_p4est_geom/
 
 # C programs need FLIBS to link
 example_hopest_p4est_geom_hopest_p4est_geom_LDADD = $(LDADD) $(FLIBS)
+
+endif

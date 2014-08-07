@@ -29,9 +29,8 @@ SUBROUTINE RefineMesh()
 USE MOD_Globals
 USE MOD_Refine_Vars
 USE MOD_Refine_Binding,ONLY: p4_refine_mesh
-USE MOD_Mesh_Vars,     ONLY: nElems
-USE MOD_P4EST_Vars,    ONLY: p4est,mesh
-USE MOD_Readintools,   ONLY: CNTSTR,GETINT
+USE MOD_P4EST_Vars,    ONLY: p4est,mesh,geom
+USE MOD_Readintools,   ONLY: GETINT,CNTSTR
 USE, INTRINSIC :: ISO_C_BINDING
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
@@ -76,8 +75,8 @@ DO iRefine=1,nRefines
   CASE DEFAULT
     STOP 'refineType is not defined'
   END SELECT
-   CALL p4_refine_mesh(p4est,refineFunc,refineLevel,& !IN
-                      mesh)                          !OUT
+   CALL p4_refine_mesh(p4est,refineFunc,refineLevel,geom, & !IN
+                    mesh)                               !OUT
    SDEALLOCATE(TreeSidesToRefine)
 END DO
 
@@ -136,8 +135,6 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER                     :: iElem
-REAL                     :: XBary(3)
 !===================================================================================================================================
 ! These are the refinement functions which are called by p4est
 refineGeomType =GETINT('refineGeomType') ! 
@@ -158,7 +155,7 @@ END SELECT
 
 END SUBROUTINE InitRefineGeom
 
-FUNCTION RefineAll(x,y,z,tree,level) BIND(C)
+FUNCTION RefineAll(x,y,z,tree,level,childID) BIND(C)
 !===================================================================================================================================
 ! Subroutine to refine the the mesh
 !===================================================================================================================================
@@ -172,6 +169,7 @@ IMPLICIT NONE
 INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: x,y,z
 INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: tree
 INTEGER(KIND=C_INT8_T ),INTENT(IN),VALUE :: level
+INTEGER(KIND=C_INT ),INTENT(IN),VALUE :: childID
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! OUTPUT VARIABLES
 INTEGER(KIND=C_INT) :: refineAll
@@ -240,12 +238,11 @@ FUNCTION RefineByGeom(x,y,z,tree,level,childID) BIND(C)
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
-USE MOD_Refine_Vars, ONLY: RefineList,refineBoundary,refineGeomType,refineLevel
+USE MOD_Refine_Vars, ONLY: refineGeomType,refineLevel
 USE MOD_Refine_Vars, ONLY: sphereCenter,sphereRadius,boxBoundary
 USE MOD_Refine_Vars, ONLY: shellRadius_inner,shellRadius_outer,shellCenter
 USE MOD_Mesh_Vars,   ONLY: XGeo,Ngeo
 USE MOD_Mesh_Vars,   ONLY: wBary_Ngeo,xi_Ngeo
-USE MOD_P4EST_Vars,  ONLY: Quadcoords 
 USE MOD_Basis,       ONLY: LagrangeInterpolationPolys 
 USE MOD_ChangeBasis, ONLY: ChangeBasis3D_XYZ
 ! IMPLICIT VARIABLE HANDLING
@@ -260,8 +257,7 @@ REAL                                     :: xi0(3)
 REAL                                     :: xiBary(3)
 REAL                                     :: dxi,length
 REAL,DIMENSION(0:Ngeo,0:Ngeo)            :: Vdm_xi,Vdm_eta,Vdm_zeta
-REAL                                     :: XQuadCoord(3),ElemLength(3),ElemFirstCorner(3),VectorToBaryQuad(3)
-REAL                                     :: XCorner(3), XBaryQuad(3),lengthQuad,test,IntSize,sIntSize
+REAL                                     :: XCorner(3), XBaryQuad(3),test,IntSize,sIntSize
 REAL                                     :: XGeoQuad(3,0:NGeo,0:NGeo,0:NGeo)
 REAL                                     :: l_xi(0:NGeo),l_eta(0:NGeo),l_zeta(0:NGeo),l_etazeta
 INTEGER                                  :: i,j,k
@@ -383,7 +379,7 @@ END SELECT
 END FUNCTION RefineByGeom
 
 
-FUNCTION RefineFirst(x,y,z,tree,level) BIND(C)
+FUNCTION RefineFirst(x,y,z,tree,level,childID) BIND(C)
 !===================================================================================================================================
 ! Subroutine to refine the the mesh
 !===================================================================================================================================
@@ -397,6 +393,7 @@ IMPLICIT NONE
 INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: x,y,z
 INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: tree
 INTEGER(KIND=C_INT8_T ),INTENT(IN),VALUE :: level
+INTEGER(KIND=C_INT ),INTENT(IN),VALUE :: childID
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! OUTPUT VARIABLES
 INTEGER(KIND=C_INT)                      :: refineFirst

@@ -1,4 +1,4 @@
-#include "../../src/hopest_f.h"
+#include <hopest_f.h>
 
 PROGRAM Hopest
 !===================================================================================================================================
@@ -8,7 +8,7 @@ PROGRAM Hopest
 USE MOD_Globals
 USE MOD_ReadInTools,  ONLY:IgnoredStrings,GETINT
 USE MOD_HopestMesh,   ONLY:HopestMesh
-USE MOD_HopestSolver, ONLY:HopestSolver,FinalizeHopestSolver
+USE MOD_HopestSolver, ONLY:HopestSolver,PrepareMesh,FinalizeHopestSolver
 USE MOD_MPI,          ONLY:InitMPI
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
@@ -29,6 +29,7 @@ CASE(1) ! HOPEST reads HDF5 builds P4EST + static refinement
   CALL HopestMesh()
 CASE(2) ! use HOPEST as INPUT for Flexi
   CALL HopestSolver()
+  CALL PrepareMesh()
   CALL FinalizeHopestSolver()
 CASE(3) ! HOPEST VTK ?!
 END SELECT

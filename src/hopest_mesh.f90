@@ -35,7 +35,7 @@ SUBROUTINE HopestMesh()
 USE MOD_Globals
 USE MOD_IO_HDF5
 USE MOD_P4EST_Vars,         ONLY: p4est,p4estFile
-USE MOD_P4EST,              ONLY: InitP4EST,BuildMeshFromP4EST,BuildBCs
+USE MOD_P4EST,              ONLY: InitP4EST,BuildMeshFromP4EST,BuildBCs,testHOabc
 USE MOD_P4EST_Binding,      ONLY: p4_savemesh
 USE MOD_Mesh_Vars
 USE MOD_Mesh,               ONLY: InitMesh,BuildHOMesh
@@ -53,7 +53,6 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER :: i
 !===================================================================================================================================
 SWRITE(UNIT_StdOut,'(132("-"))')
 SWRITE(UNIT_stdOut,'(A)') ' START HOPEST MESH...'
@@ -73,6 +72,7 @@ CALL BuildHOMesh()
 !output new mesh
 CALL writeMeshToHDF5(TRIM(ProjectName)//'_mesh_p4est.h5')
 ! dealloacte pointers
+!CALL testHOabc()
 SWRITE(UNIT_stdOut,'(A)') "NOW CALLING deleteMeshPointer..."
 !CALL deleteMeshPointer()
 

@@ -48,9 +48,8 @@ TYPE(tElem),POINTER            :: master
 TYPE(tSide),POINTER            :: Side
 INTEGER,ALLOCATABLE            :: ElemInfo(:,:),SideInfo(:,:),NodeInfo(:)
 REAL,ALLOCATABLE               :: ElemBary(:,:)
-REAL,ALLOCATABLE               :: NodeCoords(:,:)
 REAL,ALLOCATABLE               :: ElemWeight(:)
-INTEGER                        :: iQuad,i,j,k
+INTEGER                        :: iQuad,i
 INTEGER                        :: NodeID,iNode
 INTEGER                        :: iSide,SideID,iLocSide,iMortar
 INTEGER                        :: ElemCounter(11,2)
@@ -62,19 +61,19 @@ WRITE(*,'(132("~"))')
 WRITE(*,'(A)')' WRITE MESH TO HDF5 FILE... ' // TRIM(FileString) 
 
 !set all side indices =0
-DO iQuad=1,nQuadrants
+DO iQuad=1,nQuads
   Elem=>Quads(iQuad)%ep
   DO iLocSide=1,6
     Side=>Elem%Side(iLocSide)%sp
     Side%ind=0
   END DO !iLocSide=1,6
-END DO !iQuad=1,nQuadrants
+END DO !iQuad=1,nQuads
 
 ! count Elements , unique sides 
 nSideIDs=0 !number of unique side IDs (side and side%connection have the same sideID)
 
 
-DO iQuad=1,nQuadrants
+DO iQuad=1,nQuads
   Elem=>Quads(iQuad)%ep
 
   ! Count sides
@@ -109,7 +108,7 @@ WRITE(*,*)'nSideIDs',nSideIDs
 !set unique nodes and Side Indices
 SideID=0
 NodeID=0
-DO iQuad=1,nQuadrants
+DO iQuad=1,nQuads
   Elem=>Quads(iQuad)%ep
   Elem%ind=iQuad
   DO iLocSide=1,6
@@ -138,7 +137,7 @@ DO iQuad=1,nQuadrants
   END DO !iLocSide
 END DO !Elem
 
-DO iQuad=1,nQuadrants
+DO iQuad=1,nQuads
   Elem=>Quads(iQuad)%ep
   DO iLocSide=1,6
     Side=>Elem%Side(iLocSide)%sp
@@ -169,21 +168,21 @@ CALL WriteArrayToHDF5(File_ID,'BCType',nBCs,2,(/nBcs,4/),0,IntegerArray=Boundary
 !-----------------------------------------------------------------
 WRITE(*,*)'WRITE Barycenters'
 
-ALLOCATE(ElemBary(nQuadrants,3))
-DO iQuad=1,nQuadrants
+ALLOCATE(ElemBary(nQuads,3))
+DO iQuad=1,nQuads
   ElemBary(iQuad,1)=SUM(XgeoQuad(1,:,:,:,iQuad))
   ElemBary(iQuad,2)=SUM(XgeoQuad(2,:,:,:,iQuad))
   ElemBary(iQuad,3)=SUM(XgeoQuad(3,:,:,:,iQuad))
 END DO !iQuad=1,nElem
 ElemBary(:,:)=ElemBary(:,:)*(1./(Ngeo+1)**3)
 
-CALL WriteArrayToHDF5(File_ID,'ElemBarycenters',nQuadrants,2,(/nQuadrants,3/),0,RealArray=ElemBary)
+CALL WriteArrayToHDF5(File_ID,'ElemBarycenters',nQuads,2,(/nQuads,3/),0,RealArray=ElemBary)
 DEALLOCATE(ElemBary)
 
 !-----------------------------------------------------------------
 ! WRITE NodeCoords  for each element !!!! (multiple nodes!!!)
 !-----------------------------------------------------------------
-nNodeIDs=(Ngeo+1)**3*nQuadrants
+nNodeIDs=(Ngeo+1)**3*nQuads
 CALL WriteArrayToHDF5(File_ID,'NodeCoords',nNodeIDs,2,(/nNodeIDs,3/),0,  &
           RealArray=TRANSPOSE(RESHAPE(XgeoQuad,(/3,nNodeIDs/))) )
 DEALLOCATE(XgeoQuad)
@@ -194,13 +193,13 @@ DEALLOCATE(XgeoQuad)
 !-----------------------------------------------------------------
 WRITE(*,*)'WRITE ElemInfo'
 
-ALLOCATE(ElemInfo(1:nQuadrants,ELEM_InfoSize))
+ALLOCATE(ElemInfo(1:nQuads,ELEM_InfoSize))
 ElemInfo=0
 Elemcounter=0
 Elemcounter(:,1)=(/104,204,105,115,205,106,116,206,108,118,208/)
 iNode  = 0 
 iSide  = 0
-DO iQuad=1,nQuadrants
+DO iQuad=1,nQuads
   Elem=>Quads(iQuad)%ep
   locnNodes=8+nCurvedNodes
   locnSides=0
@@ -234,8 +233,8 @@ END DO !iQuad
 nTotalNodes = iNode
 nTotalSides = iSide
 
-!WRITE ElemInfo,into (1,nQuadrants)  
-CALL WriteArrayToHDF5(File_ID,'ElemInfo',nQuadrants,2,(/nQuadrants,ELEM_InfoSize/),0,IntegerArray=ElemInfo)
+!WRITE ElemInfo,into (1,nQuads)  
+CALL WriteArrayToHDF5(File_ID,'ElemInfo',nQuads,2,(/nQuads,ELEM_InfoSize/),0,IntegerArray=ElemInfo)
 
 DEALLOCATE(ElemInfo)
 
@@ -249,10 +248,10 @@ END DO
 !-----------------------------------------------------------------
 ! element weights
 !-----------------------------------------------------------------
-!WRITE ElemWeight,into (1,nQuadrants)  
-ALLOCATE(ElemWeight(1:nQuadrants))
+!WRITE ElemWeight,into (1,nQuads)  
+ALLOCATE(ElemWeight(1:nQuads))
 ElemWeight=1.
-CALL WriteArrayToHDF5(File_ID,'ElemWeight',nQuadrants,1,(/nQuadrants/),0,RealArray=ElemWeight)
+CALL WriteArrayToHDF5(File_ID,'ElemWeight',nQuads,1,(/nQuads/),0,RealArray=ElemWeight)
 DEALLOCATE(ElemWeight)
 
 
@@ -265,7 +264,7 @@ WRITE(*,*)'WRITE SideInfo'
 ALLOCATE(SideInfo(1:nTotalSides,SIDE_InfoSize)) 
 SideInfo=0 
 iSide=0
-DO iQuad=1,nQuadrants
+DO iQuad=1,nQuads
   Elem=>Quads(iQuad)%ep
   DO iLocSide=1,6
     Side=>Elem%Side(iLocSide)%sp
@@ -304,7 +303,7 @@ DO iQuad=1,nQuadrants
       SideInfo(iSide,SIDE_BCID)=Side%BCIndex                            
     END IF
   END DO !iLocSide=1,6
-END DO !iQuad=1,nQuadrants
+END DO !iQuad=1,nQuads
 
 !WRITE SideInfo,into (1,nTotalSides)   
 CALL WriteArrayToHDF5(File_ID,'SideInfo',nTotalSides,2,(/nTotalSides,SIDE_InfoSize/),0,IntegerArray=SideInfo)
@@ -337,9 +336,9 @@ master%Node(7)%np%ind=HexMap(Ngeo,Ngeo,Ngeo)
 master%Node(8)%np%ind=HexMap(   0,Ngeo,Ngeo)
 CALL createSides(master)
 
-IF(nTotalNodes.NE.locnNodes*nQuadrants) &
+IF(nTotalNodes.NE.locnNodes*nQuads) &
        CALL abort(__STAMP__,&
-          'Sanity check: nNodes not equal to locnNodes*nQuadrants!')
+          'Sanity check: nNodes not equal to locnNodes*nQuads!')
 
 
 
@@ -350,7 +349,7 @@ NodeID=0
 
 offsetID=0
 locnNodes=(Ngeo+1)**3
-DO iQuad=1,nQuadrants
+DO iQuad=1,nQuads
   Elem=>Quads(iQuad)%ep
   DO iNode=1,8
     NodeID=NodeID+1
@@ -370,7 +369,7 @@ DO iQuad=1,nQuadrants
     END IF
   END DO !iLocSide=1,6
   offsetID=offsetID+locnNodes
-END DO !iQuad=1,nQuadrants
+END DO !iQuad=1,nQuads
 
 IF(NodeID.NE.nTotalNodes) &
        CALL abort(__STAMP__,&

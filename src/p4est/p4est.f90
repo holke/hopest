@@ -27,6 +27,10 @@ INTERFACE BuildBCs
   MODULE PROCEDURE BuildBCs
 END INTERFACE
 
+INTERFACE testHOabc
+  MODULE PROCEDURE testHOabc
+END INTERFACE
+
 INTERFACE FinalizeP4EST
   MODULE PROCEDURE FinalizeP4EST
 END INTERFACE
@@ -35,6 +39,7 @@ PUBLIC::InitP4EST
 PUBLIC::BuildMeshFromP4EST
 PUBLIC::getHFlip
 PUBLIC::BuildBCs
+PUBLIC::testHOabc
 PUBLIC::FinalizeP4EST
 !===================================================================================================================================
 
@@ -82,7 +87,6 @@ USE MOD_Globals
 USE MOD_Mesh_Vars
 USE MOD_P4EST_Vars
 USE MOD_P4EST_Binding
-USE MOD_Output_Vars, ONLY:Projectname
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -92,7 +96,7 @@ IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 TYPE(C_PTR)                 :: QT,QQ,QF,QH,TB
-TYPE(tElem),POINTER         :: aQuad,nbQuad,Tree
+TYPE(tElem),POINTER         :: aQuad,nbQuad
 TYPE(tSide),POINTER         :: aSide
 INTEGER                     :: iQuad,iMortar,jMortar,iElem
 INTEGER                     :: PSide,PnbSide,nbSide
@@ -100,8 +104,8 @@ INTEGER                     :: nbQuadInd
 INTEGER                     :: PMortar,PFlip,HFlip,QHInd
 INTEGER                     :: iLocSide
 INTEGER                     :: StartQuad,EndQuad
-INTEGER                     :: BClocSide,BCindex
-INTEGER(KIND=C_INT16_T),POINTER :: TreeToBC(:,:)
+INTEGER                     :: BCindex
+INTEGER(KIND=C_INT32_T),POINTER :: TreeToBC(:,:)
 !===================================================================================================================================
 SWRITE(UNIT_stdOut,'(A)')'GENERATE HOPEST MESH FROM P4EST ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
@@ -109,19 +113,19 @@ SWRITE(UNIT_StdOut,'(132("-"))')
 ! build p4est mesh
 CALL p4_build_mesh(p4est,mesh)
 ! Get arrays from p4est: use pointers for c arrays (QT,QQ,..), duplicate data for QuadCoords,Level
-CALL p4_get_mesh_info(p4est,mesh,nQuadrants,nHalfFaces,nElems)
+CALL p4_get_mesh_info(p4est,mesh,nQuads,nGlobalQuads,offsetQuad,nHalfFaces,nElems)
 
-ALLOCATE(QuadCoords(3,nQuadrants),QuadLevel(nQuadrants)) ! big to small flip
+ALLOCATE(QuadCoords(3,nQuads),QuadLevel(nQuads)) ! big to small flip
 QuadCoords=0
 QuadLevel=0
 
-CALL p4_get_quadrants(p4est,mesh,nQuadrants,nHalfFaces,& !IN
+CALL p4_get_quadrants(p4est,mesh,nQuads,nHalfFaces,& !IN
                       intsize,QT,QQ,QF,QH,QuadCoords,QuadLevel)              !OUT
 sIntSize=1./REAL(Intsize)
 
-CALL C_F_POINTER(QT,QuadToTree,(/nQuadrants/))
-CALL C_F_POINTER(QQ,QuadToQuad,(/6,nQuadrants/))
-CALL C_F_POINTER(QF,QuadToFace,(/6,nQuadrants/))
+CALL C_F_POINTER(QT,QuadToTree,(/nQuads/))
+CALL C_F_POINTER(QQ,QuadToQuad,(/6,nQuads/))
+CALL C_F_POINTER(QF,QuadToFace,(/6,nQuads/))
 IF(nHalfFaces.GT.0) CALL C_F_POINTER(QH,QuadToHalf,(/4,nHalfFaces/))
 
 ! Get boundary conditions from p4est
@@ -130,12 +134,12 @@ CALL C_F_POINTER(TB,TreeToBC,(/6,nElems/))
 
 ALLOCATE(TreeToQuad(2,nElems))
 TreeToQuad(1,1)=0
-TreeToQuad(2,nElems)=nQuadrants
+TreeToQuad(2,nElems)=nQuads
 StartQuad=0
 EndQuad=0
 DO iElem=1,nElems
   TreeToQuad(1,iElem)=StartQuad
-  DO iQuad=StartQuad+1,nQuadrants
+  DO iQuad=StartQuad+1,nQuads
     IF(QuadToTree(iQuad)+1.EQ.iElem)THEN
       EndQuad=EndQuad+1
     ELSE
@@ -152,18 +156,21 @@ END DO !iElem
 !----------------------------------------------------------------------------------------------------------------------------
 
 !read local ElemInfo from data file
-ALLOCATE(Quads(1:nQuadrants))
-DO iQuad=1,nQuadrants
+ALLOCATE(Quads(1:nQuads))
+DO iQuad=1,nQuads
   Quads(iQuad)%ep=>GETNEWELEM()
   aQuad=>Quads(iQuad)%ep
   aQuad%Ind    = iQuad
   CALL CreateSides(aQuad)
   DO iLocSide=1,6
+    aQuad%Side(iLocSide)%sp%tmp=0
     aQuad%Side(iLocSide)%sp%flip=-999
   END DO
 END DO
 
-DO iQuad=1,nQuadrants
+nBCSides=0
+nMortarSides=0
+DO iQuad=1,nQuads
   aQuad=>Quads(iQuad)%ep
   IF(useCurveds)THEN
     aQuad%type=208 ! fully curved
@@ -194,6 +201,7 @@ DO iQuad=1,nQuadrants
 
         aSide%MortarSide(iMortar)%sp=>nbQuad%side(nbSide)%sp
         aSide%MortarSide(iMortar)%sp%flip=HFlip
+        nMortarSides=nMortarSides+1
       END DO ! iMortar
     ELSE
       nbQuadInd=QuadToQuad(PSide+1,iQuad)+1
@@ -206,6 +214,7 @@ DO iQuad=1,nQuadrants
         aSide%BCIndex=BCIndex
         NULLIFY(aSide%connection)
         aSide%Flip=0
+        nBCSides=nBCSides+1
       ELSE
         !this is an inner side (either no mortar or small side mortar)
         aSide%connection=>nbQuad%side(nbSide)%sp
@@ -216,8 +225,34 @@ DO iQuad=1,nQuadrants
   END DO !iLocSide
 END DO !iQuad
 
+DO iQuad=1,nQuads
+  aQuad=>Quads(iQuad)%ep
+  IF(useCurveds)THEN
+    aQuad%type=208 ! fully curved
+  ELSE
+    aQuad%type=118 ! trilinear
+  END IF
+  DO iLocSide=1,6
+    aSide=>aQuad%Side(iLocSide)%sp
+    IF(aSide%tmp.NE.0) CYCLE
+    nSides=nSides+1
+    IF(ASSOCIATED(aSide%connection)) aSide%connection%tmp=-1
+    IF(aSide%BCindex.NE.0)THEN !side is BC or periodic side
+      IF(ASSOCIATED(aSide%connection))THEN
+        !nPeriodicSides=nPeriodicSides+1
+      ELSE
+        IF(aSide%MortarType.EQ.0)THEN !really a BC side
+          nBCSides=nBCSides+1
+        END IF
+      END IF
+    END IF
+    IF(aSide%MortarType.GT.0) nMortarSides=nMortarSides+1
+  END DO
+END DO
+nInnerSides=nSides-nBCSides-nMortarSides
+
 ! set master slave,  element with lower element ID is master (flip=0)
-DO iQuad=1,nQuadrants
+DO iQuad=1,nQuads
   aQuad=>Quads(iQuad)%ep
   DO iLocSide=1,6
     aSide=>aQuad%Side(iLocSide)%sp
@@ -239,7 +274,7 @@ DO iQuad=1,nQuadrants
 END DO
 
 !sanity check
-DO iQuad=1,nQuadrants
+DO iQuad=1,nQuads
   aQuad=>Quads(iQuad)%ep
   DO iLocSide=1,6
     IF(aQuad%Side(iLocSide)%sp%flip.LT.0) THEN
@@ -402,7 +437,7 @@ IMPLICIT NONE
 TYPE(tElem),POINTER         :: Elem
 TYPE(tSide),POINTER         :: Side
 INTEGER                     :: iElem,iSide
-INTEGER(KIND=C_INT16_T)     :: BCElemMap(0:5,nElems)
+INTEGER(KIND=C_INT32_T)     :: BCElemMap(0:5,nElems)
 !===================================================================================================================================
 BCElemMap=-1
 DO iELem=1,nElems
@@ -414,6 +449,80 @@ DO iELem=1,nElems
 END DO
 CALL p4_build_bcs(p4est,nElems,BCElemMap)
 END SUBROUTINE BuildBCs
+
+SUBROUTINE buildHOp4GeometryX(a,b,c,x,y,z,tree)
+!===================================================================================================================================
+! Subroutine to translate p4est mesh datastructure to HOPR datastructure
+!===================================================================================================================================
+! MODULES
+USE, INTRINSIC :: ISO_C_BINDING
+USE MOD_Globals
+USE MOD_Basis,        ONLY: LagrangeInterpolationPolys
+USE MOD_Mesh_Vars,    ONLY: XGeo,xi_Ngeo,wBary_Ngeo,NGeo
+! IMPLICIT VARIABLE HANDLING
+IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+REAL( KIND = C_DOUBLE ),INTENT(IN),VALUE    :: a,b,c
+P4EST_F90_TOPIDX,INTENT(IN),VALUE    :: tree
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+REAL( KIND = C_DOUBLE ),INTENT(OUT)         :: x,y,z
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES
+REAL         :: Vdm_xi(0:NGeo),Vdm_eta(0:NGeo),Vdm_zeta(0:NGeo),Vdm_eta_zeta
+REAL         :: xi(3),HOabc(3)
+INTEGER      :: i,j,k
+!-----------------------------------------------------------------------------------------------------------------------------------
+
+xi(1)=-1.+2*a
+xi(2)=-1.+2*b
+xi(3)=-1.+2*c
+CALL LagrangeInterpolationPolys(xi(1),Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_xi(:))
+CALL LagrangeInterpolationPolys(xi(2),Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_eta(:))
+CALL LagrangeInterpolationPolys(xi(3),Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_zeta(:))
+HOabc(:)=0.
+DO k=0,NGeo
+  DO j=0,NGeo
+    Vdm_eta_zeta=Vdm_eta(j)*Vdm_zeta(k)
+    DO i=0,NGeo
+      HOabc(:)=HOabc(:)+XGeo(:,i,j,k,tree)*Vdm_xi(i)*Vdm_eta_zeta
+    END DO
+  END DO
+END DO
+x=HOabc(1)
+y=HOabc(2)
+z=HOabc(3)
+
+END SUBROUTINE buildHOp4GeometryX
+
+SUBROUTINE testHOabc()
+!===================================================================================================================================
+! Subroutine to translate p4est mesh datastructure to HOPR datastructure
+!===================================================================================================================================
+! MODULES
+USE, INTRINSIC :: ISO_C_BINDING
+! IMPLICIT VARIABLE HANDLING
+IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES
+REAL        :: a,b,c,x,y,z
+P4EST_F90_TOPIDX      :: tree
+!-----------------------------------------------------------------------------------------------------------------------------------
+a=1
+b=0
+c=0
+tree=1
+
+CALL buildHOp4GeometryX(a,b,c,x,y,z,tree)
+
+WRITE(*,*) x,y,z
+
+END SUBROUTINE testHOabc
 
 
 SUBROUTINE FinalizeP4EST()

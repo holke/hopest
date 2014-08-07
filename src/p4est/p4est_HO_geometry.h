@@ -20,14 +20,20 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-#ifndef _HOPEST_P4EST_GEOM_H
-#define _HOPEST_P4EST_GEOM_H
+#ifndef _HOPEST_P4EST_HO_GEOMETRY_H
+#define _HOPEST_P4EST_HO_GEOMETRY_H
+
+#include <hopest.h>
+#include <p8est_geometry.h>
+
+void p4_geometry_X (p8est_geometry_t * geom,
+                                           p4est_topidx_t which_tree,
+                                           const double abc[3],
+                                           double xyz[3]);
 
 
-#define FillStrings_FC \
-  HOPEST_FC_FUNC (wrapfillstrings, WRAPFILLSTRINGS)
-#define ReadMeshFromHDF5_FC \
-  HOPEST_FC_FUNC (wrapreadmeshfromhdf5nobuildp4est,WRAPREADMESHFROMHDF5NOBUILDP4EST)
+#define buildHOp4GeometryX_FC \
+  HOPEST_FC_FUNC (wrapbuildhop4geometryx,WRAPBUILDHOP4ESTGEOMETRY)
 
 #ifdef __cplusplus
 extern              "C"         /* prevent C++ name mangling */
@@ -37,8 +43,7 @@ extern              "C"         /* prevent C++ name mangling */
 #endif
 #endif
 
-void FillStrings_FC(char *inifile,int inifile_len);
-void ReadMeshFromHDF5_FC(char *hdf5file,int hdf5file_len,p8est_connectivity_t **conn);
+void buildHOp4GeometryX_FC(double,double,double,double*,double*,double*,p4est_topidx_t);
 
 #ifdef __cplusplus
 #if 0
@@ -47,4 +52,4 @@ void ReadMeshFromHDF5_FC(char *hdf5file,int hdf5file_len,p8est_connectivity_t **
 }
 #endif
 
-#endif /* _HOPEST_P4EST_GEOM_H */
+#endif /* _HOPEST_P4EST_HO_GEOMETRY_H */
