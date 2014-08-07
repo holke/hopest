@@ -68,7 +68,7 @@ DO iRefine=1,nRefines
     refineBCIndex=GETINT('refineBCIndex','1')
     CALL InitRefineBoundaryElems()
     refineFunc=C_FUNLOC(RefineByList)
-  CASE(3)
+  CASE(3) ! Refine by Geometry
     CALL InitRefineGeom()
     refineFunc=C_FUNLOC(RefineByGeom)
   CASE(11)
@@ -159,6 +159,7 @@ SUBROUTINE InitRefineGeom()
 ! MODULES
 USE MOD_Globals
 USE MOD_Refine_Vars, ONLY: refineGeomType,sphereCenter,sphereRadius,boxBoundary 
+USE MOD_Refine_Vars, ONLY: shellRadius_inner,shellRadius_outer,shellCenter
 USE MOD_Readintools,ONLY:GETREALARRAY,GETINT,GETREAL
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
@@ -177,6 +178,11 @@ SELECT CASE(refineGeomType)
   CASE(1) ! Sphere
     sphereCenter =GETREALARRAY('sphereCenter',3)
     sphereRadius =GETREAL('sphereRadius')
+  CASE(11) ! Sphere Shell
+    shellCenter =GETREALARRAY('shellCenter',3)
+    shellRadius_inner =GETREAL('shellRadius_inner')
+    shellRadius_outer =GETREAL('shellRadius_outer')
+    IF(shellRadius_inner .GE. shellRadius_outer) STOP 'inner radius is greater or equal to outer radius!'
   CASE(2) ! Box 
     boxBoundary=GETREALARRAY('boxBoundary',6)
   CASE DEFAULT
@@ -269,6 +275,7 @@ FUNCTION RefineByGeom(x,y,z,tree,level,childID) BIND(C)
 USE, INTRINSIC :: ISO_C_BINDING
 USE MOD_Refine_Vars, ONLY: RefineList,refineBoundary,refineGeomType,refineLevel
 USE MOD_Refine_Vars, ONLY: sphereCenter,sphereRadius,boxBoundary
+USE MOD_Refine_Vars, ONLY: shellRadius_inner,shellRadius_outer,shellCenter
 USE MOD_Mesh_Vars,   ONLY: XGeo,Ngeo
 USE MOD_Mesh_Vars,   ONLY: wBary_Ngeo,xi_Ngeo
 USE MOD_P4EST_Vars,  ONLY: Quadcoords 
@@ -297,6 +304,9 @@ INTEGER(KIND=C_INT) :: refineByGeom
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
+! TODO :
+! Sichereres Kriterium: kleinste Abstand zwischen Baryzentrum und geom. Objekt muss kleiner sein als Element-Diagonale!
+! Beispiel Kugel/Shell: Länge des Vektors von Elementbaryzentrum zum Kugelmittelpunkt minus Kugelradius kleiner als Element-Diagonale
 refineByGeom = 0
 IF(level.GE.refineLevel) RETURN
 
@@ -310,7 +320,7 @@ xi0(3)=-1.+2.*REAL(z)*sIntSize
 ! length of the quadrant in reference coordinates of its tree [-1,1]
 length=2./REAL(2**level)
 ! Build Vandermonde matrices for each parameter range in xi, eta,zeta
-DO i=0,Ngeo
+DO i=0,Ngeo  
   dxi=0.5*(xi_Ngeo(i)+1.)*Length
   CALL LagrangeInterpolationPolys(xi0(1) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_xi(i,:)) 
   CALL LagrangeInterpolationPolys(xi0(2) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_eta(i,:)) 
@@ -338,11 +348,11 @@ XBaryQuad(:)=0.
   END DO
 SELECT CASE (refineGeomType)
 CASE(1)   ! SPHERE
-  ! check corner nodes
-  DO k=0,1
-    DO j=0,1
-      DO i=0,1
-        XCorner(:)=XgeoQuad(:,i*NGeo,j*NGeo,k*NGeo)
+  ! check NGeo Nodes (TODO: supersampling to NSuper for this check)
+  DO k=0,Ngeo
+    DO j=0,Ngeo
+      DO i=0,Ngeo
+        XCorner(:)=XgeoQuad(:,i,j,k)
         test=SQRT((XCorner(1)-sphereCenter(1))**2+(XCorner(2)-sphereCenter(2))**2+(XCorner(3)-sphereCenter(3))**2)
         IF (test.LE.sphereRadius) THEN
           refineByGeom = 1
@@ -358,13 +368,35 @@ CASE(1)   ! SPHERE
   ELSE
     refineByGeom = 0
   END IF
-  
+
+CASE(11)   ! SPHERE SHELL
+  ! check NGeo Nodes (TODO: supersampling to NSuper for this check)
+  DO k=0,Ngeo
+    DO j=0,Ngeo
+      DO i=0,Ngeo
+        XCorner(:)=XgeoQuad(:,i,j,k)
+        test=SQRT((XCorner(1)-shellCenter(1))**2+(XCorner(2)-shellCenter(2))**2+(XCorner(3)-shellCenter(3))**2)
+        IF ((test.LE.shellRadius_outer) .AND. (test.GE.shellRadius_inner)) THEN
+          refineByGeom = 1
+          RETURN
+        END IF
+      END DO ! i
+    END DO ! j 
+  END DO ! k
+  ! check barycenter
+  test=SQRT((XBaryQuad(1)-shellCenter(1))**2+(XBaryQuad(2)-shellCenter(2))**2+(XBaryQuad(3)-shellCenter(3))**2)
+  IF ((test.LE.shellRadius_outer) .AND. (test.GE.shellRadius_inner)) THEN
+    refineByGeom = 1
+  ELSE
+    refineByGeom = 0
+  END IF
+   
 CASE(2)   ! BOX
-  ! check corner nodes
-  DO k=0,1
-    DO j=0,1
-      DO i=0,1
-        XCorner(:)=XgeoQuad(:,i*NGeo,j*NGeo,k*NGeo)
+  ! check NGeo Nodes (TODO: supersampling to NSuper for this check)
+  DO k=0,NGeo
+    DO j=0,NGeo
+      DO i=0,NGeo
+        XCorner(:)=XgeoQuad(:,i,j,k)
         IF (XCorner(1) .GE. boxBoundary(1) .AND. XCorner(1) .LE. boxBoundary(2) .AND. & 
             XCorner(2) .GE. boxBoundary(3) .AND. XCorner(2) .LE. boxBoundary(4) .AND. &
             XCorner(3) .GE. boxBoundary(5) .AND. XCorner(3) .LE. boxBoundary(6)) THEN
