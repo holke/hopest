@@ -52,7 +52,7 @@ REAL,ALLOCATABLE               :: NodeCoords(:,:)
 REAL,ALLOCATABLE               :: ElemWeight(:)
 INTEGER                        :: iQuad,i,j,k
 INTEGER                        :: NodeID,iNode
-INTEGER                        :: iSide,SideID,iLocSide
+INTEGER                        :: iSide,SideID,iLocSide,iMortar
 INTEGER                        :: ElemCounter(11,2)
 INTEGER                        :: nSideIDs,nNodeIDs
 INTEGER                        :: nTotalSides,nTotalNodes
@@ -81,14 +81,30 @@ DO iQuad=1,nQuadrants
   DO iLocSide=1,6
     Side=>Elem%Side(iLocSide)%sp
     IF(Side%ind.EQ.0) THEN
-      nSideIDs=nSideIDs+1
-      Side%ind=-88888
-      IF(ASSOCIATED(Side%connection))THEN      
-        IF(Side%connection%ind.EQ.0) nSideIDs=nSideIDs-1 ! count inner and periodic sides only once 
+      IF(Side%MortarType.EQ.0)THEN
+        nSideIDs=nSideIDs+1
+        Side%ind=-88888
+        IF(ASSOCIATED(Side%connection))THEN      
+          IF(Side%connection%ind.EQ.0) nSideIDs=nSideIDs-1 ! count inner and periodic sides only once 
+        END IF
+      ELSEIF(Side%MortarType.GT.0)THEN
+        nSideIDs=nSideIDs+1
+        Side%ind=-88888
+        DO iMortar=1,Side%nMortars
+          IF(Side%MortarSide(iMortar)%sp%ind.EQ.0)THEN
+            nSideIDs=nSideIDs+1
+            Side%MortarSide(iMortar)%sp%ind=-88888
+          END IF 
+        END DO !iMortar
+      ELSE
+        nSideIDs=nSideIDs+1
+        Side%ind=-88888
       END IF
     END IF
   END DO
 END DO
+
+WRITE(*,*)'nSideIDs',nSideIDs
 
 !set unique nodes and Side Indices
 SideID=0
@@ -96,22 +112,44 @@ NodeID=0
 DO iQuad=1,nQuadrants
   Elem=>Quads(iQuad)%ep
   Elem%ind=iQuad
-
   DO iLocSide=1,6
     Side=>Elem%Side(iLocSide)%sp
     IF(side%ind.EQ.-88888) THEN  ! assign side ID only for non MPI sides and lower MPI sides
-      SideID=SideID+1
-      Side%ind=SideID
-      IF(ASSOCIATED(Side%connection))THEN     
-        IF(Side%connection%ind.NE.-88888) Side%connection%ind=SideID !already assigned
+      IF(Side%MortarType.EQ.0)THEN
+        SideID=SideID+1
+        Side%ind=SideID
+        IF(ASSOCIATED(Side%connection))THEN      
+          IF(Side%connection%ind.EQ.-88888) Side%connection%ind=SideID ! count inner and periodic sides only once 
+        END IF
+      ELSEIF(Side%MortarType.GT.0)THEN
+        SideID=SideID+1
+        Side%ind=SideID
+        DO iMortar=1,Side%nMortars
+          IF(Side%MortarSide(iMortar)%sp%ind.EQ.-88888)THEN
+            SideID=SideID+1
+            Side%MortarSide(iMortar)%sp%ind=SideID
+          END IF 
+        END DO !iMortar
+      ELSE
+        SideID=SideID+1
+        Side%ind=SideID
       END IF
     END IF
-  END DO
+  END DO !iLocSide
 END DO !Elem
+
+DO iQuad=1,nQuadrants
+  Elem=>Quads(iQuad)%ep
+  DO iLocSide=1,6
+    Side=>Elem%Side(iLocSide)%sp
+    IF((Side%ind.LE.0).OR.(Side%ind.GT.nSideIds)) STOP 'Problem with sideID assigment'
+  END DO !iLocSide
+END DO !Elem
+
+IF(SideID.NE.nSideIDs) STOP' problem: SideID <> nSideIDs'
 
 ! start output
 CALL OpenHDF5File(FileString,create=.TRUE.,single=.TRUE.)  
-
 
 !-----------------------------------------------------------------
 !attributes 
@@ -172,7 +210,14 @@ DO iQuad=1,nQuadrants
     locnNodes = locnNodes+1 ! wirte only first oriented node of side, if curved all!         
     locnSides = locnSides+1
 
-    !+ MORTAR SIDES  !?!?
+    !Mortar
+    SELECT CASE(Side%MortarType)
+    CASE(0) !do nothing
+    CASE(1)
+      locnSides=locnSides+4
+    CASE(2,3)
+      locnSides=locnSides+2
+    END SELECT
 
   END DO !iLocSide=1,6
   ElemInfo(iQuad,ELEM_Type)         = Elem%Type        ! Element Type
@@ -234,12 +279,30 @@ DO iQuad=1,nQuadrants
     !Side ID
     SideInfo(iSide,SIDE_ID)=Side%ind
     IF(Side%flip.GT.0) SideInfo(iSide,SIDE_ID)=-SideInfo(iSide,SIDE_ID)           ! side is slave side
-    !neighbor Element ID
-    IF(ASSOCIATED(Side%Connection))THEN
-      SideInfo(iSide,SIDE_nbElemID)=Side%Connection%Elem%ind                   ! Element ID of neighbor Element
+    !MORTAR
+    IF(Side%MortarType.GT.0)THEN
+      SideInfo(iSide,SIDE_nbElemID)=-Side%MortarType !marker for attached mortar sides
+      SideInfo(iSide,SIDE_BCID)    = Side%BCIndex                            
+      IF(Side%flip.NE.0) STOP 'Problem with flip on mortar'
+      DO iMortar=1,Side%nMortars
+        iSide=iSide+1
+        !Side Tpye
+        IF(Ngeo.GT.1)THEN
+          SideInfo(iSide,SIDE_Type)=7            ! Side Type: NL quad
+        ELSE
+          SideInfo(iSide,SIDE_Type)=5            ! Side Type: bilinear
+        END IF
+        !Side ID
+        SideInfo(iSide,SIDE_ID)      = Side%MortarSide(iMortar)%sp%ind
+        SideInfo(iSide,SIDE_nbElemID)= Side%MortarSide(iMortar)%sp%Elem%ind      ! Element ID of neighbor Element
+        SideInfo(iSide,SIDE_BCID)    = Side%MortarSide(iMortar)%sp%BCIndex                            
+      END DO
+    ELSE !no mortar side
+      IF(ASSOCIATED(Side%Connection))THEN
+        SideInfo(iSide,SIDE_nbElemID)=Side%Connection%Elem%ind                   ! Element ID of neighbor Element
+      END IF
+      SideInfo(iSide,SIDE_BCID)=Side%BCIndex                            
     END IF
-    !BC ID 
-    SideInfo(iSide,SIDE_BCID)=Side%BCIndex                            
   END DO !iLocSide=1,6
 END DO !iQuad=1,nQuadrants
 

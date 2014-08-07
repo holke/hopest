@@ -75,7 +75,7 @@ CALL writeMeshToHDF5(TRIM(ProjectName)//'_mesh_p4est.h5')
 ! dealloacte pointers
 !CALL testHOabc()
 SWRITE(UNIT_stdOut,'(A)') "NOW CALLING deleteMeshPointer..."
-CALL deleteMeshPointer()
+!CALL deleteMeshPointer()
 
 CALL FinalizeHopestMesh()
 SWRITE(UNIT_stdOut,'(A)')' HOPEST MESH DONE!'

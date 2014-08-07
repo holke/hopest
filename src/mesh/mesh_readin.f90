@@ -444,11 +444,6 @@ DO iElem=1,nElems
   END DO !iLocSide
 END DO !iElem
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
-! FOR SECURITY NO PERIODICITY
-WRITE(*,*)'num_periodics set =0  for security !!! ',num_periodics
-num_periodics=0
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
 
 IF(num_periodics.GT.0) THEN
   ALLOCATE(JoinFaces(5,num_periodics))
@@ -490,8 +485,7 @@ IF(num_periodics.GT.0) THEN
 END IF !num_periodics>0
 
 CALL p4_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex, &
-                                num_periodics,JoinFaces,connectivity)
-
+                                   num_periodics,JoinFaces,connectivity)
 CALL p4_build_p4est(connectivity,p4est)
 
 DEALLOCATE(Vertices,tree_to_vertex)
