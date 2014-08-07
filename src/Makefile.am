@@ -38,7 +38,9 @@ libhopest_compiled_sources += \
 	src/mesh/mesh.f90 \
 	src/mesh/mesh_readin.f90 \
 	src/hopest_solver.f90 \
-	src/hopest_mesh.f90
+	src/hopest_mesh.f90 \
+	src/p4est/p4est_HO_geometry.c \
+	src/fortranwrap.f90
 endif
 
 # this variable is used for headers that are not publicly installed

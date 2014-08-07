@@ -7,6 +7,7 @@
 #include <p8est_mesh.h>
 #include <p8est.h>
 #include <p8est_extended.h>
+#include "p4est_HO_geometry.h"
 // 3D mode
 #include <p4est_to_p8est.h>
 
@@ -111,12 +112,21 @@ void p4_build_p4est ( p4est_connectivity_t *conn,
                       p4est_t              **p4est_out )
 {
   p4est_t* p4est;
+  p4est_geometry_t   *geom;
 
   printf("connectivity %p \n",conn);
   fflush(stdout);
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
   /* Create a forest that is not refined; it consists of the root octant. */
   p4est = p4est_new (mpicomm, conn, 0, NULL, NULL);
+
+/*
+
+  geom = P4EST_ALLOC_ZERO (p4est_geometry_t, 1);
+  geom->name = "hopest_readfromhdf5";
+  geom->X = p4_geometry_X;
+
+*/
   printf("p4est %p \n",p4est);
   *p4est_out=p4est;
 }
@@ -218,7 +228,6 @@ void p4_get_quadrants( p4est_t       *p4est,
 
   if(num_half_faces>0) *quad_to_half=mesh->quad_to_half->array;
 }
-
 
 void p4_savemesh ( char    filename[],
                    p4est_t *p4est)
