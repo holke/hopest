@@ -17,11 +17,16 @@ INTERFACE HopestSolver
   MODULE PROCEDURE HopestSolver
 END INTERFACE
 
+INTERFACE PrepareMesh
+  MODULE PROCEDURE PrepareMesh
+END INTERFACE
+
 INTERFACE FinalizeHopestSolver
   MODULE PROCEDURE FinalizeHopestSolver
 END INTERFACE
 
 PUBLIC::HopestSolver
+PUBLIC::PrepareMesh
 PUBLIC::FinalizeHopestSolver
 !===================================================================================================================================
 
@@ -66,13 +71,40 @@ CALL BuildMeshFromP4EST()
 CALL ReadGeoFromHDF5(MeshFile)
 CALL BuildHOMesh()
 
-!CALL FlexiPrepareMesh() ! Suggestion
-
-SWRITE(UNIT_stdOut,'(A)') "NOW CALLING deleteMeshPointer..."
-
 SWRITE(UNIT_stdOut,'(A)')' INIT MESH DONE!'
 SWRITE(UNIT_StdOut,'(132("-"))')
 END SUBROUTINE HopestSolver
+
+
+SUBROUTINE PrepareMesh()
+!===================================================================================================================================
+! Read Parameter from inputfile 
+!===================================================================================================================================
+! MODULES
+USE MOD_Prepare_Mesh
+USE MOD_Mesh_Vars,ONLY: nQuads,nSides,nBCSides
+USE MOD_Mesh_Vars,ONLY: ElemToSide,SideToElem,BC,AnalyzeSide
+IMPLICIT NONE
+! INPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT/OUTPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES
+INTEGER :: i
+!===================================================================================================================================
+CALL countSides()
+ALLOCATE(ElemToSide(2,6,nQuads))
+ALLOCATE(SideToElem(5,nSides))
+ALLOCATE(BC(nBCSides))
+ALLOCATE(AnalyzeSide(nSides))
+CALL setLocalSideIDs()
+#ifdef MPI
+CALL exchangeFlip()    ! should be already known from p4est
+#endif
+CALL fillMeshInfo()
+END SUBROUTINE PrepareMesh
 
 
 SUBROUTINE FinalizeHopestSolver()
@@ -91,7 +123,7 @@ IMPLICIT NONE
 !----------------------------------------------------------------------------------------------------------------------------
 !local variables
 !============================================================================================================================
-CALL deleteMeshPointer()
+!CALL deleteMeshPointer()
 CALL FinalizeP4EST()
 END SUBROUTINE FinalizeHopestSolver
 

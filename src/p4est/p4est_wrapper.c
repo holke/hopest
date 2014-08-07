@@ -6,14 +6,14 @@
 #include <p8est_bits.h>
 #include <p8est_vtk.h>
 #include <p8est_mesh.h>
-#include <p8est.h>
 #include <p8est_extended.h>
 #include "p4est_HO_geometry.h"
-// 3D mode
+#include <p4est/p4est_wrapper.h>
+// 3D mode; must be included AFTER every other file
 #include <p4est_to_p8est.h>
 
 
-sc_MPI_Comm           mpicomm;
+static sc_MPI_Comm           mpicomm;
 
 // Init p4est 
 void p4_initvars()
@@ -179,23 +179,35 @@ void p4_get_bcs(p4est_t        *p4est,
 
 void p4_get_mesh_info ( p4est_t        *p4est,
                         p4est_mesh_t   *mesh,
-                        int            *global_num_quadrants,
-                        int            *num_half_faces,
-                        int            *num_trees )
+                        p4est_locidx_t *local_num_quadrants,
+                        p4est_gloidx_t *global_num_quadrants,
+                        p4est_gloidx_t *global_first_quadrant,
+                        int32_t         *num_half_faces,
+                        int32_t         *num_trees )
 {
-  *global_num_quadrants = p4est->global_num_quadrants;
-  *num_half_faces = mesh->quad_to_half->elem_count;      // big face with 4 small neighbours
-  *num_trees = p4est->trees->elem_count;
+  *local_num_quadrants   = p4est->local_num_quadrants;
+  *global_num_quadrants  = p4est->global_num_quadrants;
+  *global_first_quadrant = p4est->global_first_quadrant[p4est->mpirank];
+  num_half_faces = (int32_t) mesh->quad_to_half->elem_count;      // big face with 4 small neighbours
+  *num_trees = (int32_t) p4est->trees->elem_count;
   SC_CHECK_ABORTF (mesh->local_num_quadrants == p4est->global_num_quadrants,
-                   "Global quads %i and local quads %i mismatch ! ",
-                   (int) p4est->global_num_quadrants,(int) mesh->local_num_quadrants );
-
+                   "Global quads %d and local quads %d mismatch ! ",
+                   p4est->global_num_quadrants, mesh->local_num_quadrants );
+  /* TODO:
+   * In parallel, local and global num_quadrants WILL be different.
+   * This check will then die.
+   */
+  SC_CHECK_ABORTF ((p4est_gloidx_t) mesh->local_num_quadrants
+                   == p4est->global_num_quadrants,
+                   "Global quads %lld and local quads %d mismatch ! ",
+                   (long long) p4est->global_num_quadrants,
+                   mesh->local_num_quadrants );
 }
 
 void p4_get_quadrants( p4est_t       *p4est,
                        p4est_mesh_t   *mesh,
-                       int            global_num_quadrants,
-                       int            num_half_faces,
+                       p4est_locidx_t local_num_quadrants,
+                       int32_t        num_half_faces,
                        p4est_qcoord_t  *intsize,
                        p4est_topidx_t **quad_to_tree,
                        p4est_locidx_t **quad_to_quad,
@@ -211,7 +223,7 @@ void p4_get_quadrants( p4est_t       *p4est,
 
   *intsize = P4EST_ROOT_LEN;
 
-  P4EST_ASSERT (global_num_quadrants == p4est->local_num_quadrants);
+  P4EST_ASSERT (local_num_quadrants == p4est->local_num_quadrants);
   for (iquad = 0; iquad < mesh->local_num_quadrants; iquad++) {
     tree = p8est_tree_array_index (p4est->trees,mesh->quad_to_tree[iquad]);
     quadrants = &(tree->quadrants);
@@ -227,7 +239,8 @@ void p4_get_quadrants( p4est_t       *p4est,
   *quad_to_quad=mesh->quad_to_quad;
   *quad_to_face=mesh->quad_to_face;
 
-  if(num_half_faces>0) *quad_to_half=mesh->quad_to_half->array;
+  *quad_to_half = NULL;
+  if(num_half_faces>0) *quad_to_half = (p4est_locidx_t *) mesh->quad_to_half->array;
 }
 
 void p4_savemesh ( char    filename[],

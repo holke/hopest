@@ -2,6 +2,22 @@
 ! Here, preprocessor variables for different equation systems and abbreviations for specific expressions are defined
 !===================================================================================================================================
 
+! We include the file that contains all configure-time settings.
+#include <hopest_config.h>
+#ifdef HOPEST_ENABLE_MPI
+/* TODO: it should work to compile hopest with MPI defined. */
+/* #define MPI */
+#endif
+
+! Change if p4est changes its types
+! Ideally, this should be in a different file
+#define P4EST_F90_TOPIDX INTEGER(KIND=C_INT32_T)
+#define P4EST_F90_QCOORD INTEGER(KIND=C_INT32_T)
+#define P4EST_F90_LOCIDX INTEGER(KIND=C_INT32_T)
+#define P4EST_F90_GLOIDX INTEGER(KIND=C_INT64_T)
+#define P4EST_F90_QLEVEL INTEGER(KIND=C_INT8_T)
+
+
 ! Abbrevations
 #define __STAMP__ __FILE__,__LINE__,__DATE__,__TIME__
 
@@ -44,3 +60,14 @@
 #define SIDE_ID           2
 #define SIDE_nbElemID     3
 #define SIDE_BCID         4
+
+! Entry position in SideToElem
+#define S2E_ELEM_ID        1
+#define S2E_NB_ELEM_ID     2
+#define S2E_LOC_SIDE_ID    3
+#define S2E_NB_LOC_SIDE_ID 4
+#define S2E_FLIP           5
+
+! Entry position in ElemToSide
+#define E2S_SIDE_ID 1
+#define E2S_FLIP    2

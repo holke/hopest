@@ -56,12 +56,12 @@ INTERFACE
   IMPLICIT NONE
   !---------------------------------------------------------------------------------------------------------------------------------
   ! INPUT VARIABLES
-  INTEGER( KIND = C_INT),VALUE                :: num_vertices 
-  INTEGER( KIND = C_INT),VALUE                :: num_trees 
-  REAL( KIND = C_DOUBLE )                     :: Vertices(3,num_vertices)
-  INTEGER( KIND = C_INT)                      :: tree_to_vertex(8*num_trees) 
-  INTEGER( KIND = C_INT),VALUE                :: num_periodics 
-  INTEGER( KIND = C_INT)                      :: JoinFaces(5*num_periodics) 
+  P4EST_F90_TOPIDX,VALUE                :: num_vertices 
+  P4EST_F90_TOPIDX,VALUE                :: num_trees 
+  REAL( KIND = C_DOUBLE )               :: Vertices(3,num_vertices)
+  P4EST_F90_TOPIDX                      :: tree_to_vertex(8*num_trees) 
+  P4EST_F90_TOPIDX,VALUE                :: num_periodics 
+  P4EST_F90_TOPIDX                      :: JoinFaces(5*num_periodics) 
   !---------------------------------------------------------------------------------------------------------------------------------
   ! OUTPUT VARIABLES
   TYPE(C_PTR)                                 :: connectivity
@@ -143,7 +143,9 @@ INTERFACE
   END SUBROUTINE p4_get_bcs
 
 
-  SUBROUTINE p4_get_mesh_info(p4est,mesh,global_num_quadrants,num_half_faces,num_trees) BIND(C)
+  SUBROUTINE p4_get_mesh_info(p4est,mesh,&
+                              local_num_quadrants,global_num_quadrants,global_first_quadrant,&
+                              num_half_faces,num_trees) BIND(C)
   !=================================================================================================================================
   ! simple refine function, giving the level and if refine_elem < 0 then a conformal refinement is applied.
   !=================================================================================================================================
@@ -157,14 +159,16 @@ INTERFACE
   TYPE(C_PTR),VALUE,INTENT(IN)     :: mesh
   !---------------------------------------------------------------------------------------------------------------------------------
   ! OUTPUT VARIABLES
-  INTEGER,INTENT(OUT)              :: global_num_quadrants
-  INTEGER,INTENT(OUT)              :: num_half_faces
-  INTEGER,INTENT(OUT)              :: num_trees
+  P4EST_F90_LOCIDX,INTENT(OUT)              :: local_num_quadrants
+  P4EST_F90_GLOIDX,INTENT(OUT)              :: global_num_quadrants
+  P4EST_F90_GLOIDX,INTENT(OUT)              :: global_first_quadrant
+  INTEGER(KIND=C_INT32_T),INTENT(OUT)       :: num_half_faces
+  INTEGER(KIND=C_INT32_T),INTENT(OUT)       :: num_trees
   !=================================================================================================================================
   END SUBROUTINE p4_get_mesh_info
 
 
-  SUBROUTINE p4_get_quadrants(p4est,mesh,global_num_quadrants,num_half_faces,&
+  SUBROUTINE p4_get_quadrants(p4est,mesh,local_num_quadrants,num_half_faces,&
                                  intsize,quad_to_tree,quad_to_quad,quad_to_face,quad_to_half,&
                                  quadcoords,quadlevel) BIND(C)
   !=================================================================================================================================
@@ -176,19 +180,19 @@ INTERFACE
   IMPLICIT NONE
   !---------------------------------------------------------------------------------------------------------------------------------
   ! INPUT VARIABLES
-  TYPE(C_PTR),VALUE         :: p4est
-  TYPE(C_PTR),VALUE         :: mesh
-  INTEGER(KIND=C_INT),VALUE :: global_num_quadrants
-  INTEGER(KIND=C_INT),VALUE :: num_half_faces
+  TYPE(C_PTR),VALUE            :: p4est
+  TYPE(C_PTR),VALUE            :: mesh
+  P4EST_F90_LOCIDX,VALUE       :: local_num_quadrants
+  INTEGER(KIND=C_INT32_T),VALUE :: num_half_faces
   !---------------------------------------------------------------------------------------------------------------------------------
   ! OUTPUT VARIABLES
-  INTEGER(KIND=4),INTENT(OUT) :: intsize ! P4EST_ROOT_LEN -> int2real transform in parameter space, REAL=1/intsize*INT [0,1]
-  TYPE(C_PTR),INTENT(OUT)     :: quad_to_tree
-  TYPE(C_PTR),INTENT(OUT)     :: quad_to_quad
-  TYPE(C_PTR),INTENT(OUT)     :: quad_to_face
-  TYPE(C_PTR),INTENT(OUT)     :: quad_to_half
-  INTEGER(KIND=4),INTENT(OUT) :: quadcoords(  3,global_num_quadrants)
-  INTEGER(KIND=1),INTENT(OUT) :: quadlevel(     global_num_quadrants)
+  P4EST_F90_QCOORD,INTENT(OUT) :: intsize ! P4EST_ROOT_LEN -> int2real transform in parameter space, REAL=1/intsize*INT [0,1]
+  TYPE(C_PTR),INTENT(OUT)      :: quad_to_tree
+  TYPE(C_PTR),INTENT(OUT)      :: quad_to_quad
+  TYPE(C_PTR),INTENT(OUT)      :: quad_to_face
+  TYPE(C_PTR),INTENT(OUT)      :: quad_to_half
+  P4EST_F90_QCOORD,INTENT(OUT) :: quadcoords(  3,local_num_quadrants)
+  P4EST_F90_QLEVEL,INTENT(OUT) :: quadlevel(     local_num_quadrants)
   !=================================================================================================================================
   END SUBROUTINE p4_get_quadrants
 

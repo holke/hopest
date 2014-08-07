@@ -114,19 +114,19 @@ SWRITE(UNIT_StdOut,'(132("-"))')
 ! build p4est mesh
 CALL p4_build_mesh(p4est,mesh)
 ! Get arrays from p4est: use pointers for c arrays (QT,QQ,..), duplicate data for QuadCoords,Level
-CALL p4_get_mesh_info(p4est,mesh,nQuadrants,nHalfFaces,nElems)
+CALL p4_get_mesh_info(p4est,mesh,nQuads,nGlobalQuads,offsetQuad,nHalfFaces,nElems)
 
-ALLOCATE(QuadCoords(3,nQuadrants),QuadLevel(nQuadrants)) ! big to small flip
+ALLOCATE(QuadCoords(3,nQuads),QuadLevel(nQuads)) ! big to small flip
 QuadCoords=0
 QuadLevel=0
 
-CALL p4_get_quadrants(p4est,mesh,nQuadrants,nHalfFaces,& !IN
+CALL p4_get_quadrants(p4est,mesh,nQuads,nHalfFaces,& !IN
                       intsize,QT,QQ,QF,QH,QuadCoords,QuadLevel)              !OUT
 sIntSize=1./REAL(Intsize)
 
-CALL C_F_POINTER(QT,QuadToTree,(/nQuadrants/))
-CALL C_F_POINTER(QQ,QuadToQuad,(/6,nQuadrants/))
-CALL C_F_POINTER(QF,QuadToFace,(/6,nQuadrants/))
+CALL C_F_POINTER(QT,QuadToTree,(/nQuads/))
+CALL C_F_POINTER(QQ,QuadToQuad,(/6,nQuads/))
+CALL C_F_POINTER(QF,QuadToFace,(/6,nQuads/))
 IF(nHalfFaces.GT.0) CALL C_F_POINTER(QH,QuadToHalf,(/4,nHalfFaces/))
 
 ! Get boundary conditions from p4est
@@ -135,12 +135,12 @@ CALL C_F_POINTER(TB,TreeToBC,(/6,nElems/))
 
 ALLOCATE(TreeToQuad(2,nElems))
 TreeToQuad(1,1)=0
-TreeToQuad(2,nElems)=nQuadrants
+TreeToQuad(2,nElems)=nQuads
 StartQuad=0
 EndQuad=0
 DO iElem=1,nElems
   TreeToQuad(1,iElem)=StartQuad
-  DO iQuad=StartQuad+1,nQuadrants
+  DO iQuad=StartQuad+1,nQuads
     IF(QuadToTree(iQuad)+1.EQ.iElem)THEN
       EndQuad=EndQuad+1
     ELSE
@@ -157,18 +157,21 @@ END DO !iElem
 !----------------------------------------------------------------------------------------------------------------------------
 
 !read local ElemInfo from data file
-ALLOCATE(Quads(1:nQuadrants))
-DO iQuad=1,nQuadrants
+ALLOCATE(Quads(1:nQuads))
+DO iQuad=1,nQuads
   Quads(iQuad)%ep=>GETNEWELEM()
   aQuad=>Quads(iQuad)%ep
   aQuad%Ind    = iQuad
   CALL CreateSides(aQuad)
   DO iLocSide=1,6
+    aQuad%Side(iLocSide)%sp%tmp=0
     aQuad%Side(iLocSide)%sp%flip=-999
   END DO
 END DO
 
-DO iQuad=1,nQuadrants
+nBCSides=0
+nMortarSides=0
+DO iQuad=1,nQuads
   aQuad=>Quads(iQuad)%ep
   IF(useCurveds)THEN
     aQuad%type=208 ! fully curved
@@ -196,6 +199,7 @@ DO iQuad=1,nQuadrants
         nbSide=P2H_FaceMap(PnbSide)
         aSide%MortarSide(iMortar)%sp=>nbQuad%side(nbSide)%sp
         aSide%MortarSide(iMortar)%sp%flip=HFlip
+        nMortarSides=nMortarSides+1
       END DO ! iMortar
     ELSE
       nbQuadInd=QuadToQuad(PSide+1,iQuad)+1
@@ -208,6 +212,7 @@ DO iQuad=1,nQuadrants
         aSide%BCIndex=BCIndex
         NULLIFY(aSide%connection)
         aSide%Flip=0
+        nBCSides=nBCSides+1
       ELSE
         !this is an inner side (either no mortar or small side mortar)
         aSide%connection=>nbQuad%side(nbSide)%sp
@@ -218,8 +223,34 @@ DO iQuad=1,nQuadrants
   END DO
 END DO
 
+DO iQuad=1,nQuads
+  aQuad=>Quads(iQuad)%ep
+  IF(useCurveds)THEN
+    aQuad%type=208 ! fully curved
+  ELSE
+    aQuad%type=118 ! trilinear
+  END IF
+  DO iLocSide=1,6
+    aSide=>aQuad%Side(iLocSide)%sp
+    IF(aSide%tmp.NE.0) CYCLE
+    nSides=nSides+1
+    IF(ASSOCIATED(aSide%connection)) aSide%connection%tmp=-1
+    IF(aSide%BCindex.NE.0)THEN !side is BC or periodic side
+      IF(ASSOCIATED(aSide%connection))THEN
+        !nPeriodicSides=nPeriodicSides+1
+      ELSE
+        IF(aSide%MortarType.EQ.0)THEN !really a BC side
+          nBCSides=nBCSides+1
+        END IF
+      END IF
+    END IF
+    IF(aSide%MortarType.GT.0) nMortarSides=nMortarSides+1
+  END DO
+END DO
+nInnerSides=nSides-nBCSides-nMortarSides
+
 ! set master slave,  element with lower element ID is master (flip=0)
-DO iQuad=1,nQuadrants
+DO iQuad=1,nQuads
   aQuad=>Quads(iQuad)%ep
   DO iLocSide=1,6
     aSide=>aQuad%Side(iLocSide)%sp
@@ -241,7 +272,7 @@ DO iQuad=1,nQuadrants
 END DO
 
 !sanity check
-DO iQuad=1,nQuadrants
+DO iQuad=1,nQuads
   aQuad=>Quads(iQuad)%ep
   DO iLocSide=1,6
     IF(aQuad%Side(iLocSide)%sp%flip.LT.0) THEN
