@@ -23,18 +23,42 @@
 #include <hopest.h>
 #include <hopest_hdf5.h>
 #include <string.h>
+#include <p8est.h>
 #include "hopest_p4est_geom.h"
+
+#include <p4est_to_p8est.h>
 
 int main(int argc,char *argv[]){
     char *IniFile;
     int inifile_len;
+    /* p4est_t *p4est; */
+    p4est_connectivity_t **conn,*conn2;
+    int mpiret;
+
+    mpiret = sc_MPI_Init (&argc, &argv);
+    SC_CHECK_MPI (mpiret);
     if(argc>1) {
         IniFile=argv[1];
         inifile_len=strlen(IniFile);
-        FillStrings_FC(IniFile,inifile_len);
-        /*InitMesh_FC();*/
+        /*FillStrings_FC(IniFile,inifile_len);*/
+        conn = NULL;
+        InitMesh_FC(IniFile,inifile_len,conn);
+        printf("Got connectivity address %p\n",*conn);
+        conn2=*conn;
+#if 0
+        {
+           char *mem=(char*)(conn2);
+            printf("[%i]",(int)(mem[0]));
+            printf("\n");
+        }
+#endif
+        fflush(stdout);
+        /*P4EST_ASSERT(p4est_connectivity_is_valid(*conn));*/
+
     }
     /* connectivity holen und p4est bauen */
     else printf("no input file given.\n");
+    mpiret = sc_MPI_Finalize ();
+    SC_CHECK_MPI (mpiret);
     return 0;
 }

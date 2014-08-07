@@ -17,7 +17,6 @@
 #define P4EST_F90_GLOIDX INTEGER(KIND=C_INT64_T)
 #define P4EST_F90_QLEVEL INTEGER(KIND=C_INT8_T)
 
-
 ! Abbrevations
 #define __STAMP__ __FILE__,__LINE__,__DATE__,__TIME__
 
