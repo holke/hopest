@@ -7,7 +7,9 @@ libhopest_generated_headers = src/hopest_config.h
 libhopest_installed_headers = \
         src/hopest.h
 libhopest_internal_headers = \
-	src/hopest_f.h
+	src/hopest_f.h \
+	src/p4est/p4est_wrapper.h
+#src/refine/refine_wrapper.h
 libhopest_compiled_sources = \
 	src/globals/preprocessing.f90 \
 	src/globals/globals.f90 \
@@ -18,6 +20,7 @@ libhopest_compiled_sources = \
 	src/p4est/p4est_binding.f90 \
 	src/p4est/p4est_wrapper.c \
 	src/p4est/p4est.f90 \
+	src/mesh/prepare_mesh.f90 \
 	src/readintools/isovaryingstring.f90 \
 	src/interpolation/changeBasis.f90 \
 	src/mpi/mpi.f90 \
@@ -42,7 +45,7 @@ libhopest_compiled_sources += \
 endif
 
 # this variable is used for headers that are not publicly installed
-HOPEST_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS)
+HOPEST_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -I@top_builddir@/src
 
 lib_LTLIBRARIES += src/libhopest.la
 src_libhopest_la_SOURCES = \

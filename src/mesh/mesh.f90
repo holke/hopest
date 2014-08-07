@@ -130,7 +130,7 @@ SUBROUTINE BuildHOMesh()
 !===================================================================================================================================
 ! MODULES
 USE MOD_Globals
-USE MOD_Mesh_Vars,   ONLY: Ngeo,nElems,nQuadrants,Xgeo,XgeoQuad
+USE MOD_Mesh_Vars,   ONLY: Ngeo,nElems,nQuads,Xgeo,XgeoQuad
 USE MOD_Mesh_Vars,   ONLY: wBary_Ngeo,xi_Ngeo
 USE MOD_P4EST_Vars,  ONLY: TreeToQuad,QuadCoords,QuadLevel,sIntSize
 USE MOD_Basis,       ONLY: LagrangeInterpolationPolys 
@@ -146,16 +146,16 @@ IMPLICIT NONE
 REAL                          :: xi0(3)
 REAL                          :: dxi,length
 REAL,DIMENSION(0:Ngeo,0:Ngeo) :: Vdm_xi,Vdm_eta,Vdm_zeta
-INTEGER                       :: StartQuad,EndQuad,nQuads
+INTEGER                       :: StartQuad,EndQuad,nLocalQuads
 INTEGER                       :: i,iQuad,iElem 
 !===================================================================================================================================
-ALLOCATE(XgeoQuad(3,0:Ngeo,0:Ngeo,0:Ngeo,nQuadrants))
+ALLOCATE(XgeoQuad(3,0:Ngeo,0:Ngeo,0:Ngeo,nQuads))
 
 DO iElem=1,nElems
   StartQuad = TreeToQuad(1,iElem)+1
   EndQuad   = TreeToQuad(2,iElem)
-  nQuads    = TreeToQuad(2,iElem)-TreeToQuad(1,iElem)
-  IF(nQuads.EQ.1)THEN !no refinement in this tree
+  nLocalQuads = TreeToQuad(2,iElem)-TreeToQuad(1,iElem)
+  IF(nLocalQuads.EQ.1)THEN !no refinement in this tree
     XgeoQuad(:,:,:,:,StartQuad)=Xgeo(:,:,:,:,iElem)
   ELSE
     DO iQuad=StartQuad,EndQuad
@@ -173,7 +173,7 @@ DO iElem=1,nElems
       !interpolate tree HO mapping to quadrant HO mapping
       CALL ChangeBasis3D_XYZ(3,Ngeo,Ngeo,Vdm_xi,Vdm_eta,Vdm_zeta,XGeo(:,:,:,:,iElem),XgeoQuad(:,:,:,:,iQuad))
     END DO !iQuad=StartQuad,EndQuad
-  END IF !nQuads==1
+  END IF !nLocalQuads==1
 END DO !iElem=1,nElems
 END SUBROUTINE BuildHOMesh
 
