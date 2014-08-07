@@ -27,6 +27,10 @@ INTERFACE BuildBCs
   MODULE PROCEDURE BuildBCs
 END INTERFACE
 
+INTERFACE testHOabc
+  MODULE PROCEDURE testHOabc
+END INTERFACE
+
 INTERFACE FinalizeP4EST
   MODULE PROCEDURE FinalizeP4EST
 END INTERFACE
@@ -35,6 +39,7 @@ PUBLIC::InitP4EST
 PUBLIC::BuildMeshFromP4EST
 PUBLIC::getHFlip
 PUBLIC::BuildBCs
+PUBLIC::testHOabc
 PUBLIC::FinalizeP4EST
 !===================================================================================================================================
 
@@ -374,6 +379,80 @@ DO iELem=1,nElems
 END DO
 CALL p4_build_bcs(p4est,nElems,BCElemMap)
 END SUBROUTINE BuildBCs
+
+SUBROUTINE buildHOp4GeometryX(a,b,c,x,y,z,tree)
+!===================================================================================================================================
+! Subroutine to translate p4est mesh datastructure to HOPR datastructure
+!===================================================================================================================================
+! MODULES
+USE, INTRINSIC :: ISO_C_BINDING
+USE MOD_Globals
+USE MOD_Basis,        ONLY: LagrangeInterpolationPolys
+USE MOD_Mesh_Vars,    ONLY: XGeo,xi_Ngeo,wBary_Ngeo,NGeo
+USE, intrinsic :: ISO_C_BINDING
+! IMPLICIT VARIABLE HANDLING
+IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+REAL( KIND = C_DOUBLE ),INTENT(IN),VALUE    :: a,b,c
+INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE    :: tree
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+REAL( KIND = C_DOUBLE ),INTENT(OUT)         :: x,y,z
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES
+REAL         :: Vdm_xi(0:NGeo),Vdm_eta(0:NGeo),Vdm_zeta(0:NGeo),Vdm_eta_zeta
+REAL         :: xi(3),HOabc(3)
+INTEGER      :: i,j,k
+!-----------------------------------------------------------------------------------------------------------------------------------
+
+xi(1)=-1.+2*a
+xi(2)=-1.+2*b
+xi(3)=-1.+2*c
+CALL LagrangeInterpolationPolys(xi(1),Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_xi(:))
+CALL LagrangeInterpolationPolys(xi(2),Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_eta(:))
+CALL LagrangeInterpolationPolys(xi(3),Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_zeta(:))
+HOabc(:)=0.
+DO k=0,NGeo
+  DO j=0,NGeo
+    Vdm_eta_zeta=Vdm_eta(j)*Vdm_zeta(k)
+    DO i=0,NGeo
+      HOabc(:)=HOabc(:)+XGeo(:,i,j,k,tree)*Vdm_xi(i)*Vdm_eta_zeta
+    END DO
+  END DO
+END DO
+x=HOabc(1)
+y=HOabc(2)
+z=HOabc(3)
+
+END SUBROUTINE buildHOp4GeometryX
+
+SUBROUTINE testHOabc()
+!===================================================================================================================================
+! Subroutine to translate p4est mesh datastructure to HOPR datastructure
+!===================================================================================================================================
+! MODULES
+! IMPLICIT VARIABLE HANDLING
+IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES
+REAL        :: a,b,c,x,y,z
+INTEGER      :: tree
+!-----------------------------------------------------------------------------------------------------------------------------------
+a=1
+b=0
+c=0
+tree=1
+
+CALL buildHOp4GeometryX(a,b,c,x,y,z,tree)
+
+WRITE(*,*) x,y,z
+
+END SUBROUTINE testHOabc
 
 
 SUBROUTINE FinalizeP4EST()

@@ -15,8 +15,9 @@ SAVE
 CHARACTER(LEN=255)          :: p4estFile          ! name of hdf5 meshfile (write with ending .h5!)
 
 TYPE(C_PTR)                 :: p4est              ! c pointers to p4est structures
-TYPE(C_PTR)                 :: mesh               ! 
-TYPE(C_PTR)                 :: connectivity       ! 
+TYPE(C_PTR)                 :: mesh               !
+TYPE(C_PTR)                 :: connectivity       !
+TYPE(C_PTR)                 :: geom               !
 
 INTEGER                     :: nHalfFaces         ! number of mortar sides
 INTEGER(KIND=4)             :: IntSize            ! used to transform INT coords/levels to REAL coords/levels: REAL=1/inssize*INT  [0. ; 1.]

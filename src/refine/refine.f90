@@ -30,8 +30,8 @@ USE MOD_Globals
 USE MOD_Refine_Vars
 USE MOD_Refine_Binding,ONLY: p4_refine_mesh
 USE MOD_Mesh_Vars,     ONLY: nElems
-USE MOD_P4EST_Vars,    ONLY: p4est,mesh
-USE MOD_Readintools,   ONLY: CNTSTR,GETINT
+USE MOD_P4EST_Vars,    ONLY: p4est,mesh,geom
+USE MOD_Readintools,   ONLY: GETINT,CNTSTR
 USE, INTRINSIC :: ISO_C_BINDING
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
@@ -76,8 +76,8 @@ DO iRefine=1,nRefines
   CASE DEFAULT
     STOP 'refineType is not defined'
   END SELECT
-   CALL p4_refine_mesh(p4est,refineFunc,refineLevel,& !IN
-                      mesh)                          !OUT
+   CALL p4_refine_mesh(p4est,refineFunc,refineLevel,geom, & !IN
+                    mesh)                               !OUT
    SDEALLOCATE(TreeSidesToRefine)
 END DO
 
