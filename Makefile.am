@@ -101,5 +101,8 @@ if HOPEST_DIST_DENY
 	@exit 1
 endif
 
+mostlyclean-local:
+	rm -f @top_builddir@/*.mod
+
 clean-local:
 	rm -f ChangeLog *vtu *.visit

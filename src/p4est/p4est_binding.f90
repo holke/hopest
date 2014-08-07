@@ -162,8 +162,8 @@ INTERFACE
   P4EST_F90_LOCIDX,INTENT(OUT)              :: local_num_quadrants
   P4EST_F90_GLOIDX,INTENT(OUT)              :: global_num_quadrants
   P4EST_F90_GLOIDX,INTENT(OUT)              :: global_first_quadrant
-  INTEGER(KIND=C_INT32_T),INTENT(OUT)       :: num_half_faces
-  INTEGER(KIND=C_INT32_T),INTENT(OUT)       :: num_trees
+  P4EST_F90_LOCIDX,INTENT(OUT)              :: num_half_faces
+  P4EST_F90_TOPIDX,INTENT(OUT)              :: num_trees
   !=================================================================================================================================
   END SUBROUTINE p4_get_mesh_info
 
