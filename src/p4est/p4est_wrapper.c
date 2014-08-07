@@ -30,6 +30,7 @@
 // 3D mode; must be included AFTER every other file
 #include <p4est_to_p8est.h>
 
+p8est_connectivity_t *global_conn;
 
 static sc_MPI_Comm           mpicomm;
 
@@ -124,7 +125,6 @@ void p4_connectivity_treevertex (p4est_topidx_t num_vertices,
      (long long) conn->num_trees, (long long) conn->num_vertices);
 
   *conn_out=conn;
-  printf("DEBUG connectivity %p \n",conn);
 }
 
 void p4_build_p4est ( p4est_connectivity_t *conn,
@@ -134,7 +134,6 @@ void p4_build_p4est ( p4est_connectivity_t *conn,
   p4est_t* p4est;
   p4est_geometry_t   *geom;
 
-  printf("DEBUG: connectivity %p \n",conn);
   fflush(stdout);
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
   /* Create a forest that is not refined; it consists of the root octant. */
@@ -144,8 +143,6 @@ void p4_build_p4est ( p4est_connectivity_t *conn,
   geom->name = "hopest_readfromhdf5";
   geom->X = p4_geometry_X;
 
-  printf("DEBUG: saved geometry at address %p\n",geom);
-  printf("DEBUG: p4est %p \n",p4est);
   *p4est_out=p4est;
   *geom_out=geom;
 }
