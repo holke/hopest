@@ -82,6 +82,9 @@ ChangeLog:
          cat .ChangeLog.tmp | @top_srcdir@/build-aux/git2cl > ChangeLog) ; \
         rm -f .ChangeLog.tmp
 
+install-exec-hook:
+	cp -f @top_builddir@/*.mod $(includedir)
+
 dist-hook:
 	echo $(VERSION) > $(distdir)/.tarball-version
 	test "x$(VERSION)" = "x`@top_srcdir@/build-aux/git-version-gen \
