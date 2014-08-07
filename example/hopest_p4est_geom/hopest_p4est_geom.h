@@ -27,7 +27,7 @@
 #define FillStrings_FC \
   HOPEST_FC_FUNC (wrapfillstrings, WRAPFILLSTRINGS)
 #define ReadMeshFromHDF5_FC \
-  HOPEST_FC_FUNC (wrapreadmeshfromhdf5,WRAPREADMESHFROMHDF5)
+  HOPEST_FC_FUNC (wrapreadmeshfromhdf5nobuildp4est,WRAPREADMESHFROMHDF5NOBUILDP4EST)
 
 #ifdef __cplusplus
 extern              "C"         /* prevent C++ name mangling */

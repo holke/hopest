@@ -23,33 +23,47 @@
 
 #include <hopest_f.h>
 
-SUBROUTINE wrapReadMeshFromHDF5(hdf5file,hdf5file_len,conn)
+SUBROUTINE wrapReadMeshFromHDF5nobuildp4est(hdf5file,hdf5file_len,conn)
+!===================================================================================================================================
+! Subroutine to wrap the ReadMeshFromHDF5nobuildp4est routine
+!===================================================================================================================================
+! MODULES
     USE MOD_Mesh_ReadIn
     USE MOD_IO_HDF5
     USE MOD_Mesh,          ONLY: InitMesh
     USE MOD_P4EST_Vars,    ONLY: connectivity
     USE MOD_P4EST,         ONLY: InitP4est
     USE, intrinsic :: ISO_C_BINDING
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
     integer(C_INT), intent(IN), VALUE               :: hdf5file_len
     character(hdf5file_len,kind=C_CHAR), intent(IN) :: hdf5file
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
     TYPE(C_PTR)                                     :: conn
-
-!    CALL InitMesh()
-!    CALL InitP4EST()
+!-----------------------------------------------------------------------------------------------------------------------------------
     CALL InitIO()
-    call ReadMeshFromHDF5(hdf5file)
-    print *,"connectivity auf F-Seite", connectivity
+    call ReadMeshFromHDF5nobuildp4est(hdf5file)
     conn=connectivity
-END SUBROUTINE wrapReadMeshFromHDF5
+END SUBROUTINE wrapReadMeshFromHDF5nobuildp4est
 
 ! To pass strings from C to Fortran 2003 we pass the string as char* and its
 ! length as an integer
 
 SUBROUTINE wrapbuildHOp4GeometryX(a,b,c,x,y,z,tree)
+!===================================================================================================================================
+! Subroutine to wrap the buildHOp4GeometryX routine
+!===================================================================================================================================
+! MODULES
     USE MOD_P4EST,ONLY:buildHOp4GeometryX
     USE, intrinsic :: ISO_C_BINDING
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
     REAL( KIND = C_DOUBLE ),INTENT(IN),VALUE    :: a,b,c
-    REAL( KIND = C_DOUBLE ),INTENT(OUT)         :: x,y,z
     P4EST_F90_TOPIDX,INTENT(IN),VALUE           :: tree
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+    REAL( KIND = C_DOUBLE ),INTENT(OUT)         :: x,y,z
+!-----------------------------------------------------------------------------------------------------------------------------------
     call buildHOp4GeometryX(a,b,c,x,y,z,tree)
 END SUBROUTINE wrapbuildHOp4GeometryX

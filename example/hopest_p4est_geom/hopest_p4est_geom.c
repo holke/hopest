@@ -35,26 +35,31 @@
 #include <p4est_to_p8est.h>
 
 int main(int argc,char *argv[]){
-    char *IniFile;
-    int inifile_len;
+    char *HDF5File;
+    int HDF5file_len;
     /* p4est_t *p4est; */
     p4est_connectivity_t *conn;
     p4est_t              *p4est;
     p4est_geometry_t     *geom;
+    char vtkfilename[BUFSIZ],*vtkfilename_temp;
     int mpiret;
 
     mpiret = sc_MPI_Init (&argc, &argv);
     SC_CHECK_MPI (mpiret);
     if(argc>1) {
-        IniFile=argv[1];
-        inifile_len=strlen(IniFile);
-        ReadMeshFromHDF5_FC(IniFile,inifile_len,&conn);
+        HDF5File=argv[1];
+        HDF5file_len=strlen(HDF5File);
+        ReadMeshFromHDF5_FC(HDF5File,HDF5file_len,&conn);
         P4EST_ASSERT(p4est_connectivity_is_valid(conn));
-        p4est=p4est_new_ext(sc_MPI_COMM_WORLD,conn,0,1,1,0,NULL,NULL);
+        p4est=p4est_new_ext(sc_MPI_COMM_WORLD,conn,0,2,1,0,NULL,NULL);
         geom = P4EST_ALLOC_ZERO (p4est_geometry_t, 1);
         geom->name = "hopest_readfromhdf5";
         geom->X = p4_geometry_X;
-        p4est_vtk_write_file (p4est,geom, P4EST_STRING "from_hdf5file_via_hopest");
+        vtkfilename_temp=P4EST_STRDUP(HDF5File);
+        basename(vtkfilename_temp);
+        snprintf (vtkfilename, BUFSIZ, "%s", vtkfilename_temp);
+        p4est_vtk_write_file (p4est,geom,vtkfilename);
+        P4EST_FREE(vtkfilename_temp);
         p4est_geometry_destroy(geom);
         p4est_destroy(p4est);
         p4est_connectivity_destroy(conn);

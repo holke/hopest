@@ -419,7 +419,6 @@ USE, INTRINSIC :: ISO_C_BINDING
 USE MOD_Globals
 USE MOD_Basis,        ONLY: LagrangeInterpolationPolys
 USE MOD_Mesh_Vars,    ONLY: XGeo,xi_Ngeo,wBary_Ngeo,NGeo
-USE, intrinsic :: ISO_C_BINDING
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -462,6 +461,7 @@ SUBROUTINE testHOabc()
 ! Subroutine to translate p4est mesh datastructure to HOPR datastructure
 !===================================================================================================================================
 ! MODULES
+USE, INTRINSIC :: ISO_C_BINDING
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------

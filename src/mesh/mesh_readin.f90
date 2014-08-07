@@ -16,11 +16,16 @@ INTERFACE ReadMeshFromHDF5
   MODULE PROCEDURE ReadMeshFromHDF5
 END INTERFACE
 
+INTERFACE ReadMeshFromHDF5nobuildp4est
+  MODULE PROCEDURE ReadMeshFromHDF5nobuildp4est
+END INTERFACE
+
 INTERFACE ReadGeoFromHDF5
   MODULE PROCEDURE ReadGeoFromHDF5
 END INTERFACE
 
 PUBLIC::ReadMeshFromHDF5
+PUBLIC::ReadMeshFromHDF5nobuildp4est
 PUBLIC::ReadGeoFromHDF5
 !===================================================================================================================================
 
@@ -133,9 +138,9 @@ CALL SetCurvedInfo()
 END SUBROUTINE ReadMeshHeader
 
 
-SUBROUTINE ReadMeshFromHDF5(FileString)
+SUBROUTINE ReadMeshFromHDF5nobuildp4est(FileString)
 !===================================================================================================================================
-! Subroutine to read the mesh from a mesh data file
+! Subroutine to read the mesh from a mesh data file and build p4est_connectivity
 !===================================================================================================================================
 ! MODULES
 USE MOD_Globals
@@ -484,7 +489,6 @@ END IF !num_periodics>0
 
 CALL p4_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex, &
                                    num_periodics,JoinFaces,connectivity)
-CALL p4_build_p4est(connectivity,p4est,geom)
 
 DEALLOCATE(Vertices,tree_to_vertex)
 IF(num_periodics.GT.0) DEALLOCATE(JoinFaces) 
@@ -533,8 +537,29 @@ WRITE(*,'(A22,I8)' )'nBCSides:',nBCSides
 WRITE(*,'(A22,I8)' )'nPeriodicSides:',nPeriodicSides
 WRITE(*,*)'-------------------------------------------------------'
 
-END SUBROUTINE ReadMeshFromHDF5
+END SUBROUTINE ReadMeshFromHDF5nobuildp4est
 
+SUBROUTINE Buildp4est()
+!===================================================================================================================================
+! Subroutine to build the p4est and the p4est_geometry from connectivity
+!===================================================================================================================================
+! MODULES
+USE MOD_P4EST_Vars,    ONLY: connectivity,p4est,geom
+USE MOD_P4EST_Binding, ONLY: p4_build_p4est
+!-----------------------------------------------------------------------------------------------------------------------------------
+CALL p4_build_p4est(connectivity,p4est,geom)
+END SUBROUTINE Buildp4est
+
+SUBROUTINE ReadMeshFromHDF5(FileString)
+!===================================================================================================================================
+! Subroutine to read the mesh from a mesh data file, build p4est and p4est_connectivity
+!===================================================================================================================================
+! INPUT VARIABLES
+CHARACTER(LEN=*),INTENT(IN)  :: FileString
+!-----------------------------------------------------------------------------------------------------------------------------------
+CALL ReadMeshFromHDF5nobuildp4est(FileString)
+CALL Buildp4est
+END SUBROUTINE ReadMeshFromHDF5
 
 SUBROUTINE ReadGeoFromHDF5(FileString)
 !===================================================================================================================================
