@@ -8,8 +8,8 @@ libhopest_installed_headers = \
         src/hopest.h
 libhopest_internal_headers = \
 	src/hopest_f.h \
-	src/p4est/p4est_wrapper.h
-#src/refine/refine_wrapper.h
+	src/p4est/p4est_wrapper.h \
+	src/p4est/p4est_HO_geometry.h
 libhopest_compiled_sources = \
 	src/globals/preprocessing.f90 \
 	src/globals/globals.f90 \

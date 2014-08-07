@@ -30,6 +30,7 @@
 // 3D mode; must be included AFTER every other file
 #include <p4est_to_p8est.h>
 
+p8est_connectivity_t *global_conn;
 
 static sc_MPI_Comm           mpicomm;
 
@@ -144,8 +145,6 @@ void p4_build_p4est ( p4est_connectivity_t *conn,
   geom->name = "hopest_readfromhdf5";
   geom->X = p4_geometry_X;
 
-  printf("DEBUG: saved geometry at address %p\n",geom);
-  printf("DEBUG: p4est %p \n",p4est);
   *p4est_out=p4est;
   *geom_out=geom;
 }

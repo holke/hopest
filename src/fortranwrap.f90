@@ -21,9 +21,24 @@
 ! This file wraps some fortran routines to be called by C-Code
 ! It is important that this is NOT a Fortran Module
 
-!USE MOD_ReadInTools
-!USE MOD_Mesh
-!USE MOD_MeshVars
+SUBROUTINE wrapReadMeshFromHDF5(hdf5file,hdf5file_len,conn)
+    USE MOD_Mesh_ReadIn
+    USE MOD_IO_HDF5
+    USE MOD_Mesh,          ONLY: InitMesh
+    USE MOD_P4EST_Vars,    ONLY: connectivity
+    USE MOD_P4EST,         ONLY: InitP4est
+    USE, intrinsic :: ISO_C_BINDING
+    integer(C_INT), intent(IN), VALUE               :: hdf5file_len
+    character(hdf5file_len,kind=C_CHAR), intent(IN) :: hdf5file
+    TYPE(C_PTR)                               :: conn
+
+!    CALL InitMesh()
+!    CALL InitP4EST()
+    CALL InitIO()
+    call ReadMeshFromHDF5(hdf5file)
+    print *,"connectivity auf F-Seite", connectivity
+    conn=connectivity
+END SUBROUTINE wrapReadMeshFromHDF5
 
 ! To pass strings from C to Fortran 2003 we pass the string as char* and its
 ! length as an integer

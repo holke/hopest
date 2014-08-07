@@ -43,7 +43,6 @@ void p4_connectivity_treevertex (p4est_topidx_t num_vertices,
                                  p4est_topidx_t num_periodics,
                                  p4est_topidx_t *join_faces,
                                  p8est_connectivity_t        **conn_out );
-
 void p4_build_p4est ( p8est_connectivity_t *conn,
                       p8est_t              **p4est_out,
                       p8est_geometry_t     **geom_out);
@@ -80,6 +79,9 @@ void p4_get_quadrants( p8est_t       *p4est,
 
 void p4_savemesh ( char    filename[],
                    p8est_t *p4est);
+                   
+void p4est_save_all ( char    filename[],
+                      p8est_t *p4est);
 
 #ifdef __cplusplus
 #if 0
@@ -87,4 +89,3 @@ void p4_savemesh ( char    filename[],
 #endif
 }
 #endif
-
