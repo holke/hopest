@@ -206,11 +206,11 @@ void p4_get_mesh_info ( p4est_t        *p4est,
   *local_num_quadrants   = p4est->local_num_quadrants;
   *global_num_quadrants  = p4est->global_num_quadrants;
   *global_first_quadrant = p4est->global_first_quadrant[p4est->mpirank];
-  num_half_faces = (int32_t) mesh->quad_to_half->elem_count;      // big face with 4 small neighbours
+  num_half_faces = (int32_t*) mesh->quad_to_half->elem_count;      // big face with 4 small neighbours
   *num_trees = (int32_t) p4est->trees->elem_count;
   SC_CHECK_ABORTF (mesh->local_num_quadrants == p4est->global_num_quadrants,
-                   "Global quads %d and local quads %d mismatch ! ",
-                   p4est->global_num_quadrants, mesh->local_num_quadrants );
+                   "Global quads %lld and local quads %d mismatch ! ",
+                   (long long) p4est->global_num_quadrants, mesh->local_num_quadrants );
   /* TODO:
    * In parallel, local and global num_quadrants WILL be different.
    * This check will then die.
