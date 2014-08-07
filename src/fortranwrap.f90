@@ -30,7 +30,7 @@ SUBROUTINE wrapReadMeshFromHDF5(hdf5file,hdf5file_len,conn)
     USE, intrinsic :: ISO_C_BINDING
     integer(C_INT), intent(IN), VALUE               :: hdf5file_len
     character(hdf5file_len,kind=C_CHAR), intent(IN) :: hdf5file
-    TYPE(C_PTR)                               :: conn
+    TYPE(C_PTR)                                     :: conn
 
 !    CALL InitMesh()
 !    CALL InitP4EST()

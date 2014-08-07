@@ -50,7 +50,7 @@ int main(int argc,char *argv[]){
         inifile_len=strlen(IniFile);
         ReadMeshFromHDF5_FC(IniFile,inifile_len,&conn);
         P4EST_ASSERT(p4est_connectivity_is_valid(conn));
-        p4est=p4est_new_ext(sc_MPI_COMM_WORLD,conn,0,2,1,0,NULL,NULL);
+        p4est=p4est_new_ext(sc_MPI_COMM_WORLD,conn,0,1,1,0,NULL,NULL);
         geom = P4EST_ALLOC_ZERO (p4est_geometry_t, 1);
         geom->name = "hopest_readfromhdf5";
         geom->X = p4_geometry_X;
