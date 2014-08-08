@@ -166,9 +166,9 @@ USE MOD_Refine_Vars, ONLY: RefineLevel
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! INPUT VARIABLES
-INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: x,y,z
-INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: tree
-INTEGER(KIND=C_INT8_T ),INTENT(IN),VALUE :: level
+P4EST_F90_QCOORD,    INTENT(IN),VALUE :: x,y,z
+P4EST_F90_TOPIDX,    INTENT(IN),VALUE :: tree
+P4EST_F90_QLEVEL,    INTENT(IN),VALUE :: level
 INTEGER(KIND=C_INT ),INTENT(IN),VALUE :: childID
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! OUTPUT VARIABLES
@@ -192,16 +192,16 @@ USE MOD_Refine_Vars, ONLY: refineLevel,TreeSidesToRefine
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! INPUT VARIABLES
-INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: x,y,z
-INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: tree
-INTEGER(KIND=C_INT8_T ),INTENT(IN),VALUE :: level
+P4EST_F90_QCOORD,    INTENT(IN),VALUE :: x,y,z
+P4EST_F90_TOPIDX,    INTENT(IN),VALUE :: tree
+P4EST_F90_QLEVEL,    INTENT(IN),VALUE :: level
 INTEGER(KIND=C_INT ),INTENT(IN),VALUE :: childID
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! OUTPUT VARIABLES
-INTEGER(KIND=C_INT)                      :: refineByList
+INTEGER(KIND=C_INT)                   :: refineByList
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER(KIND=C_INT32_T)  IntSize,length
+P4EST_F90_QCOORD                      ::  IntSize,length
 !-----------------------------------------------------------------------------------------------------------------------------------
 RefineByList=0
 IF(level.GE.refineLevel) RETURN
@@ -249,18 +249,18 @@ USE MOD_ChangeBasis, ONLY: ChangeBasis3D_XYZ
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! INPUT VARIABLES
-INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: x,y,z
-INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: tree
-INTEGER(KIND=C_INT8_T ),INTENT(IN),VALUE :: level
-INTEGER(KIND=C_INT ),INTENT(IN),VALUE    :: childID
-REAL                                     :: xi0(3)
-REAL                                     :: xiBary(3)
-REAL                                     :: dxi,length
-REAL,DIMENSION(0:Ngeo,0:Ngeo)            :: Vdm_xi,Vdm_eta,Vdm_zeta
-REAL                                     :: XCorner(3), XBaryQuad(3),test,IntSize,sIntSize
-REAL                                     :: XGeoQuad(3,0:NGeo,0:NGeo,0:NGeo)
-REAL                                     :: l_xi(0:NGeo),l_eta(0:NGeo),l_zeta(0:NGeo),l_etazeta
-INTEGER                                  :: i,j,k
+P4EST_F90_QCOORD,    INTENT(IN),VALUE :: x,y,z
+P4EST_F90_TOPIDX,    INTENT(IN),VALUE :: tree
+P4EST_F90_QLEVEL,    INTENT(IN),VALUE :: level
+INTEGER(KIND=C_INT ),INTENT(IN),VALUE :: childID
+REAL                                  :: xi0(3)
+REAL                                  :: xiBary(3)
+REAL                                  :: dxi,length
+REAL,DIMENSION(0:Ngeo,0:Ngeo)         :: Vdm_xi,Vdm_eta,Vdm_zeta
+REAL                                  :: XCorner(3), XBaryQuad(3),test,IntSize,sIntSize
+REAL                                  :: XGeoQuad(3,0:NGeo,0:NGeo,0:NGeo)
+REAL                                  :: l_xi(0:NGeo),l_eta(0:NGeo),l_zeta(0:NGeo),l_etazeta
+INTEGER                               :: i,j,k
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! OUTPUT VARIABLES
 INTEGER(KIND=C_INT) :: refineByGeom
@@ -390,10 +390,10 @@ USE MOD_Refine_Vars, ONLY: refineLevel
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! INPUT VARIABLES
-INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: x,y,z
-INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: tree
-INTEGER(KIND=C_INT8_T ),INTENT(IN),VALUE :: level
-INTEGER(KIND=C_INT ),INTENT(IN),VALUE :: childID
+P4EST_F90_QCOORD,INTENT(IN),VALUE :: x,y,z
+P4EST_F90_TOPIDX,INTENT(IN),VALUE :: tree
+P4EST_F90_QLEVEL,INTENT(IN),VALUE :: level
+P4EST_F90_LOCIDX,INTENT(IN),VALUE :: childID
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! OUTPUT VARIABLES
 INTEGER(KIND=C_INT)                      :: refineFirst
