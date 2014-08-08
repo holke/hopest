@@ -35,10 +35,10 @@ SUBROUTINE HopestMesh()
 USE MOD_Globals
 USE MOD_IO_HDF5
 USE MOD_P4EST_Vars,         ONLY: p4est,p4estFile
-USE MOD_P4EST,              ONLY: InitP4EST,BuildMeshFromP4EST,BuildBCs,testHOabc
+USE MOD_P4EST,              ONLY: InitP4EST,BuildMeshFromP4EST,BuildBCs,testHOabc,FinalizeP4EST
 USE MOD_P4EST_Binding,      ONLY: p4_savemesh
 USE MOD_Mesh_Vars
-USE MOD_Mesh,               ONLY: InitMesh,BuildHOMesh
+USE MOD_Mesh,               ONLY: InitMesh,BuildHOMesh,FinalizeMesh
 USE MOD_Output_Vars,        ONLY: Projectname
 USE MOD_Output_HDF5,        ONLY: writeMeshToHDF5
 USE MOD_Mesh_ReadIn,        ONLY: readMeshFromHDF5
@@ -76,7 +76,10 @@ CALL writeMeshToHDF5(TRIM(ProjectName)//'_mesh_p4est.h5')
 SWRITE(UNIT_stdOut,'(A)') "NOW CALLING deleteMeshPointer..."
 !CALL deleteMeshPointer()
 
+CALL FinalizeP4EST()
+CALL FinalizeMesh()
 CALL FinalizeHopestMesh()
+
 SWRITE(UNIT_stdOut,'(A)')' HOPEST MESH DONE!'
 SWRITE(UNIT_StdOut,'(132("-"))')
 END SUBROUTINE HopestMesh

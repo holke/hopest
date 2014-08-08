@@ -193,8 +193,23 @@ IMPLICIT NONE
 !output parameters
 !----------------------------------------------------------------------------------------------------------------------------
 !local variables
+INTEGER       :: iElem,iLocSide,iNode
 !============================================================================================================================
 ! Deallocate global variables, needs to go somewhere else later
+DO iElem=1,nElems
+  DO iLocSide=1,6
+    DEALLOCATE(Elems(iElem)%ep%Side(iLocSide)%sp)
+  END DO
+  DEALLOCATE(Elems(iElem)%ep)
+END DO
+DEALLOCATE(Elems)
+DO iNode=1,nNodes
+    DEALLOCATE(Nodes(iNode)%np)
+END DO
+DEALLOCATE(Nodes)
+SDEALLOCATE(XGeo)
+SDEALLOCATE(HexMap)
+SDEALLOCATE(HexMapInv)
 SDEALLOCATE(Xi_NGeo)
 SDEALLOCATE(BoundaryName)
 SDEALLOCATE(BoundaryType)
