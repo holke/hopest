@@ -21,6 +21,7 @@
 */
 
 #include <p8est_mesh.h>
+#include <p8est_geometry.h>
 
 #ifdef __cplusplus
 extern              "C"         /* prevent C++ name mangling */
@@ -44,7 +45,8 @@ void p4_connectivity_treevertex (p4est_topidx_t num_vertices,
                                  p8est_connectivity_t        **conn_out );
 
 void p4_build_p4est ( p8est_connectivity_t *conn,
-                      p8est_t              **p4est_out );
+                      p8est_t              **p4est_out,
+                      p8est_geometry_t     **geom_out);
 
 void p4_build_bcs(p8est_t        *p4est,
                   p4est_topidx_t num_trees,

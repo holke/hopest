@@ -2,7 +2,7 @@
 
 MODULE MODH_P4EST_Binding
 !===================================================================================================================================
-! Fortran <-> C++ wrapper routine for the P4est Routines
+! Fortran <-> C wrapper routine for the P4est Routines
 !===================================================================================================================================
 ! MODULES
 !USE MODH_P4estBindingTypes
@@ -87,7 +87,7 @@ INTERFACE
   END SUBROUTINE p4_build_mesh 
 
 
-  SUBROUTINE p4_build_p4est(connectivity,p4est) BIND(C)
+  SUBROUTINE p4_build_p4est(connectivity,p4est,geom) BIND(C)
   !=================================================================================================================================
   ! builds up p4est connectivit, using only element connectivity and vertex positions
   !=================================================================================================================================
@@ -101,6 +101,7 @@ INTERFACE
   !---------------------------------------------------------------------------------------------------------------------------------
   ! OUTPUT VARIABLES
   TYPE(C_PTR)                      :: p4est
+  TYPE(C_PTR)                      :: geom
   !=================================================================================================================================
   END SUBROUTINE p4_build_p4est
 
@@ -182,7 +183,7 @@ INTERFACE
   TYPE(C_PTR),VALUE            :: p4est
   TYPE(C_PTR),VALUE            :: mesh
   P4EST_F90_LOCIDX,VALUE       :: local_num_quadrants
-  INTEGER(KIND=C_INT32_T),VALUE :: num_half_faces
+  P4EST_F90_LOCIDX,VALUE       :: num_half_faces
   !---------------------------------------------------------------------------------------------------------------------------------
   ! OUTPUT VARIABLES
   P4EST_F90_QCOORD,INTENT(OUT) :: intsize ! P4EST_ROOT_LEN -> int2real transform in parameter space, REAL=1/intsize*INT [0,1]

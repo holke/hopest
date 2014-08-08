@@ -19,23 +19,20 @@
 !  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 ! This file wraps some fortran routines to be called by C-Code
-! It is important that this is not a Fortran Module
+! It is important that this is NOT a Fortran Module
 
-SUBROUTINE wrapinitmesh()
-    USE MODH_Mesh
-    call InitMesh()
-END SUBROUTINE wrapinitmesh
+!USE MODH_ReadInTools
+!USE MODH_Mesh
+!USE MODH_MeshVars
 
 ! To pass strings from C to Fortran 2003 we pass the string as char* and its
 ! length as an integer
-SUBROUTINE wrapfillstrings(inifile,inifile_len)
-    USE MODH_ReadInTools
+
+SUBROUTINE wrapbuildHOp4GeometryX(a,b,c,x,y,z,tree)
+    USE MODH_P4EST,ONLY:buildHOp4GeometryX
     USE, intrinsic :: ISO_C_BINDING
-    implicit none
-    integer(C_INT), intent(IN), VALUE :: inifile_len
-    character(inifile_len,kind=C_CHAR), intent(IN) :: inifile
-    print *,"calling FillString routine with parameter ", inifile
-    call fillstrings(inifile)
-END SUBROUTINE wrapfillstrings
-
-
+    REAL( KIND = C_DOUBLE ),INTENT(IN),VALUE    :: a,b,c
+    INTEGER (KIND=C_INT32_T),INTENT(IN),VALUE   :: tree
+    REAL( KIND = C_DOUBLE ),INTENT(OUT)         :: x,y,z
+    call buildHOp4GeometryX(a,b,c,x,y,z,tree)
+END SUBROUTINE wrapbuildHOp4GeometryX

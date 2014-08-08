@@ -3,7 +3,7 @@
 !===================================================================================================================================
 
 ! We include the file that contains all configure-time settings.
-#include "hopest_config.h"
+#include <hopest_config.h>
 #ifdef HOPEST_ENABLE_MPI
 /* TODO: it should work to compile hopest with MPI defined. */
 /* #define MPI */
@@ -16,7 +16,6 @@
 #define P4EST_F90_LOCIDX INTEGER(KIND=C_INT32_T)
 #define P4EST_F90_GLOIDX INTEGER(KIND=C_INT64_T)
 #define P4EST_F90_QLEVEL INTEGER(KIND=C_INT8_T)
-
 
 ! Abbrevations
 #define __STAMP__ __FILE__,__LINE__,__DATE__,__TIME__

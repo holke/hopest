@@ -11,7 +11,7 @@ IMPLICIT NONE
 
 INTERFACE 
 
-  SUBROUTINE p4_refine_mesh(p4est,refine_function,refine_level,&
+  SUBROUTINE p4_refine_mesh(p4est,refine_function,refine_level,geom,&
                                mesh) BIND(C)
   !=================================================================================================================================
   ! simple refine function, giving the level and if refine_elem < 0 then a conformal refinement is applied.
@@ -23,6 +23,7 @@ INTERFACE
   !---------------------------------------------------------------------------------------------------------------------------------
   ! INPUT VARIABLES
   TYPE(C_PTR),INTENT(IN),VALUE          :: p4est
+  TYPE(C_PTR),INTENT(IN),VALUE          :: geom
   TYPE(C_FUNPTR),INTENT(IN),VALUE       :: refine_function
   INTEGER(KIND=C_INT),INTENT(IN),VALUE  :: refine_level 
   !---------------------------------------------------------------------------------------------------------------------------------

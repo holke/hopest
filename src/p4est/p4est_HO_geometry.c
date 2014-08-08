@@ -20,31 +20,12 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-#ifndef _HOPEST_P4EST_GEOM_H
-#define _HOPEST_P4EST_GEOM_H
+#include "p4est_HO_geometry.h"
 
-
-#define FillStrings_FC \
-  HOPEST_FC_FUNC (wrapfillstrings, WRAPFILLSTRINGS)
-#define InitMesh_FC \
-  HOPEST_FC_FUNC (wrapinitmesh, WRAPINITMESH)
-
-#ifdef __cplusplus
-extern              "C"         /* prevent C++ name mangling */
-{
-#if 0
+void p4_geometry_X (p8est_geometry_t * geom,
+                                           p4est_topidx_t which_tree,
+                                           const double abc[3],
+                                           double xyz[3]){
+    int which_tree_p1=which_tree+1;
+    buildHOp4GeometryX_FC(abc[0],abc[1],abc[2],xyz+0,xyz+1,xyz+2,(which_tree_p1));
 }
-#endif
-#endif
-
-void FillStrings_FC(char *inifile,int inifile_len);
-void InitMesh_FC(char *hdf5file,int hdf5file_len,p8est_connectivity_t **conn);
-
-#ifdef __cplusplus
-#if 0
-{
-#endif
-}
-#endif
-
-#endif /* _HOPEST_P4EST_GEOM_H */

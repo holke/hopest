@@ -64,7 +64,6 @@
 #define HOPEST_ASSERT(c) SC_NOOP ()
 #endif
 
-
 /* protect against C++ compilation */
 #ifdef __cplusplus
 extern              "C"         /* prevent C++ name mangling */
@@ -73,7 +72,6 @@ extern              "C"         /* prevent C++ name mangling */
 }
 #endif
 #endif
-
 
 /* functions for mananging the package identity within libsc */
 int                 hopest_get_package_id (void);
@@ -87,7 +85,6 @@ void                hopest_global_productionf (const char *fmt, ...);
 /* register hopest with libsc and print version and variable information */
 void                hopest_init (sc_log_handler_t log_handler,
                                 int log_threshold);
-
 
 #ifdef __cplusplus
 #if 0

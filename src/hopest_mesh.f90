@@ -35,7 +35,7 @@ SUBROUTINE HopestMesh()
 USE MODH_Globals
 USE MODH_IO_HDF5
 USE MODH_P4EST_Vars,         ONLY: p4est,p4estFile
-USE MODH_P4EST,              ONLY: InitP4EST,BuildMeshFromP4EST,BuildBCs
+USE MODH_P4EST,              ONLY: InitP4EST,BuildMeshFromP4EST,BuildBCs,testHOabc
 USE MODH_P4EST_Binding,      ONLY: p4_savemesh
 USE MODH_Mesh_Vars
 USE MODH_Mesh,               ONLY: InitMesh,BuildHOMesh
@@ -73,8 +73,9 @@ CALL BuildHOMesh()
 !output new mesh
 CALL writeMeshToHDF5(TRIM(ProjectName)//'_mesh_p4est.h5')
 ! dealloacte pointers
+!CALL testHOabc()
 SWRITE(UNIT_stdOut,'(A)') "NOW CALLING deleteMeshPointer..."
-CALL deleteMeshPointer()
+!CALL deleteMeshPointer()
 
 CALL FinalizeHopestMesh()
 SWRITE(UNIT_stdOut,'(A)')' HOPEST MESH DONE!'
