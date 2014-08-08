@@ -41,7 +41,7 @@ int main(int argc,char *argv[]){
     p4est_connectivity_t *conn;
     p4est_t              *p4est;
     p4est_geometry_t     *geom;
-    char vtkfilename[BUFSIZ],*vtkfilename_temp;
+    char *vtkfilename,*vtkfilename_temp;
     int mpiret;
 
     mpiret = sc_MPI_Init (&argc, &argv);
@@ -56,8 +56,8 @@ int main(int argc,char *argv[]){
         geom->name = "hopest_readfromhdf5";
         geom->X = p4_geometry_X;
         vtkfilename_temp=P4EST_STRDUP(HDF5File);
-        basename(vtkfilename_temp);
-        snprintf (vtkfilename, BUFSIZ, "%s", vtkfilename_temp);
+        vtkfilename=basename(vtkfilename_temp);
+        printf("%s\n",vtkfilename);
         p4est_vtk_write_file (p4est,geom,vtkfilename);
         P4EST_FREE(vtkfilename_temp);
         p4est_geometry_destroy(geom);
