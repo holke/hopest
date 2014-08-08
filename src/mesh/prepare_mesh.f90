@@ -62,7 +62,6 @@ TYPE(tElem),POINTER :: Quad
 TYPE(tSide),POINTER :: Side
 INTEGER             :: iQuad,iSide
 !-----------------------------------------------------------------------------------------------------------------------------------
-
 DO iQuad=1,nQuads
   Quad=>Quads(iQuad)%ep
   DO iSide=1,6
@@ -226,6 +225,7 @@ IF(iSide.NE.nInnerSides+nBCSides+nMortarSides) STOP'not all SideIDs are set!'
 nMPISides_MINE=0
 nMPISides_YOUR=0
 #ifdef MPI
+STOP 'no mpi yet'
 ! SPLITTING MPISides in MINE and YOURS
 ALLOCATE(nMPISides_MINE_Proc(1:nNbProcs),nMPISides_YOUR_Proc(1:nNbProcs))
 nMPISides_MINE_Proc=0
@@ -482,6 +482,7 @@ DO iQuad=1,nQuads
 END DO ! iQuad
 
 ! Side to Quadent mapping, sorted by SideID
+SideToElem=0
 DO iQuad=1,nQuads
   aQuad=>Quads(iQuad+offsetQuad)%ep
   DO LocSideID=1,6
@@ -501,7 +502,6 @@ END DO ! iQuad
 
 ! Mapping of Mortar Master Side to Mortar Slave Side
 nSides_MortarType=0
-
 DO iQuad=1,nQuads
   aQuad=>Quads(iQuad+offsetQuad)%ep
   DO LocSideID=1,6

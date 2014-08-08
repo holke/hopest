@@ -122,6 +122,12 @@ sideID_minus_lower = 1
 sideID_minus_upper = nBCSides+nMortarSides+nInnerSides+nMPISides_MINE                                 
 sideID_plus_lower  = nBCSides+nMortarSides+1
 sideID_plus_upper  = nBCSides+nMortarSides+nInnerSides+nMPISides
+write(*,*) nSides,nBCSides
+
+write(*,*) sideID_minus_lower 
+write(*,*) sideID_minus_upper 
+write(*,*) sideID_plus_lower  
+write(*,*) sideID_plus_upper  
 
 !! dealloacte pointers
 !SWRITE(UNIT_stdOut,'(A)') "NOW CALLING deleteMeshPointer..."
