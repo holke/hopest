@@ -1,5 +1,5 @@
 #include "hopest_f.h"
-MODULE MOD_Mesh_Vars
+MODULE MODH_Mesh_Vars
 !===================================================================================================================================
 ! Contains global variables provided by the mesh routines
 !===================================================================================================================================
@@ -30,24 +30,24 @@ CHARACTER(LEN=255),ALLOCATABLE   :: BoundaryName(:)
 !-----------------------------------------------------------------------------------------------------------------------------------
 INTEGER          :: nGlobalElems=0      ! number of elements in mesh
 INTEGER          :: nElems=0            ! number of local elements
-INTEGER(KIND=8)  :: offsetQuad=0
-INTEGER(KIND=8)  :: nGlobalQuads=0      ! number of quadrants in mesh
+INTEGER          :: offsetQuad=0
+INTEGER          :: nGlobalQuads=0      ! number of quadrants in mesh
 INTEGER          :: nQuads=0            ! local number of quadrants
-INTEGER          :: nSides=0            ! =nInnerSides+nBCSides
-INTEGER          :: nInnerSides=0
+INTEGER          :: nSides=0            ! =nInnerSides+nBCSides+nMPISides
+INTEGER          :: nInnerSides=0       ! InnerSide index range: sideID \in [nBCSides+1:nBCSides+nInnerSides]
 INTEGER          :: nBCSides=0          ! BCSide index range: sideID \in [1:nBCSides]
 INTEGER          :: nMPISides=0
 INTEGER          :: nMPISides_MINE=0
 INTEGER          :: nMPISides_YOUR=0
-
-INTEGER          :: nNodes=0            ! SIZE of Nodes pointer array, number of unique nodes
-INTEGER          :: nBCs=0              ! number of BCs in mesh
-INTEGER          :: nUserBCs=0     
-INTEGER          :: nCurvedNodes=0      ! number of curved nodes per element = (Ngeo+1)^3
 INTEGER          :: SideID_minus_lower  ! lower side ID of array U_minus/GradUx_minus...
 INTEGER          :: SideID_minus_upper  ! upper side ID of array U_minus/GradUx_minus...
 INTEGER          :: SideID_plus_lower   ! lower side ID of array U_plus/GradUx_plus...
 INTEGER          :: SideID_plus_upper   ! upper side ID of array U_plus/GradUx_plus...
+INTEGER          :: nBCs=0              ! number of BCs in mesh
+INTEGER          :: nUserBCs=0          ! number of BC in inifile
+
+INTEGER          :: nNodes=0            ! SIZE of Nodes pointer array, number of unique nodes
+INTEGER          :: nCurvedNodes=0      ! number of curved nodes per element = (Ngeo+1)^3
 !-----------------------------------------------------------------------------------------------------------------------------------
 INTEGER             :: nMortarSides=0      ! 
 INTEGER             :: firstMortarSideID=0  !Set by mesh during initialization
@@ -294,4 +294,4 @@ END IF
 END SUBROUTINE deleteMeshPointer
 
 
-END MODULE MOD_Mesh_Vars
+END MODULE MODH_Mesh_Vars

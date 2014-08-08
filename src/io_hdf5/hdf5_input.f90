@@ -1,11 +1,11 @@
 #include "hopest_f.h"
 
-MODULE MOD_HDF5_Input
+MODULE MODH_HDF5_Input
 !===================================================================================================================================
 ! Add comments please!
 !===================================================================================================================================
 ! MODULES
-USE MOD_io_hdf5
+USE MODH_io_hdf5
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 PRIVATE
@@ -50,7 +50,7 @@ FUNCTION ISVALIDHDF5FILE(FileName)
 ! Subroutine to check if a file is a valid Flexi HDF5 file
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
+USE MODH_Globals
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -148,7 +148,7 @@ SUBROUTINE GetHDF5DataProps(nVar_HDF5,N_HDF5,nElems_HDF5,NodeType_HDF5)
 ! Subroutine to determine HDF5 datasize
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
+USE MODH_Globals
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -209,7 +209,7 @@ SUBROUTINE ReadArray(ArrayName,Rank,nVal,Offset_in,Offset_dim,RealArray,IntegerA
 ! Subroutine to read arrays of rank "Rank" with dimensions "Dimsf(1:Rank)".
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
+USE MODH_Globals
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -282,7 +282,7 @@ SUBROUTINE ReadAttributeFromHDF5(Loc_ID_in,AttribName,nVal,DatasetName,RealScala
 ! Subroutine to read attributes from HDF5 file.
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
+USE MODH_Globals
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -372,7 +372,7 @@ SUBROUTINE GetHDF5NextFileName(FileName,NextFileName_HDF5,single)
 ! Subroutine to determine filename of next HDF5 file for FlushHDF5
 !===================================================================================================================================
 ! MODULES
-USE MOD_globals
+USE MODH_globals
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -423,4 +423,4 @@ END IF
 LOGWRITE(*,*)'...DONE!'
 END SUBROUTINE GetHDF5NextFileName
 
-END MODULE MOD_HDF5_Input
+END MODULE MODH_HDF5_Input

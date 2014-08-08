@@ -22,14 +22,14 @@
 ! It is important that this is not a Fortran Module
 
 SUBROUTINE wrapinitmesh()
-    USE MOD_Mesh
+    USE MODH_Mesh
     call InitMesh()
 END SUBROUTINE wrapinitmesh
 
 ! To pass strings from C to Fortran 2003 we pass the string as char* and its
 ! length as an integer
 SUBROUTINE wrapfillstrings(inifile,inifile_len)
-    USE MOD_ReadInTools
+    USE MODH_ReadInTools
     USE, intrinsic :: ISO_C_BINDING
     implicit none
     integer(C_INT), intent(IN), VALUE :: inifile_len

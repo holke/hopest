@@ -1,6 +1,6 @@
 #include "hopest_f.h"
 
-MODULE MOD_Prepare_Mesh
+MODULE MODH_Prepare_Mesh
 !===================================================================================================================================
 ! Contains subroutines to build (curviilinear) meshes and provide metrics, etc.
 !===================================================================================================================================
@@ -44,11 +44,11 @@ SUBROUTINE countSides()
 ! 
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Mesh_Vars,  ONLY: tElem,tSide,Quads
-USE MOD_Mesh_Vars,  ONLY: nQuads,nInnerSides,nSides,nBCSides
+USE MODH_Globals
+USE MODH_Mesh_Vars,  ONLY: tElem,tSide,Quads
+USE MODH_Mesh_Vars,  ONLY: nQuads,nInnerSides,nSides,nBCSides
 #ifdef MPI
-USE MOD_Mesh_Vars,  ONLY: nMPISides
+USE MODH_Mesh_Vars,  ONLY: nMPISides
 #endif /*MPI*/
 IMPLICIT NONE
 ! INPUT VARIABLES
@@ -106,16 +106,16 @@ SUBROUTINE setLocalSideIDs()
 ! 
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Mesh_Vars,  ONLY: tElem,tSide
-USE MOD_Mesh_Vars,  ONLY: nQuads,nInnerSides,nSides,nBCSides,offsetQuad
-USE MOD_Mesh_Vars,  ONLY: Quads,nMPISides_MINE,nMPISides_YOUR,BoundaryType,nBCs
-USE MOD_Mesh_Vars,  ONLY: nMortarSides 
+USE MODH_Globals
+USE MODH_Mesh_Vars,  ONLY: tElem,tSide
+USE MODH_Mesh_Vars,  ONLY: nQuads,nInnerSides,nSides,nBCSides,offsetQuad
+USE MODH_Mesh_Vars,  ONLY: Quads,nMPISides_MINE,nMPISides_YOUR,BoundaryType,nBCs
+USE MODH_Mesh_Vars,  ONLY: nMortarSides 
 #ifdef MPI
-USE MOD_ReadInTools,ONLY: GETLOGICAL
-USE MOD_MPI_Vars,   ONLY: nNbProcs,NbProc,nMPISides_Proc,nMPISides_MINE_Proc,nMPISides_YOUR_Proc
-USE MOD_MPI_Vars,   ONLY: offsetQuadMPI,offsetMPISides_MINE,offsetMPISides_YOUR
-USE MOD_Mesh_ReadIn,ONLY: Qsort1Int,INVMAP
+USE MODH_ReadInTools,ONLY: GETLOGICAL
+USE MODH_MPI_Vars,   ONLY: nNbProcs,NbProc,nMPISides_Proc,nMPISides_MINE_Proc,nMPISides_YOUR_Proc
+USE MODH_MPI_Vars,   ONLY: offsetQuadMPI,offsetMPISides_MINE,offsetMPISides_YOUR
+USE MODH_Mesh_ReadIn,ONLY: Qsort1Int,INVMAP
 #endif
 IMPLICIT NONE
 ! INPUT VARIABLES
@@ -445,15 +445,15 @@ SUBROUTINE fillMeshInfo()
 ! 
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Mesh_Vars,  ONLY: tElem,tSide
-USE MOD_Mesh_Vars,ONLY:nQuads,offsetQuad,nSides,nInnerSides,nBCSides,nMPISides,nMortarSides
-USE MOD_Mesh_Vars,ONLY:nMPISides_MINE
-USE MOD_Mesh_Vars,ONLY:ElemToSide,SideToElem,BC,AnalyzeSide
-USE MOD_Mesh_Vars,ONLY:Quads
-USE MOD_Mesh_Vars,ONLY:MortarType,Mortar_nbSideID,Mortar_Flip
+USE MODH_Globals
+USE MODH_Mesh_Vars,  ONLY: tElem,tSide
+USE MODH_Mesh_Vars,ONLY:nQuads,offsetQuad,nSides,nInnerSides,nBCSides,nMPISides,nMortarSides
+USE MODH_Mesh_Vars,ONLY:nMPISides_MINE
+USE MODH_Mesh_Vars,ONLY:ElemToSide,SideToElem,BC,AnalyzeSide
+USE MODH_Mesh_Vars,ONLY:Quads
+USE MODH_Mesh_Vars,ONLY:MortarType,Mortar_nbSideID,Mortar_Flip
 #ifdef MPI
-USE MOD_MPI_vars
+USE MODH_MPI_vars
 #endif
 IMPLICIT NONE
 ! INPUT VARIABLES
@@ -549,11 +549,11 @@ SUBROUTINE exchangeFlip()
 ! set flip of MINE sides to zero, therefore send flip of MINE to other processor, so that YOUR sides get their corresponding flip>0
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Mesh_Vars,  ONLY: tQuad,tSide
-USE MOD_Mesh_Vars,ONLY:nQuads,offsetQuad
-USE MOD_Mesh_Vars,ONLY:Quads
-USE MOD_MPI_vars
+USE MODH_Globals
+USE MODH_Mesh_Vars,  ONLY: tQuad,tSide
+USE MODH_Mesh_Vars,ONLY:nQuads,offsetQuad
+USE MODH_Mesh_Vars,ONLY:Quads
+USE MODH_MPI_vars
 IMPLICIT NONE
 ! INPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -632,4 +632,4 @@ END SUBROUTINE exchangeFlip
 #endif
 
 
-END MODULE MOD_Prepare_Mesh
+END MODULE MODH_Prepare_Mesh

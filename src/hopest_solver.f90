@@ -1,6 +1,6 @@
 #include "hopest_f.h"
 
-MODULE MOD_HopestSolver
+MODULE MODH_HopestSolver
 !===================================================================================================================================
 ! Contains subroutines to build (curviilinear) meshes and provide metrics, etc.
 !===================================================================================================================================
@@ -37,15 +37,16 @@ SUBROUTINE HopestSolver()
 ! Read Parameter from inputfile 
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_IO_HDF5
-USE MOD_P4EST_Vars,         ONLY: p4est,p4estFile
-USE MOD_P4EST,              ONLY: InitP4EST,BuildMeshFromP4EST
-USE MOD_P4EST_Binding,      ONLY: p4_loadmesh
-USE MOD_Mesh_Vars
-USE MOD_Mesh,               ONLY: InitMesh,BuildHOMesh
-USE MOD_Mesh_ReadIn,        ONLY: ReadGeoFromHDF5
-USE MOD_ReadInTools,        ONLY: GETINT,GETSTR
+USE MODH_Globals
+USE MODH_MPI
+USE MODH_IO_HDF5
+USE MODH_P4EST_Vars,         ONLY: p4est,p4estFile
+USE MODH_P4EST,              ONLY: InitP4EST,BuildMeshFromP4EST
+USE MODH_P4EST_Binding,      ONLY: p4_loadmesh
+USE MODH_Mesh_Vars
+USE MODH_Mesh,               ONLY: InitMesh,BuildHOMesh
+USE MODH_Mesh_ReadIn,        ONLY: ReadGeoFromHDF5
+USE MODH_ReadInTools,        ONLY: GETINT,GETSTR
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! INPUT VARIABLES
@@ -57,8 +58,9 @@ IMPLICIT NONE
 ! LOCAL VARIABLES
 !===================================================================================================================================
 SWRITE(UNIT_StdOut,'(132("-"))')
-SWRITE(UNIT_stdOut,'(A)') ' INIT MESH...'
+SWRITE(UNIT_stdOut,'(A)') ' INIT MESH UNO...'
 
+CALL InitMPI()
 CALL InitMesh()
 CALL InitP4EST()
 CALL InitIO()
@@ -81,9 +83,8 @@ SUBROUTINE PrepareMesh()
 ! Read Parameter from inputfile 
 !===================================================================================================================================
 ! MODULES
-USE MOD_Prepare_Mesh
-USE MOD_Mesh_Vars,ONLY: nQuads,nSides,nBCSides
-USE MOD_Mesh_Vars,ONLY: ElemToSide,SideToElem,BC,AnalyzeSide
+USE MODH_Prepare_Mesh
+USE MODH_Mesh_Vars
 IMPLICIT NONE
 ! INPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -92,7 +93,6 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER :: i
 !===================================================================================================================================
 CALL countSides()
 ALLOCATE(ElemToSide(2,6,nQuads))
@@ -104,6 +104,29 @@ CALL setLocalSideIDs()
 CALL exchangeFlip()    ! should be already known from p4est
 #endif
 CALL fillMeshInfo()
+
+!MortarStuff
+firstMortarSideID = nBCSides+1
+lastMortarSideID  = nBCSides+nMortarSides                                                             
+ALLOCATE(MortarType(1:nSides))
+! FOR PARALLIZATION : ALLOCATE(MortarFlip(1:4,firstMortarSideID:lastMortarSideID))                    
+ALLOCATE(Mortar_nbSideID(1:4,firstMortarSideID:lastMortarSideID))                                     
+ALLOCATE(Mortar_Flip(1:4,firstMortarSideID:lastMortarSideID))                                         
+MortarType=0
+Mortar_nbSideID=0                                                                                     
+Mortar_Flip=-1                                                                                        
+
+!lower and upper index of U/gradUx/y/z _plus                                                          
+!lower and upper index of U/gradUx/y/z _plus                                                          
+sideID_minus_lower = 1
+sideID_minus_upper = nBCSides+nMortarSides+nInnerSides+nMPISides_MINE                                 
+sideID_plus_lower  = nBCSides+nMortarSides+1
+sideID_plus_upper  = nBCSides+nMortarSides+nInnerSides+nMPISides
+
+!! dealloacte pointers
+!SWRITE(UNIT_stdOut,'(A)') "NOW CALLING deleteMeshPointer..."
+!CALL deleteMeshPointer()
+
 END SUBROUTINE PrepareMesh
 
 
@@ -112,8 +135,8 @@ SUBROUTINE FinalizeHopestSolver()
 ! Deallocate all global interpolation variables.
 !============================================================================================================================
 ! MODULES
-USE MOD_Mesh_Vars,ONLY: deleteMeshPointer
-USE MOD_P4EST,    ONLY: FinalizeP4EST
+USE MODH_Mesh_Vars,ONLY: deleteMeshPointer
+USE MODH_P4EST,    ONLY: FinalizeP4EST
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !----------------------------------------------------------------------------------------------------------------------------
@@ -128,4 +151,4 @@ CALL FinalizeP4EST()
 END SUBROUTINE FinalizeHopestSolver
 
 
-END MODULE MOD_HopestSolver
+END MODULE MODH_HopestSolver

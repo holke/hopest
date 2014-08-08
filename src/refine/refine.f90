@@ -1,6 +1,6 @@
 #include "hopest_f.h"
 
-MODULE MOD_Refine
+MODULE MODH_Refine
 !===================================================================================================================================
 ! Add comments please!
 !===================================================================================================================================
@@ -26,12 +26,12 @@ SUBROUTINE RefineMesh()
 ! Subroutine to read the mesh from a mesh data file
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Refine_Vars
-USE MOD_Refine_Binding,ONLY: p4_refine_mesh
-USE MOD_Mesh_Vars,     ONLY: nElems
-USE MOD_P4EST_Vars,    ONLY: p4est,mesh
-USE MOD_Readintools,   ONLY: GETINT
+USE MODH_Globals
+USE MODH_Refine_Vars
+USE MODH_Refine_Binding,ONLY: p4_refine_mesh
+USE MODH_Mesh_Vars,     ONLY: nElems
+USE MODH_P4EST_Vars,    ONLY: p4est,mesh
+USE MODH_Readintools,   ONLY: GETINT
 USE, INTRINSIC :: ISO_C_BINDING
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
@@ -83,9 +83,9 @@ SUBROUTINE InitRefineList()
 ! init the refinment list
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Refine_Vars
-USE MOD_Mesh_Vars,  ONLY: Elems,nElems
+USE MODH_Globals
+USE MODH_Refine_Vars
+USE MODH_Mesh_Vars,  ONLY: Elems,nElems
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -145,9 +145,9 @@ SUBROUTINE InitRefineGeom()
 ! init the geometric refinment
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Refine_Vars, ONLY: refineBoundary,refineListType
-USE MOD_Readintools, ONLY: GETREALARRAY
+USE MODH_Globals
+USE MODH_Refine_Vars, ONLY: refineBoundary,refineListType
+USE MODH_Readintools, ONLY: GETREALARRAY
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -204,7 +204,7 @@ FUNCTION RefineByList(x,y,z,tree,level,childID) BIND(C)
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
-USE MOD_Refine_Vars, ONLY: TreeToQuadRefine
+USE MODH_Refine_Vars, ONLY: TreeToQuadRefine
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -230,8 +230,8 @@ FUNCTION RefineByGeom(x,y,z,tree,level) BIND(C)
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
-USE MOD_Refine_Vars,ONLY: RefineList,refineBoundary
-USE MOD_Mesh_Vars,  ONLY: XGeo,Ngeo
+USE MODH_Refine_Vars,ONLY: RefineList,refineBoundary
+USE MODH_Mesh_Vars,  ONLY: XGeo,Ngeo
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -310,4 +310,4 @@ ELSE
 END IF
 END FUNCTION RefineFirst
 
-END MODULE MOD_Refine
+END MODULE MODH_Refine

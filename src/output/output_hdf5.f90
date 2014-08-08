@@ -1,10 +1,10 @@
 #include "hopest_f.h"
-MODULE MOD_Output_HDF5
+MODULE MODH_Output_HDF5
 !===================================================================================================================================
 ! Add comments please!
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
+USE MODH_Globals
 USE HDF5
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
@@ -30,9 +30,9 @@ SUBROUTINE WriteMeshToHDF5(FileString)
 ! Subroutine to write Data to HDF5 format
 !===================================================================================================================================
 ! MODULES
-USE MOD_Mesh_Vars
-USE MOD_IO_HDF5
-USE MOD_HDF5_output
+USE MODH_Mesh_Vars
+USE MODH_IO_HDF5
+USE MODH_HDF5_output
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -374,4 +374,4 @@ INTEGER,INTENT(INOUT)    :: ElemCounter(11,2)
 END SUBROUTINE AddToElemCounter
 
 
-END MODULE MOD_Output_HDF5
+END MODULE MODH_Output_HDF5

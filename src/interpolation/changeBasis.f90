@@ -1,4 +1,4 @@
-MODULE MOD_ChangeBasis
+MODULE MODH_ChangeBasis
 !===================================================================================================================================
 ! Changes a 2D or 3D Tensor Product Lagrange Points of Lagrange Basis of degree N_In to  
 ! Lagrange points of a Lagrange Basis N_Out, using two
@@ -202,4 +202,4 @@ DO kN_In=0,N_In
 END DO
 END SUBROUTINE ChangeBasis3D_XYZ
 
-END MODULE MOD_changeBasis
+END MODULE MODH_changeBasis

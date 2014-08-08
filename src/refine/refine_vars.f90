@@ -1,5 +1,5 @@
 #include "hopest_f.h"
-MODULE MOD_Refine_Vars
+MODULE MODH_Refine_Vars
 !===================================================================================================================================
 ! Contains global variables provided by the mesh routines
 !===================================================================================================================================
@@ -19,4 +19,4 @@ REAL,ALLOCATABLE                 :: refineBoundary(:)
 INTEGER,ALLOCATABLE              :: TreeToQuadRefine(:,:)
 !-----------------------------------------------------------------------------------------------------------------------------------
 
-END MODULE MOD_Refine_Vars
+END MODULE MODH_Refine_Vars

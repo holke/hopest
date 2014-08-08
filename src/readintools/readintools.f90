@@ -1,10 +1,10 @@
 #include "hopest_f.h"
 
-MODULE MOD_ReadInTools
+MODULE MODH_ReadInTools
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_ISO_VARYING_STRING
+USE MODH_Globals
+USE MODH_ISO_VARYING_STRING
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 PRIVATE
@@ -381,7 +381,7 @@ SUBROUTINE IgnoredStrings()
 ! Prints out remaining strings in list after read-in is complete
 !===================================================================================================================================
 ! MODULES
-USE MOD_ISO_VARYING_STRING
+USE MODH_ISO_VARYING_STRING
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -411,7 +411,7 @@ SUBROUTINE FillStrings(IniFile)
 ! with "firstString"
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
+USE MODH_Globals
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -680,4 +680,4 @@ DO iLen=1,nLen
 END DO
 END SUBROUTINE LowCase
 
-END MODULE MOD_ReadInTools
+END MODULE MODH_ReadInTools

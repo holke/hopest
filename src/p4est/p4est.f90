@@ -1,6 +1,6 @@
 #include "hopest_f.h"
 
-MODULE MOD_P4EST
+MODULE MODH_P4EST
 !===================================================================================================================================
 ! Add comments please!
 !===================================================================================================================================
@@ -47,11 +47,11 @@ SUBROUTINE InitP4EST()
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
-USE MOD_Globals,       ONLY: hopestMode
-USE MOD_P4EST_Vars,    ONLY: p4estFile
-USE MOD_P4EST_Binding, ONLY: p4_initvars
-USE MOD_Output_Vars,   ONLY: Projectname
-USE MOD_ReadInTools,   ONLY: GETSTR
+USE MODH_Globals,       ONLY: hopestMode
+USE MODH_P4EST_Vars,    ONLY: p4estFile
+USE MODH_P4EST_Binding, ONLY: p4_initvars
+USE MODH_Output_Vars,   ONLY: Projectname
+USE MODH_ReadInTools,   ONLY: GETSTR
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -78,11 +78,11 @@ SUBROUTINE BuildMeshFromP4EST()
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
-USE MOD_Globals
-USE MOD_Mesh_Vars
-USE MOD_P4EST_Vars
-USE MOD_P4EST_Binding
-USE MOD_Output_Vars, ONLY:Projectname
+USE MODH_Globals
+USE MODH_Mesh_Vars
+USE MODH_P4EST_Vars
+USE MODH_P4EST_Binding
+USE MODH_Output_Vars, ONLY:Projectname
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -102,6 +102,7 @@ INTEGER                     :: iLocSide
 INTEGER                     :: StartQuad,EndQuad
 INTEGER                     :: BClocSide,BCindex
 INTEGER(KIND=C_INT16_T),POINTER :: TreeToBC(:,:)
+INTEGER(KIND=8)             :: offsetQuadTmp,nGlobalQuadsTmp
 !===================================================================================================================================
 SWRITE(UNIT_stdOut,'(A)')'GENERATE HOPEST MESH FROM P4EST ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
@@ -109,7 +110,9 @@ SWRITE(UNIT_StdOut,'(132("-"))')
 ! build p4est mesh
 CALL p4_build_mesh(p4est,mesh)
 ! Get arrays from p4est: use pointers for c arrays (QT,QQ,..), duplicate data for QuadCoords,Level
-CALL p4_get_mesh_info(p4est,mesh,nQuads,nGlobalQuads,offsetQuad,nHalfFaces,nElems)
+CALL p4_get_mesh_info(p4est,mesh,nQuads,nGlobalQuadsTmp,offsetQuadTmp,nHalfFaces,nElems)
+offsetQuad=offsetQuadTmp
+nGlobalQuads=nGlobalQuadsTmp
 
 ALLOCATE(QuadCoords(3,nQuads),QuadLevel(nQuads)) ! big to small flip
 QuadCoords=0
@@ -334,7 +337,7 @@ FUNCTION GetHFlip(PSide0,PSide1,PFlip)
 ! Subroutine to read the mesh from a mesh data file
 !===================================================================================================================================
 ! MODULES
-USE MOD_P4EST_Vars,ONLY:P2H_FaceMap,H2P_FaceNodeMap,P2H_FaceNodeMap,P4R,P4Q,P4P
+USE MODH_P4EST_Vars,ONLY:P2H_FaceMap,H2P_FaceNodeMap,P2H_FaceNodeMap,P4R,P4Q,P4P
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -367,10 +370,10 @@ SUBROUTINE BuildBCs()
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
-USE MOD_Globals
-USE MOD_P4EST_Vars,   ONLY: H2P_FaceMap,p4est
-USE MOD_Mesh_Vars,    ONLY: tElem,tSide,nElems,Elems
-USE MOD_P4EST_Binding,ONLY: p4_build_bcs
+USE MODH_Globals
+USE MODH_P4EST_Vars,   ONLY: H2P_FaceMap,p4est
+USE MODH_Mesh_Vars,    ONLY: tElem,tSide,nElems,Elems
+USE MODH_P4EST_Binding,ONLY: p4_build_bcs
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -402,8 +405,8 @@ SUBROUTINE FinalizeP4EST()
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
-USE MOD_P4EST_Vars,    ONLY: TreeToQuad,QuadCoords,QuadLevel
-USE MOD_P4EST_Binding
+USE MODH_P4EST_Vars,    ONLY: TreeToQuad,QuadCoords,QuadLevel
+USE MODH_P4EST_Binding
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -423,4 +426,4 @@ SDEALLOCATE(QuadLevel)
 END SUBROUTINE FinalizeP4EST
 
 
-END MODULE MOD_P4EST
+END MODULE MODH_P4EST

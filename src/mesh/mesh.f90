@@ -1,6 +1,6 @@
 #include "hopest_f.h"
 
-MODULE MOD_Mesh
+MODULE MODH_Mesh
 !===================================================================================================================================
 ! Contains subroutines to build (curviilinear) meshes and provide metrics, etc.
 !===================================================================================================================================
@@ -42,10 +42,10 @@ SUBROUTINE InitMesh()
 ! Read Parameter from inputfile 
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Output_Vars, ONLY: Projectname
-USE MOD_Mesh_Vars,   ONLY: BoundaryName,BoundaryType,MeshFile,nUserBCs,MeshInitIsDone
-USE MOD_ReadInTools, ONLY: GETINT,GETSTR,GETINTARRAY,CNTSTR
+USE MODH_Globals
+USE MODH_Output_Vars, ONLY: Projectname
+USE MODH_Mesh_Vars,   ONLY: BoundaryName,BoundaryType,MeshFile,nUserBCs,MeshInitIsDone
+USE MODH_ReadInTools, ONLY: GETINT,GETSTR,GETINTARRAY,CNTSTR
 IMPLICIT NONE
 ! INPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -57,10 +57,11 @@ IMPLICIT NONE
 INTEGER :: i
 !===================================================================================================================================
 SWRITE(UNIT_StdOut,'(132("-"))')
-SWRITE(UNIT_stdOut,'(A)') ' INIT MESH...'
+SWRITE(UNIT_stdOut,'(A)') ' INIT MESH DUE...'
 
 ! prepare pointer structure (get nElems, etc.)
 MeshFile = GETSTR('MeshFile')
+SWRITE(UNIT_stdOut,'(A)') ' NOCH DA ...'
 ProjectName=Meshfile(1:INDEX(Meshfile,'_mesh.h5')-1)
 
 ! read in boundary conditions, will overwrite BCs from meshfile!
@@ -84,10 +85,10 @@ SUBROUTINE SetCurvedInfo()
 ! Set and allocate information related to high order data
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Mesh_Vars,ONLY: NGeo,Xi_NGeo,wBary_NGeo,HexMap,HexMapInv
-USE MOD_Mesh_Vars,ONLY: nCurvedNodes 
-USE MOD_Basis,    ONLY: BarycentricWeights
+USE MODH_Globals
+USE MODH_Mesh_Vars,ONLY: NGeo,Xi_NGeo,wBary_NGeo,HexMap,HexMapInv
+USE MODH_Mesh_Vars,ONLY: nCurvedNodes 
+USE MODH_Basis,    ONLY: BarycentricWeights
 !-----------------------------------------------------------------------------------------------------------------------------------
 IMPLICIT NONE
 ! INPUT VARIABLES
@@ -129,12 +130,12 @@ SUBROUTINE BuildHOMesh()
 ! uses XGeo High order data from trees and interpolates it to the quadrants 
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Mesh_Vars,   ONLY: Ngeo,nElems,nQuads,Xgeo,XgeoQuad
-USE MOD_Mesh_Vars,   ONLY: wBary_Ngeo,xi_Ngeo
-USE MOD_P4EST_Vars,  ONLY: TreeToQuad,QuadCoords,QuadLevel,sIntSize
-USE MOD_Basis,       ONLY: LagrangeInterpolationPolys 
-USE MOD_ChangeBasis, ONLY: ChangeBasis3D_XYZ 
+USE MODH_Globals
+USE MODH_Mesh_Vars,   ONLY: Ngeo,nElems,nQuads,Xgeo,XgeoQuad
+USE MODH_Mesh_Vars,   ONLY: wBary_Ngeo,xi_Ngeo
+USE MODH_P4EST_Vars,  ONLY: TreeToQuad,QuadCoords,QuadLevel,sIntSize
+USE MODH_Basis,       ONLY: LagrangeInterpolationPolys 
+USE MODH_ChangeBasis, ONLY: ChangeBasis3D_XYZ 
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -183,8 +184,8 @@ SUBROUTINE FinalizeMesh()
 ! Deallocate all global interpolation variables.
 !============================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Mesh_Vars
+USE MODH_Globals
+USE MODH_Mesh_Vars
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !----------------------------------------------------------------------------------------------------------------------------
@@ -201,4 +202,4 @@ SDEALLOCATE(BoundaryType)
 MeshInitIsDone = .FALSE.
 END SUBROUTINE FinalizeMesh
 
-END MODULE MOD_Mesh
+END MODULE MODH_Mesh

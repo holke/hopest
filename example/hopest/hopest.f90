@@ -5,11 +5,11 @@ PROGRAM Hopest
 ! Control program of the Flexi code. Initialization of the computation
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_ReadInTools,  ONLY:IgnoredStrings,GETINT
-USE MOD_HopestMesh,   ONLY:HopestMesh
-USE MOD_HopestSolver, ONLY:HopestSolver,PrepareMesh,FinalizeHopestSolver
-USE MOD_MPI,          ONLY:InitMPI
+USE MODH_Globals
+USE MODH_ReadInTools,  ONLY:IgnoredStrings,GETINT
+USE MODH_HopestMesh,   ONLY:HopestMesh
+USE MODH_HopestSolver, ONLY:HopestSolver,PrepareMesh,FinalizeHopestSolver
+USE MODH_MPI,          ONLY:InitMPI
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------

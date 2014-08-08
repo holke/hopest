@@ -1,4 +1,4 @@
-MODULE MOD_Output_Vars
+MODULE MODH_Output_Vars
 !===================================================================================================================================
 ! Contains global variables provided by the output routines
 !===================================================================================================================================
@@ -16,4 +16,4 @@ CHARACTER(LEN=255)           :: ProjectName
 INTEGER                      :: outputFormat=0           ! =0: visualization off, >0 visualize
 LOGICAL                      :: OutputInitIsDone=.FALSE.
 !===================================================================================================================================
-END MODULE MOD_Output_Vars
+END MODULE MODH_Output_Vars
