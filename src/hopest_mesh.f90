@@ -42,6 +42,7 @@ USE MOD_Mesh,               ONLY: InitMesh,BuildHOMesh
 USE MOD_Output_Vars,        ONLY: Projectname
 USE MOD_Output_HDF5,        ONLY: writeMeshToHDF5
 USE MOD_Mesh_ReadIn,        ONLY: readMeshFromHDF5
+USE MOD_Mesh,               ONLY: DeformMesh
 USE MOD_Basis,              ONLY: BarycentricWeights
 USE MOD_Refine,             ONLY: RefineMesh
 USE MOD_ReadInTools,        ONLY: GETINT,GETSTR,GETINTARRAY,CNTSTR
@@ -62,6 +63,8 @@ CALL InitP4EST()
 CALL InitIO()
 
 CALL readMeshFromHDF5(MeshFile) !set nElems
+
+CALL deformMesh()
 
 CALL RefineMesh()
 CALL BuildBCs()

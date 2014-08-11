@@ -25,6 +25,10 @@ INTERFACE BuildHOMesh
   MODULE PROCEDURE BuildHOMesh
 END INTERFACE
 
+INTERFACE DeformMesh
+  MODULE PROCEDURE DeformMesh
+END INTERFACE
+
 INTERFACE FinalizeMesh
   MODULE PROCEDURE FinalizeMesh
 END INTERFACE
@@ -32,6 +36,7 @@ END INTERFACE
 PUBLIC::InitMesh
 PUBLIC::SetCurvedInfo
 PUBLIC::BuildHOMesh
+PUBLIC::DeformMesh
 PUBLIC::FinalizeMesh
 !===================================================================================================================================
 
@@ -44,7 +49,7 @@ SUBROUTINE InitMesh()
 ! MODULES
 USE MOD_Globals
 USE MOD_Output_Vars, ONLY: Projectname
-USE MOD_Mesh_Vars,   ONLY: BoundaryName,BoundaryType,MeshFile,nUserBCs
+USE MOD_Mesh_Vars,   ONLY: BoundaryName,BoundaryType,MeshFile,nUserBCs,Deform
 USE MOD_ReadInTools, ONLY: GETINT,GETSTR,GETINTARRAY,CNTSTR
 IMPLICIT NONE
 ! INPUT VARIABLES
@@ -61,7 +66,14 @@ SWRITE(UNIT_stdOut,'(A)') ' INIT MESH...'
 
 ! prepare pointer structure (get nElems, etc.)
 MeshFile = GETSTR('MeshFile')
-ProjectName = GETSTR('ProjectName')
+
+IF(CNTSTR('ProjectName',0).EQ.0)THEN
+  !default project name frommesh file
+  ProjectName=TRIM(Meshfile(1:INDEX(Meshfile,'_mesh.h5')-1))
+ELSE
+  ProjectName = GETSTR('ProjectName')
+END IF
+Deform = GETINT('Deform','0')
 
 ! read in boundary conditions, will overwrite BCs from meshfile!
 nUserBCs = CNTSTR('BoundaryName',0)
@@ -176,6 +188,42 @@ DO iElem=1,nElems
   END IF !nLocalQuads==1
 END DO !iElem=1,nElems
 END SUBROUTINE BuildHOMesh
+
+
+SUBROUTINE DeformMesh()
+!===================================================================================================================================
+! Subroutine to read the mesh from a mesh data file
+!===================================================================================================================================
+! MODULES
+USE MOD_Globals
+USE MOD_Mesh_Vars, ONLY: nElems,XGeo,Ngeo,Deform
+! IMPLICIT VARIABLE HANDLING
+IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES
+INTEGER                        :: i,j,k
+INTEGER                        :: iElem
+REAL                           :: Pi,x(3)
+!-----------------------------------------------------------------------------------------------------------------------------------
+IF(Deform.EQ.0) RETURN
+!deform the mesh
+SELECT CASE(Deform)
+CASE(1) !sinus -1,1 deformation
+  Pi = ACOS(-1.) 
+  DO iElem=1,nElems
+    DO k=0,NGeo; DO j=0,NGeo; DO i=0,NGeo
+      x(:)=Xgeo(:,i,j,k,iElem)
+      Xgeo(:,i,j,k,iElem) = x+ 0.1*SIN(Pi*x(1))*SIN(Pi*x(2))*SIN(Pi*x(3))
+    END DO; END DO; END DO;
+  END DO
+CASE DEFAULT
+  STOP 'This deform case is not defined'
+END SELECT !Deform
+END SUBROUTINE DeformMesh
 
 
 SUBROUTINE FinalizeMesh()
