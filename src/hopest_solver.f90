@@ -56,15 +56,22 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
+LOGICAL :: fileExists
 !===================================================================================================================================
 SWRITE(UNIT_StdOut,'(132("-"))')
 SWRITE(UNIT_stdOut,'(A)') ' INIT MESH UNO...'
+
+! If this routine is called then hopest is run in solver mode
+hopestMode = 2
 
 CALL InitMPI()
 CALL InitMesh()
 CALL InitP4EST()
 CALL InitIO()
 
+INQUIRE(FILE=TRIM(p4estFile), EXIST=fileExists)
+IF(.NOT.fileExists) CALL abort(__STAMP__,&
+  'p4est Input file does not exists: '//p4estFile)
 CALL p4_loadmesh(TRIM(p4estFile)//C_NULL_CHAR,p4est)
 !CALL p4_partition_info !start and end tree and quadrants
 CALL BuildMeshFromP4EST()

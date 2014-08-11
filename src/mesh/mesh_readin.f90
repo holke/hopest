@@ -16,16 +16,11 @@ INTERFACE ReadMeshFromHDF5
   MODULE PROCEDURE ReadMeshFromHDF5
 END INTERFACE
 
-INTERFACE ReadMeshFromHDF5nobuildp4est
-  MODULE PROCEDURE ReadMeshFromHDF5nobuildp4est
-END INTERFACE
-
 INTERFACE ReadGeoFromHDF5
   MODULE PROCEDURE ReadGeoFromHDF5
 END INTERFACE
 
 PUBLIC::ReadMeshFromHDF5
-PUBLIC::ReadMeshFromHDF5nobuildp4est
 PUBLIC::ReadGeoFromHDF5
 !===================================================================================================================================
 
@@ -37,7 +32,7 @@ SUBROUTINE ReadBCs()
 !===================================================================================================================================
 ! MODULES
 USE MODH_Globals
-USE MODH_Mesh_Vars,ONLY:BoundaryName,BoundaryType,nBCs,nUserBCs
+USE MODH_Mesh_Vars,ONLY:BoundaryName,BoundaryType,nBCs
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -46,64 +41,81 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER, ALLOCATABLE           :: BCMapping(:),BCType(:,:)
-CHARACTER(LEN=255), ALLOCATABLE:: BCNames(:)
-INTEGER                        :: iBC,iUserBC
-INTEGER                        :: Offset=0 ! Every process reads all BCs
+INTEGER                        :: iBC,Offset
 !===================================================================================================================================
-! Read boundary names from data file
+! Get number of boundary condtions
 CALL GetDataSize(File_ID,'BCNames',nDims,HSize)
 nBCs=HSize(1)
 DEALLOCATE(HSize)
-ALLOCATE(BCNames(nBCs))
-ALLOCATE(BCMapping(nBCs))
-CALL ReadArray('BCNames',1,(/nBCs/),Offset,1,StrArray=BCNames)  ! Type is a dummy type only
-! User may have redefined boundaries in the ini file. So we have to create mappings for the boundaries.
-BCMapping=0
-IF(nUserBCs .GT. 0)THEN
-  DO iBC=1,nBCs
-    DO iUserBC=1,nUserBCs
-      IF(INDEX(TRIM(BCNames(iBC)),TRIM(BoundaryName(iUserBC))) .NE.0) BCMapping(iBC)=iUserBC
-    END DO
-  END DO
-END IF
-
-! Read boundary types from data file
 CALL GetDataSize(File_ID,'BCType',nDims,HSize)
 IF(HSize(1).NE.nBCs) STOP 'Problem in readBC'
 DEALLOCATE(HSize)
-ALLOCATE(BCType(nBCs,4))
-offset=0
-CALL ReadArray('BCType',2,(/nBCs,4/),Offset,1,IntegerArray=BCType)
-! Now apply boundary mappings
-IF(nUserBCs .GT. 0)THEN
-  DO iBC=1,nBCs
-    IF(BCMapping(iBC) .NE. 0)THEN
-      SWRITE(Unit_StdOut,'(A,A)')    ' |     Boundary in HDF file found |  ',TRIM(BCNames(iBC))
-      SWRITE(Unit_StdOut,'(A,I2,I2)')' |                            was | ',BCType(iBC,1),BCType(iBC,3)
-      SWRITE(Unit_StdOut,'(A,I2,I2)')' |                      is set to | ',BoundaryType(BCMapping(iBC),1:2)
-      BCType(iBC,1) = BoundaryType(BCMapping(iBC),1)
-      BCType(iBC,3) = BoundaryType(BCMapping(iBC),2)
-    END IF
-  END DO
-END IF
-IF(ALLOCATED(BoundaryName)) DEALLOCATE(BoundaryName)
-IF(ALLOCATED(BoundaryType)) DEALLOCATE(BoundaryType)
+
 ALLOCATE(BoundaryName(nBCs))
 ALLOCATE(BoundaryType(nBCs,BC_SIZE))
-BoundaryName = BCNames
-BoundaryType(:,BC_TYPE)  = BCType(:,BC_TYPE)  
-BoundaryType(:,BC_CURVED)= BCType(:,BC_CURVED)
-BoundaryType(:,BC_STATE) = BCType(:,BC_STATE) 
-BoundaryType(:,BC_ALPHA) = BCType(:,BC_ALPHA) 
+offset=0
+CALL ReadArray('BCNames',1,(/nBCs/),  Offset,1,StrArray    =BoundaryName)
+CALL ReadArray('BCType' ,2,(/nBCs,4/),Offset,1,IntegerArray=BoundaryType)
+
 SWRITE(UNIT_StdOut,'(132("."))')
 SWRITE(Unit_StdOut,'(A,A16,A20,A10,A10,A10,A10)')'BOUNDARY CONDITIONS','|','Name','Type','Curved','State','Alpha'
 DO iBC=1,nBCs
   SWRITE(*,'(A,A33,A20,I10,I10,I10,I10)')' |','|',TRIM(BoundaryName(iBC)),BoundaryType(iBC,:)
 END DO
 SWRITE(UNIT_StdOut,'(132("."))')
-DEALLOCATE(BCNames,BCType,BCMapping)
 END SUBROUTINE ReadBCs
+
+
+SUBROUTINE SetUserBCs()
+!===================================================================================================================================
+! The user can redefine boundaries in the ini file. We create the mappings for the boundaries.
+!===================================================================================================================================
+! MODULES
+USE MODH_Globals
+USE MODH_Mesh_Vars,  ONLY: BoundaryName,BoundaryType,nBCs,nUserBCs
+USE MODH_ReadinTools,ONLY: CNTSTR,GETSTR,GETINTARRAY
+! IMPLICIT VARIABLE HANDLING
+IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES
+INTEGER                        :: BCMapping(nBCs)
+CHARACTER(LEN=255),ALLOCATABLE :: BoundaryNameUser(:)
+INTEGER,ALLOCATABLE            :: BoundaryTypeUser(:,:)
+INTEGER                        :: iBC,iUserBC
+!===================================================================================================================================
+! read in boundary conditions, will overwrite BCs from meshfile!
+nUserBCs = CNTSTR('BoundaryName',0)
+IF(nUserBCs.EQ.0) RETURN
+
+! Read user BC
+ALLOCATE(BoundaryNameUser(nUserBCs))
+ALLOCATE(BoundaryTypeUser(nUserBCs,2))
+DO iBC=1,nUserBCs
+  BoundaryName(iBC)   = GETSTR('BoundaryName')
+  BoundaryType(iBC,:) = GETINTARRAY('BoundaryType',2) !(/Type,State/)
+END DO
+
+! Override BCs
+BCMapping=0
+DO iBC=1,nBCs
+  DO iUserBC=1,nUserBCs
+    IF(INDEX(TRIM(BoundaryNameUser(iUserBC)),TRIM(BoundaryName(iBC))) .NE.0)THEN
+      SWRITE(Unit_StdOut,'(A,A)')    ' |     Boundary in HDF file found | ',TRIM(BoundaryName(iBC))
+      SWRITE(Unit_StdOut,'(A,I2,I2)')' |                            was | ',BoundaryType(iBC,1),BoundaryType(iBC,3)
+      SWRITE(Unit_StdOut,'(A,I2,I2)')' |                      is set to | ',BoundaryTypeUser(iUserBC,1:2)
+      BoundaryType(iBC,1) = BoundaryTypeUser(iUserBC,1)
+      BoundaryType(iBC,3) = BoundaryTypeUser(iUserBC,2)
+    END IF
+  END DO
+END DO
+
+SWRITE(UNIT_StdOut,'(132("."))')
+DEALLOCATE(BoundaryNameUser,BoundaryTypeUser)
+END SUBROUTINE SetUserBCs
 
 
 SUBROUTINE ReadMeshHeader()
@@ -130,15 +142,17 @@ DEALLOCATE(HSize)
 
 CALL ReadAttribute(File_ID,'BoundaryOrder',1,IntegerScalar=BoundaryOrder_mesh)
 NGeo = BoundaryOrder_mesh-1
+CALL SetCurvedInfo()
+
 CALL ReadAttribute(File_ID,'CurvedFound',1,LogicalScalar=useCurveds)
 
 CALL readBCs()
-CALL SetCurvedInfo()
+IF(hopestMode.EQ.2) CALL setUserBCs()
 
 END SUBROUTINE ReadMeshHeader
 
 
-SUBROUTINE ReadMeshFromHDF5nobuildp4est(FileString)
+SUBROUTINE ReadMeshFromHDF5(FileString)
 !===================================================================================================================================
 ! Subroutine to read the mesh from a mesh data file and build p4est_connectivity
 !===================================================================================================================================
@@ -184,7 +198,6 @@ INTEGER,ALLOCATABLE            :: tree_to_vertex(:,:)
 REAL,ALLOCATABLE               :: vertices(:,:)
 INTEGER,ALLOCATABLE            :: JoinFaces(:,:)
 !===================================================================================================================================
-IF(MESHInitIsDone) RETURN
 INQUIRE (FILE=TRIM(FileString), EXIST=fileExists)
 IF(.NOT.FileExists)  &
     CALL abort(__STAMP__, &
@@ -332,8 +345,8 @@ DO iTree=1,nTrees
       aSide%BCindex = BCindex
       IF(BoundaryType(aSide%BCindex,BC_TYPE).NE.1)THEN ! Reassignement from periodic to non-periodic
         doConnection=.FALSE.
-        aSide%flip  =0
-        elemID            = 0
+        aSide%flip  = 0
+        elemID      = 0
       END IF
     ELSE
       aSide%BCindex = 0
@@ -537,21 +550,9 @@ WRITE(*,'(A22,I8)' )'nBCSides:',nBCSides
 WRITE(*,'(A22,I8)' )'nPeriodicSides:',nPeriodicSides
 WRITE(*,*)'-------------------------------------------------------'
 
-END SUBROUTINE ReadMeshFromHDF5nobuildp4est
-
-
-SUBROUTINE ReadMeshFromHDF5(FileString)
-!===================================================================================================================================
-! Subroutine to read the mesh from a mesh data file, build p4est and p4est_connectivity
-!===================================================================================================================================
-! MODULES
-USE MODH_P4EST,         ONLY: Buildp4est
-! INPUT VARIABLES
-CHARACTER(LEN=*),INTENT(IN)  :: FileString
-!-----------------------------------------------------------------------------------------------------------------------------------
-CALL ReadMeshFromHDF5nobuildp4est(FileString)
-CALL Buildp4est
 END SUBROUTINE ReadMeshFromHDF5
+
+
 
 SUBROUTINE ReadGeoFromHDF5(FileString)
 !===================================================================================================================================

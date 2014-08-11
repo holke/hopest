@@ -27,10 +27,6 @@ INTERFACE BuildBCs
   MODULE PROCEDURE BuildBCs
 END INTERFACE
 
-INTERFACE Buildp4est
-  MODULE PROCEDURE Buildp4est
-END INTERFACE
-
 INTERFACE testHOabc
   MODULE PROCEDURE testHOabc
 END INTERFACE
@@ -43,7 +39,6 @@ PUBLIC::InitP4EST
 PUBLIC::BuildMeshFromP4EST
 PUBLIC::getHFlip
 PUBLIC::BuildBCs
-PUBLIC::Buildp4est
 PUBLIC::testHOabc
 PUBLIC::FinalizeP4EST
 !===================================================================================================================================
@@ -72,11 +67,7 @@ IMPLICIT NONE
 ! LOCAL VARIABLES
 !===================================================================================================================================
 CALL p4_initvars()
-IF(hopestMode.EQ.2)THEN
-  p4estFile = GETSTR('p4estFile')
-ELSE
-  p4estFile = TRIM(ProjectName)//'.p4est'
-END IF
+p4estFile = GETSTR('p4estFile',TRIM(ProjectName)//'.p4est')
 
 END SUBROUTINE InitP4EST
 
@@ -457,17 +448,6 @@ DO iTree=1,nTrees
 END DO
 CALL p4_build_bcs(p4est,nTrees,BCElemMap)
 END SUBROUTINE BuildBCs
-
-SUBROUTINE Buildp4est()
-!===================================================================================================================================
-! Subroutine to build the p4est and the p4est_geometry from connectivity
-!===================================================================================================================================
-! MODULES
-USE MODH_P4EST_Vars,    ONLY: connectivity,p4est,geom
-USE MODH_P4EST_Binding, ONLY: p4_build_p4est
-!-----------------------------------------------------------------------------------------------------------------------------------
-CALL p4_build_p4est(connectivity,p4est,geom)
-END SUBROUTINE Buildp4est
 
 
 SUBROUTINE buildHOp4GeometryX(a,b,c,x,y,z,tree)

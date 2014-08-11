@@ -16,9 +16,10 @@ LOGICAL           :: useCurveds
 INTEGER           :: NGeo                        ! polynomial degree of geometric transformation
 REAL,ALLOCATABLE  :: Xi_NGeo(:)                  ! 1D equidistant point positions for curved elements (during readin)
 REAL,ALLOCATABLE  :: wBary_NGeo(:)               ! barycentric weights from xi_Ngeo
-REAL,ALLOCATABLE  :: XGeo(:,:,:,:,:)              ! High order geometry nodes, per element (1:3,0:Ngeo,0:Ngeo,0:Ngeo,nTrees)
-REAL,ALLOCATABLE  :: XGeoElem(:,:,:,:,:)              ! High order geometry nodes, per element (1:3,0:Ngeo,0:Ngeo,0:Ngeo,nElems)
-INTEGER           :: Deform                       ! used for mesh deformations
+REAL,ALLOCATABLE  :: XGeo(:,:,:,:,:)             ! High order geometry nodes, per element (1:3,0:Ngeo,0:Ngeo,0:Ngeo,nTrees)
+REAL,ALLOCATABLE  :: XGeoElem(:,:,:,:,:)         ! High order geometry nodes, per element (1:3,0:Ngeo,0:Ngeo,0:Ngeo,nElems)
+INTEGER           :: Deform                      ! used for mesh deformations
+LOGICAL           :: setUserBCs=.FALSE.          ! replace HDF5 BCs by those defined in parameter file (only in solver mode)
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! GLOBAL VARIABLES 
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -110,8 +111,6 @@ INTEGER,ALLOCATABLE            :: HexMap(:,:,:)
 INTEGER,ALLOCATABLE            :: HexMapInv(:,:)
 ! DATA STRUCTURES BUILT USING P4EST CONNECTIVITY
 TYPE(tElemPtr),POINTER         :: Elems(:)        ! new element list elements are "quadrants/octants"        
-!-----------------------------------------------------------------------------------------------------------------------------------
-LOGICAL          :: MeshInitIsDone =.FALSE.
 !===================================================================================================================================
 INTERFACE GETNEWSIDE
   MODULE PROCEDURE GETNEWSIDE

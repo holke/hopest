@@ -48,9 +48,9 @@ SUBROUTINE InitMesh()
 !===================================================================================================================================
 ! MODULES
 USE MODH_Globals
-USE MODH_Output_Vars, ONLY: Projectname
-USE MODH_Mesh_Vars,   ONLY: BoundaryName,BoundaryType,MeshFile,nUserBCs,Deform
-USE MODH_ReadInTools, ONLY: GETINT,GETSTR,GETINTARRAY,CNTSTR
+USE MODH_Output_Vars, ONLY: ProjectName
+USE MODH_Mesh_Vars,   ONLY: MeshFile,Deform
+USE MODH_ReadInTools, ONLY: GETINT,GETSTR,CNTSTR
 IMPLICIT NONE
 ! INPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -62,7 +62,7 @@ IMPLICIT NONE
 INTEGER :: i
 !===================================================================================================================================
 SWRITE(UNIT_StdOut,'(132("-"))')
-SWRITE(UNIT_stdOut,'(A)') ' INIT MESH DUE...'
+SWRITE(UNIT_stdOut,'(A)') ' INIT MESH ...'
 
 ! prepare pointer structure (get nTrees, etc.)
 MeshFile = GETSTR('MeshFile')
@@ -73,17 +73,6 @@ ELSE
   ProjectName = GETSTR('ProjectName')
 END IF
 Deform = GETINT('Deform','0')
-
-! read in boundary conditions, will overwrite BCs from meshfile!
-nUserBCs = CNTSTR('BoundaryName',0)
-IF(nUserBCs.GT.0)THEN
-  ALLOCATE(BoundaryName(1:nUserBCs))
-  ALLOCATE(BoundaryType(1:nUserBCs,2))
-  DO i=1,nUserBCs
-    BoundaryName(i)   = GETSTR('BoundaryName')
-    BoundaryType(i,:) = GETINTARRAY('BoundaryType',2) !(/Type,State/)
-  END DO
-END IF !nUserBCs>0
 
 SWRITE(UNIT_stdOut,'(A)')' INIT MESH DONE!'
 SWRITE(UNIT_StdOut,'(132("-"))')
@@ -260,7 +249,6 @@ SDEALLOCATE(HexMapInv)
 SDEALLOCATE(Xi_NGeo)
 SDEALLOCATE(BoundaryName)
 SDEALLOCATE(BoundaryType)
-MeshInitIsDone = .FALSE.
 END SUBROUTINE FinalizeMesh
 
 END MODULE MODH_Mesh
