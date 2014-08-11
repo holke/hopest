@@ -24,10 +24,10 @@ INTEGER(KIND=4)             :: IntSize            ! used to transform INT coords
 REAL                        :: sIntSize           ! 1./REAL(intsize)
 INTEGER(KIND=4),POINTER     :: QuadToTree(:)      ! from quadrant to tree ( ~ new element ID to old element ID) 
 INTEGER(KIND=4),ALLOCATABLE :: TreeToQuad(:,:)    ! from tree to quad range (2,nTrees), entry 1: firstInd-1, entry2:lastInd 
-INTEGER(KIND=4),POINTER     :: QuadToQuad(:,:)    ! p4est quadrant connectivity (1:6,1:nQuads) => neighbor quadrant
-INTEGER(KIND=1),POINTER     :: QuadToFace(:,:)    ! p4est face connectivity (1:6,1:nQuads) => neighbor faceId + orientation + non-conform info
+INTEGER(KIND=4),POINTER     :: QuadToQuad(:,:)    ! p4est quadrant connectivity (1:6,1:nElems) => neighbor quadrant
+INTEGER(KIND=1),POINTER     :: QuadToFace(:,:)    ! p4est face connectivity (1:6,1:nElems) => neighbor faceId + orientation + non-conform info
 INTEGER(KIND=4),POINTER     :: QuadToHalf(:,:)    ! p4est face connectivity for mortars (1:4,1:nHalfFaces), ( ~small sides)
-INTEGER(KIND=4),ALLOCATABLE :: QuadCoords(:,:)    ! p4est Integer coordinates of first quadrant node (xyz,nQuads)
+INTEGER(KIND=4),ALLOCATABLE :: QuadCoords(:,:)    ! p4est Integer coordinates of first quadrant node (xyz,nElems)
 INTEGER(KIND=1),ALLOCATABLE :: QuadLevel(:)       ! p4est Integer Level of quadrant (use to compute quadrant size
 
 !-----------------------------------------------------------------------------------------------------------------------------------

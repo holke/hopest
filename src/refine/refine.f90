@@ -257,8 +257,8 @@ REAL                                  :: xi0(3)
 REAL                                  :: xiBary(3)
 REAL                                  :: dxi,length
 REAL,DIMENSION(0:Ngeo,0:Ngeo)         :: Vdm_xi,Vdm_eta,Vdm_zeta
-REAL                                  :: XCorner(3), XBaryQuad(3),test,IntSize,sIntSize
-REAL                                  :: XGeoQuad(3,0:NGeo,0:NGeo,0:NGeo)
+REAL                                  :: XCorner(3), XBaryElem(3),test,IntSize,sIntSize
+REAL                                  :: XGeoElem(3,0:NGeo,0:NGeo,0:NGeo)
 REAL                                  :: l_xi(0:NGeo),l_eta(0:NGeo),l_zeta(0:NGeo),l_etazeta
 INTEGER                               :: i,j,k
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -280,7 +280,7 @@ sIntSize=1./IntSize
 xi0(1)=-1.+2.*REAL(x)*sIntSize
 xi0(2)=-1.+2.*REAL(y)*sIntSize
 xi0(3)=-1.+2.*REAL(z)*sIntSize
-! length of the quadrant in reference coordinates of its tree [-1,1]
+! length of the element / quadrant in reference coordinates of its tree [-1,1]
 length=2./REAL(2**level)
 ! Build Vandermonde matrices for each parameter range in xi, eta,zeta
 DO i=0,Ngeo  
@@ -289,8 +289,8 @@ DO i=0,Ngeo
   CALL LagrangeInterpolationPolys(xi0(2) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_eta(i,:)) 
   CALL LagrangeInterpolationPolys(xi0(3) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_zeta(i,:)) 
 END DO
-!interpolate tree HO mapping to quadrant HO mapping
-CALL ChangeBasis3D_XYZ(3,Ngeo,Ngeo,Vdm_xi,Vdm_eta,Vdm_zeta,XGeo(:,:,:,:,tree),XgeoQuad(:,:,:,:))
+!interpolate tree HO mapping to element / quadrant HO mapping
+CALL ChangeBasis3D_XYZ(3,Ngeo,Ngeo,Vdm_xi,Vdm_eta,Vdm_zeta,XGeo(:,:,:,:,tree),XgeoElem(:,:,:,:))
 
 
 ! Barycenter
@@ -300,12 +300,12 @@ CALL LagrangeInterpolationPolys(xiBary(1),Ngeo,xi_Ngeo,wBary_Ngeo,l_xi(:))
 CALL LagrangeInterpolationPolys(xiBary(2),Ngeo,xi_Ngeo,wBary_Ngeo,l_eta(:)) 
 CALL LagrangeInterpolationPolys(xiBary(3),Ngeo,xi_Ngeo,wBary_Ngeo,l_zeta(:)) 
 !interpolate tree HO mapping to quadrant HO mapping
-XBaryQuad(:)=0.
+XBaryElem(:)=0.
   DO k=0,NGeo
     DO j=0,NGeo
       l_etazeta=l_eta(j)*l_zeta(k)
       DO i=0,NGeo
-        XBaryQuad(:)=XBaryQuad(:)+XgeoQuad(:,i,j,k)*l_xi(i)*l_etazeta
+        XBaryElem(:)=XBaryElem(:)+XgeoElem(:,i,j,k)*l_xi(i)*l_etazeta
       END DO
     END DO
   END DO
@@ -315,7 +315,7 @@ CASE(1)   ! SPHERE
   DO k=0,Ngeo
     DO j=0,Ngeo
       DO i=0,Ngeo
-        XCorner(:)=XgeoQuad(:,i,j,k)
+        XCorner(:)=XgeoElem(:,i,j,k)
         test=SQRT((XCorner(1)-sphereCenter(1))**2+(XCorner(2)-sphereCenter(2))**2+(XCorner(3)-sphereCenter(3))**2)
         IF (test.LE.sphereRadius) THEN
           refineByGeom = 1
@@ -325,7 +325,7 @@ CASE(1)   ! SPHERE
     END DO ! j 
   END DO ! k
   ! check barycenter
-  test=SQRT((XBaryQuad(1)-sphereCenter(1))**2+(XBaryQuad(2)-sphereCenter(2))**2+(XBaryQuad(3)-sphereCenter(3))**2)
+  test=SQRT((XBaryElem(1)-sphereCenter(1))**2+(XBaryElem(2)-sphereCenter(2))**2+(XBaryElem(3)-sphereCenter(3))**2)
   IF (test.LE.sphereRadius) THEN
     refineByGeom = 1
   ELSE
@@ -337,7 +337,7 @@ CASE(11)   ! SPHERE SHELL
   DO k=0,Ngeo
     DO j=0,Ngeo
       DO i=0,Ngeo
-        XCorner(:)=XgeoQuad(:,i,j,k)
+        XCorner(:)=XgeoElem(:,i,j,k)
         test=SQRT((XCorner(1)-shellCenter(1))**2+(XCorner(2)-shellCenter(2))**2+(XCorner(3)-shellCenter(3))**2)
         IF ((test.LE.shellRadius_outer) .AND. (test.GE.shellRadius_inner)) THEN
           refineByGeom = 1
@@ -347,7 +347,7 @@ CASE(11)   ! SPHERE SHELL
     END DO ! j 
   END DO ! k
   ! check barycenter
-  test=SQRT((XBaryQuad(1)-shellCenter(1))**2+(XBaryQuad(2)-shellCenter(2))**2+(XBaryQuad(3)-shellCenter(3))**2)
+  test=SQRT((XBaryElem(1)-shellCenter(1))**2+(XBaryElem(2)-shellCenter(2))**2+(XBaryElem(3)-shellCenter(3))**2)
   IF ((test.LE.shellRadius_outer) .AND. (test.GE.shellRadius_inner)) THEN
     refineByGeom = 1
   ELSE
@@ -359,7 +359,7 @@ CASE(2)   ! BOX
   DO k=0,NGeo
     DO j=0,NGeo
       DO i=0,NGeo
-        XCorner(:)=XgeoQuad(:,i,j,k)
+        XCorner(:)=XgeoElem(:,i,j,k)
         IF (XCorner(1) .GE. boxBoundary(1) .AND. XCorner(1) .LE. boxBoundary(2) .AND. & 
             XCorner(2) .GE. boxBoundary(3) .AND. XCorner(2) .LE. boxBoundary(4) .AND. &
             XCorner(3) .GE. boxBoundary(5) .AND. XCorner(3) .LE. boxBoundary(6)) THEN
@@ -370,9 +370,9 @@ CASE(2)   ! BOX
     END DO ! j 
   END DO ! k
   ! refineBoundary(xmin,xmax,ymin,ymax,zmin,zmax)
-  IF (XBaryQuad(1) .GE. boxBoundary(1) .AND. XBaryQuad(1) .LE. boxBoundary(2) .AND. & 
-      XBaryQuad(2) .GE. boxBoundary(3) .AND. XBaryQuad(2) .LE. boxBoundary(4) .AND. &
-      XBaryQuad(3) .GE. boxBoundary(5) .AND. XBaryQuad(3) .LE. boxBoundary(6)) THEN
+  IF (XBaryElem(1) .GE. boxBoundary(1) .AND. XBaryElem(1) .LE. boxBoundary(2) .AND. & 
+      XBaryElem(2) .GE. boxBoundary(3) .AND. XBaryElem(2) .LE. boxBoundary(4) .AND. &
+      XBaryElem(3) .GE. boxBoundary(5) .AND. XBaryElem(3) .LE. boxBoundary(6)) THEN
     refineByGeom = 1
   END IF
 END SELECT

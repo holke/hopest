@@ -141,7 +141,7 @@ SUBROUTINE BuildHOMesh()
 !===================================================================================================================================
 ! MODULES
 USE MODH_Globals
-USE MODH_Mesh_Vars,   ONLY: Ngeo,nTrees,nQuads,Xgeo,XgeoQuad
+USE MODH_Mesh_Vars,   ONLY: Ngeo,nTrees,nElems,Xgeo,XgeoElem
 USE MODH_Mesh_Vars,   ONLY: wBary_Ngeo,xi_Ngeo
 USE MODH_P4EST_Vars,  ONLY: TreeToQuad,QuadCoords,QuadLevel,sIntSize
 USE MODH_Basis,       ONLY: LagrangeInterpolationPolys 
@@ -157,23 +157,23 @@ IMPLICIT NONE
 REAL                          :: xi0(3)
 REAL                          :: dxi,length
 REAL,DIMENSION(0:Ngeo,0:Ngeo) :: Vdm_xi,Vdm_eta,Vdm_zeta
-INTEGER                       :: StartQuad,EndQuad,nLocalQuads
-INTEGER                       :: i,iQuad,iTree 
+INTEGER                       :: StartElem,EndElem,nLocalElems
+INTEGER                       :: i,iElem,iTree 
 !===================================================================================================================================
-ALLOCATE(XgeoQuad(3,0:Ngeo,0:Ngeo,0:Ngeo,nQuads))
+ALLOCATE(XgeoElem(3,0:Ngeo,0:Ngeo,0:Ngeo,nElems))
 
 DO iTree=1,nTrees
-  StartQuad = TreeToQuad(1,iTree)+1
-  EndQuad   = TreeToQuad(2,iTree)
-  nLocalQuads = TreeToQuad(2,iTree)-TreeToQuad(1,iTree)
-  IF(nLocalQuads.EQ.1)THEN !no refinement in this tree
-    XgeoQuad(:,:,:,:,StartQuad)=Xgeo(:,:,:,:,iTree)
+  StartElem = TreeToQuad(1,iTree)+1
+  EndElem   = TreeToQuad(2,iTree)
+  nLocalElems = TreeToQuad(2,iTree)-TreeToQuad(1,iTree)
+  IF(nLocalElems.EQ.1)THEN !no refinement in this tree
+    XgeoElem(:,:,:,:,StartElem)=Xgeo(:,:,:,:,iTree)
   ELSE
-    DO iQuad=StartQuad,EndQuad
+    DO iElem=StartElem,EndElem
       ! transform p4est first corner coordinates (integer from 0... intsize) to [-1,1] reference element
-      xi0(:)=-1.+2.*REAL(QuadCoords(:,iQuad))*sIntSize
+      xi0(:)=-1.+2.*REAL(QuadCoords(:,iElem))*sIntSize
       ! length of each quadrant in integers
-      length=2./REAL(2**QuadLevel(iQuad))
+      length=2./REAL(2**QuadLevel(iElem))
       ! Build Vandermonde matrices for each parameter range in xi, eta,zeta
       DO i=0,Ngeo
         dxi=0.5*(xi_Ngeo(i)+1.)*Length
@@ -182,9 +182,9 @@ DO iTree=1,nTrees
         CALL LagrangeInterpolationPolys(xi0(3) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_zeta(i,:)) 
       END DO
       !interpolate tree HO mapping to quadrant HO mapping
-      CALL ChangeBasis3D_XYZ(3,Ngeo,Ngeo,Vdm_xi,Vdm_eta,Vdm_zeta,XGeo(:,:,:,:,iTree),XgeoQuad(:,:,:,:,iQuad))
-    END DO !iQuad=StartQuad,EndQuad
-  END IF !nLocalQuads==1
+      CALL ChangeBasis3D_XYZ(3,Ngeo,Ngeo,Vdm_xi,Vdm_eta,Vdm_zeta,XGeo(:,:,:,:,iTree),XgeoElem(:,:,:,:,iElem))
+    END DO !iElem=StartElem,EndElem
+  END IF !nLocalElems==1
 END DO !iTree=1,nTrees
 END SUBROUTINE BuildHOMesh
 

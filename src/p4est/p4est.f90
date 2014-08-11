@@ -101,9 +101,9 @@ IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 TYPE(C_PTR)                 :: QT,QQ,QF,QH,TB
-TYPE(tElem),POINTER         :: aQuad,nbQuad
+TYPE(tElem),POINTER         :: aElem,nbQuad
 TYPE(tSide),POINTER         :: aSide
-INTEGER                     :: iQuad,iMortar,jMortar,iTree
+INTEGER                     :: iElem,iMortar,jMortar,iTree
 INTEGER                     :: PSide,PnbSide,nbSide
 INTEGER                     :: nbQuadInd
 INTEGER                     :: PMortar,PFlip,HFlip,QHInd
@@ -111,7 +111,7 @@ INTEGER                     :: iLocSide
 INTEGER                     :: StartQuad,EndQuad
 INTEGER                     :: BClocSide,BCindex
 INTEGER(KIND=C_INT32_T),POINTER :: TreeToBC(:,:)
-INTEGER(KIND=8)             :: offsetQuadTmp,nGlobalQuadsTmp
+INTEGER(KIND=8)             :: offsetElemTmp,nGlobalElemsTmp
 !===================================================================================================================================
 SWRITE(UNIT_stdOut,'(A)')'GENERATE HOPEST MESH FROM P4EST ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
@@ -119,21 +119,21 @@ SWRITE(UNIT_StdOut,'(132("-"))')
 ! build p4est mesh
 CALL p4_build_mesh(p4est,mesh)
 ! Get arrays from p4est: use pointers for c arrays (QT,QQ,..), duplicate data for QuadCoords,Level
-CALL p4_get_mesh_info(p4est,mesh,nQuads,nGlobalQuadsTmp,offsetQuadTmp,nHalfFaces,nTrees)
-offsetQuad=offsetQuadTmp
-nGlobalQuads=nGlobalQuadsTmp
+CALL p4_get_mesh_info(p4est,mesh,nElems,nGlobalElemsTmp,offsetElemTmp,nHalfFaces,nTrees)
+offsetElem=offsetElemTmp
+nGlobalElems=nGlobalElemsTmp
 
-ALLOCATE(QuadCoords(3,nQuads),QuadLevel(nQuads)) ! big to small flip
+ALLOCATE(QuadCoords(3,nElems),QuadLevel(nElems)) ! big to small flip
 QuadCoords=0
 QuadLevel=0
 
-CALL p4_get_quadrants(p4est,mesh,nQuads,nHalfFaces,& !IN
+CALL p4_get_quadrants(p4est,mesh,nElems,nHalfFaces,& !IN
                       intsize,QT,QQ,QF,QH,QuadCoords,QuadLevel)              !OUT
 sIntSize=1./REAL(Intsize)
 
-CALL C_F_POINTER(QT,QuadToTree,(/nQuads/))
-CALL C_F_POINTER(QQ,QuadToQuad,(/6,nQuads/))
-CALL C_F_POINTER(QF,QuadToFace,(/6,nQuads/))
+CALL C_F_POINTER(QT,QuadToTree,(/nElems/))
+CALL C_F_POINTER(QQ,QuadToQuad,(/6,nElems/))
+CALL C_F_POINTER(QF,QuadToFace,(/6,nElems/))
 IF(nHalfFaces.GT.0) CALL C_F_POINTER(QH,QuadToHalf,(/4,nHalfFaces/))
 
 ! Get boundary conditions from p4est
@@ -142,20 +142,20 @@ CALL C_F_POINTER(TB,TreeToBC,(/6,nTrees/))
 
 ALLOCATE(TreeToQuad(2,nTrees))
 TreeToQuad(1,1)=0
-TreeToQuad(2,nTrees)=nQuads
+TreeToQuad(2,nTrees)=nElems
 StartQuad=0
 EndQuad=0
 DO iTree=1,nTrees
   TreeToQuad(1,iTree)=StartQuad
-  DO iQuad=StartQuad+1,nQuads
-    IF(QuadToTree(iQuad)+1.EQ.iTree)THEN
+  DO iElem=StartQuad+1,nElems
+    IF(QuadToTree(iElem)+1.EQ.iTree)THEN
       EndQuad=EndQuad+1
     ELSE
       TreeToQuad(2,iTree)=EndQuad
       StartQuad=EndQuad
       EXIT 
     END IF
-  END DO !iQuad
+  END DO !iElem
 END DO !iTree
 !----------------------------------------------------------------------------------------------------------------------------
 !             Start to build p4est datastructure in HOPEST
@@ -164,45 +164,45 @@ END DO !iTree
 !----------------------------------------------------------------------------------------------------------------------------
 
 !read local ElemInfo from data file
-ALLOCATE(Quads(1:nQuads))
-DO iQuad=1,nQuads
-  Quads(iQuad)%ep=>GETNEWELEM()
-  aQuad=>Quads(iQuad)%ep
-  aQuad%Ind    = iQuad
-  CALL CreateSides(aQuad)
+ALLOCATE(Elems(1:nElems))
+DO iElem=1,nElems
+  Elems(iElem)%ep=>GETNEWELEM()
+  aElem=>Elems(iElem)%ep
+  aElem%Ind    = iElem
+  CALL CreateSides(aElem)
   DO iLocSide=1,6
-    aQuad%Side(iLocSide)%sp%tmp=0
-    aQuad%Side(iLocSide)%sp%flip=-999
+    aElem%Side(iLocSide)%sp%tmp=0
+    aElem%Side(iLocSide)%sp%flip=-999
   END DO
 END DO
 
 nBCSides=0
 nMortarSides=0
-DO iQuad=1,nQuads
-  aQuad=>Quads(iQuad)%ep
+DO iElem=1,nElems
+  aElem=>Elems(iElem)%ep
   IF(useCurveds)THEN
-    aQuad%type=208 ! fully curved
+    aElem%type=208 ! fully curved
   ELSE
-    aQuad%type=118 ! trilinear
+    aElem%type=118 ! trilinear
   END IF
   DO iLocSide=1,6
-    aSide=>aQuad%Side(iLocSide)%sp
+    aSide=>aElem%Side(iLocSide)%sp
     ! Get P4est local side
     PSide=H2P_FaceMap(iLocSide)
     ! Get P4est neighbour side/flip/morter
-    CALL EvalP4ESTConnectivity(QuadToFace(PSide+1,iQuad),PnbSide,PFlip,PMortar)
+    CALL EvalP4ESTConnectivity(QuadToFace(PSide+1,iElem),PnbSide,PFlip,PMortar)
     ! transform p4est orientation to HOPR flip (magic)
     HFlip=GetHFlip(PSide,PnbSide,PFlip)  !Hflip of neighbor side!!!
     IF(PMortar.EQ.4)THEN
       ! Neighbour side is mortar (4 sides), all neighbour element sides have same orientation and local side ind
-      QHInd=QuadToQuad(PSide+1,iQuad)+1
+      QHInd=QuadToQuad(PSide+1,iElem)+1
       aSide%nMortars=4
       aSide%MortarType=1             ! 1->4 case
       aSide%flip=HFlip
       ALLOCATE(aSide%MortarSide(4))
       DO jMortar=0,3
         nbQuadInd=QuadToHalf(jMortar+1,QHInd)+1
-        nbQuad=>Quads(nbQuadInd)%ep
+        nbQuad=>Elems(nbQuadInd)%ep
         nbSide=P2H_FaceMap(PnbSide)
 
         iMortar=GetHMortar(jMortar,PSide,PnbSide,PFlip)
@@ -212,12 +212,12 @@ DO iQuad=1,nQuads
         nMortarSides=nMortarSides+1
       END DO ! iMortar
     ELSE
-      nbQuadInd=QuadToQuad(PSide+1,iQuad)+1
-      nbQuad=>Quads(nbQuadInd)%ep
+      nbQuadInd=QuadToQuad(PSide+1,iElem)+1
+      nbQuad=>Elems(nbQuadInd)%ep
       nbSide=P2H_FaceMap(PnbSide)
-      IF((nbQuadInd.EQ.iQuad).AND.(nbSide.EQ.iLocSide))THEN
+      IF((nbQuadInd.EQ.iElem).AND.(nbSide.EQ.iLocSide))THEN
         ! this is a boundary side: 
-        BCindex=TreeToBC(PSide+1,QuadToTree(iQuad)+1)
+        BCindex=TreeToBC(PSide+1,QuadToTree(iElem)+1)
         IF(BCIndex.EQ.0) STOP 'Problem in Boundary assignment'
         aSide%BCIndex=BCIndex
         NULLIFY(aSide%connection)
@@ -231,17 +231,17 @@ DO iQuad=1,nQuads
       IF(PMortar.NE.-1) aSide%MortarType= - (PMortar+1)  ! Pmortar 0...3, small side belonging to  mortar group -> -1..-4
     END IF ! PMortar
   END DO !iLocSide
-END DO !iQuad
+END DO !iElem
 
-DO iQuad=1,nQuads
-  aQuad=>Quads(iQuad)%ep
+DO iElem=1,nElems
+  aElem=>Elems(iElem)%ep
   IF(useCurveds)THEN
-    aQuad%type=208 ! fully curved
+    aElem%type=208 ! fully curved
   ELSE
-    aQuad%type=118 ! trilinear
+    aElem%type=118 ! trilinear
   END IF
   DO iLocSide=1,6
-    aSide=>aQuad%Side(iLocSide)%sp
+    aSide=>aElem%Side(iLocSide)%sp
     IF(aSide%tmp.NE.0) CYCLE
     nSides=nSides+1
     IF(ASSOCIATED(aSide%connection)) aSide%connection%tmp=-1
@@ -260,10 +260,10 @@ END DO
 nInnerSides=nSides-nBCSides-nMortarSides
 
 ! set master slave,  element with lower element ID is master (flip=0)
-DO iQuad=1,nQuads
-  aQuad=>Quads(iQuad)%ep
+DO iElem=1,nElems
+  aElem=>Elems(iElem)%ep
   DO iLocSide=1,6
-    aSide=>aQuad%Side(iLocSide)%sp
+    aSide=>aElem%Side(iLocSide)%sp
     IF(aSide%MortarType.GT.0)THEN
       aSide%flip=0
       DO iMortar=1,4
@@ -272,7 +272,7 @@ DO iQuad=1,nQuads
     ELSE
       IF(aSide%MortarType.EQ.0)THEN
         IF(ASSOCIATED(aSide%connection))THEN
-          IF(aSide%connection%elem%ind.GT.iQuad)THEN
+          IF(aSide%connection%elem%ind.GT.iElem)THEN
             aSide%flip=0
           END IF
         END IF
@@ -282,11 +282,11 @@ DO iQuad=1,nQuads
 END DO
 
 !sanity check
-DO iQuad=1,nQuads
-  aQuad=>Quads(iQuad)%ep
+DO iElem=1,nElems
+  aElem=>Elems(iElem)%ep
   DO iLocSide=1,6
-    IF(aQuad%Side(iLocSide)%sp%flip.LT.0) THEN
-      WRITE(*,*) 'flip assignment failed, iQuad= ',iQuad,', iLocSide= ',iLocSide 
+    IF(aElem%Side(iLocSide)%sp%flip.LT.0) THEN
+      WRITE(*,*) 'flip assignment failed, iElem= ',iElem,', iLocSide= ',iLocSide 
       STOP
     END IF
   END DO
@@ -552,7 +552,7 @@ SUBROUTINE FinalizeP4EST()
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
 USE MODH_P4EST_Vars,    ONLY: TreeToQuad,QuadCoords,QuadLevel,p4est,mesh,connectivity
-USE MODH_Mesh_Vars,    ONLY: nQuads,Quads
+USE MODH_Mesh_Vars,    ONLY: nElems,Elems
 USE MODH_P4EST_Binding
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
@@ -562,20 +562,20 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER           :: iQuad,iLocSide
+INTEGER           :: iElem,iLocSide
 !===================================================================================================================================
 ! TODO: DEALLOCATE P4EST BC POINTER ARRAY
-DO iQuad=1,nQuads
+DO iElem=1,nElems
   DO iLocSide=1,6
-    DEALLOCATE(Quads(iQuad)%ep%Side(iLocSide)%sp)
+    DEALLOCATE(Elems(iElem)%ep%Side(iLocSide)%sp)
   END DO
-  DEALLOCATE(Quads(iQuad)%ep)
+  DEALLOCATE(Elems(iElem)%ep)
 END DO
-DEALLOCATE(Quads)
+DEALLOCATE(Elems)
 ! TODO: DEALLOCATE P4EST / CONNECTIVITY THEMSELVES
 CALL p4_destroy_p4est(p4est)
 CALL p4_destroy_mesh(mesh)
-CALL p4_destroy_connectivity(connectivity)
+!CALL p4_destroy_connectivity(connectivity)
 SDEALLOCATE(TreeToQuad)
 SDEALLOCATE(QuadCoords)
 SDEALLOCATE(QuadLevel)

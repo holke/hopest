@@ -17,7 +17,7 @@ INTEGER           :: NGeo                        ! polynomial degree of geometri
 REAL,ALLOCATABLE  :: Xi_NGeo(:)                  ! 1D equidistant point positions for curved elements (during readin)
 REAL,ALLOCATABLE  :: wBary_NGeo(:)               ! barycentric weights from xi_Ngeo
 REAL,ALLOCATABLE  :: XGeo(:,:,:,:,:)              ! High order geometry nodes, per element (1:3,0:Ngeo,0:Ngeo,0:Ngeo,nTrees)
-REAL,ALLOCATABLE  :: XGeoQuad(:,:,:,:,:)              ! High order geometry nodes, per element (1:3,0:Ngeo,0:Ngeo,0:Ngeo,nQuads)
+REAL,ALLOCATABLE  :: XGeoElem(:,:,:,:,:)              ! High order geometry nodes, per element (1:3,0:Ngeo,0:Ngeo,0:Ngeo,nElems)
 INTEGER           :: Deform                       ! used for mesh deformations
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! GLOBAL VARIABLES 
@@ -31,9 +31,9 @@ CHARACTER(LEN=255),ALLOCATABLE   :: BoundaryName(:)
 !-----------------------------------------------------------------------------------------------------------------------------------
 INTEGER          :: nGlobalTrees=0      ! number of elements in mesh
 INTEGER          :: nTrees=0            ! number of local elements
-INTEGER          :: offsetQuad=0
-INTEGER          :: nGlobalQuads=0      ! number of quadrants in mesh
-INTEGER          :: nQuads=0            ! local number of quadrants
+INTEGER          :: offsetElem=0
+INTEGER          :: nGlobalElems=0      ! number of elements / quadrants in mesh
+INTEGER          :: nElems=0            ! local number of elements/ quadrants
 INTEGER          :: nSides=0            ! =nInnerSides+nBCSides+nMPISides
 INTEGER          :: nInnerSides=0       ! InnerSide index range: sideID \in [nBCSides+1:nBCSides+nInnerSides]
 INTEGER          :: nBCSides=0          ! BCSide index range: sideID \in [1:nBCSides]
@@ -78,7 +78,6 @@ TYPE tElem
   INTEGER                      :: Type            ! element type (linear/bilinear/curved)
   INTEGER                      :: Zone
   INTEGER                      :: treeID
-  !INTEGER                      :: quadrant_id
   TYPE(tNodePtr)               :: Node(8)
   TYPE(tSidePtr)               :: Side(6)
 END TYPE tElem
@@ -105,12 +104,12 @@ TYPE tNode
   !REAL                         :: x(3)=0.
 END TYPE tNode
 !-----------------------------------------------------------------------------------------------------------------------------------
-TYPE(tElemPtr),POINTER         :: Trees(:)
+TYPE(tElemPtr),POINTER         :: Trees(:)        ! list of tree elements (coarsest level)
 TYPE(tNodePtr),POINTER         :: Nodes(:)
 INTEGER,ALLOCATABLE            :: HexMap(:,:,:)
 INTEGER,ALLOCATABLE            :: HexMapInv(:,:)
 ! DATA STRUCTURES BUILT USING P4EST CONNECTIVITY
-TYPE(tElemPtr),POINTER         :: Quads(:)        ! new element list elements are "quadrants/octants"        
+TYPE(tElemPtr),POINTER         :: Elems(:)        ! new element list elements are "quadrants/octants"        
 !-----------------------------------------------------------------------------------------------------------------------------------
 LOGICAL          :: MeshInitIsDone =.FALSE.
 !===================================================================================================================================
@@ -259,18 +258,18 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER             :: iTree,iQuad,iLocSide,iNode,nAssocNodes
-TYPE(tElem),POINTER :: aElem,aQuad
+INTEGER             :: iTree,iElem,iLocSide,iNode,nAssocNodes
+TYPE(tElem),POINTER :: aTree,aElem
 TYPE(tSide),POINTER :: aSide
 !===================================================================================================================================
 IF(ASSOCIATED(Trees))THEN
   DO iTree=1,nTrees
-    aElem=>Trees(iTree)%ep
+    aTree=>Trees(iTree)%ep
     DO iLocSide=1,6
-      aSide=>aElem%Side(iLocSide)%sp
+      aSide=>aTree%Side(iLocSide)%sp
       DEALLOCATE(aSide)
     END DO
-    DEALLOCATE(aElem)
+    DEALLOCATE(aTree)
   END DO
   DEALLOCATE(Trees)
   nAssocNodes=0
@@ -282,16 +281,16 @@ IF(ASSOCIATED(Trees))THEN
   END DO
   DEALLOCATE(Nodes)
 END IF
-IF(ASSOCIATED(Quads))THEN
-  DO iQuad=1,nQuads
-    aQuad=>Quads(iQuad)%ep
+IF(ASSOCIATED(Elems))THEN
+  DO iElem=1,nElems
+    aElem=>Elems(iElem)%ep
     DO iLocSide=1,6
-      aSide=>aQuad%Side(iLocSide)%sp
+      aSide=>aElem%Side(iLocSide)%sp
       DEALLOCATE(aSide)
     END DO
-    DEALLOCATE(aQuad)
+    DEALLOCATE(aElem)
   END DO
-  DEALLOCATE(Quads)
+  DEALLOCATE(Elems)
 END IF
 END SUBROUTINE deleteMeshPointer
 

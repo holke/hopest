@@ -95,7 +95,7 @@ IMPLICIT NONE
 ! LOCAL VARIABLES
 !===================================================================================================================================
 CALL countSides()
-ALLOCATE(ElemToSide(2,6,nQuads))
+ALLOCATE(ElemToSide(2,6,nElems))
 ALLOCATE(SideToElem(5,nSides))
 ALLOCATE(BC(nBCSides))
 ALLOCATE(AnalyzeSide(nSides))
