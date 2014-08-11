@@ -103,7 +103,7 @@ IMPLICIT NONE
 TYPE(C_PTR)                 :: QT,QQ,QF,QH,TB
 TYPE(tElem),POINTER         :: aQuad,nbQuad
 TYPE(tSide),POINTER         :: aSide
-INTEGER                     :: iQuad,iMortar,jMortar,iElem
+INTEGER                     :: iQuad,iMortar,jMortar,iTree
 INTEGER                     :: PSide,PnbSide,nbSide
 INTEGER                     :: nbQuadInd
 INTEGER                     :: PMortar,PFlip,HFlip,QHInd
@@ -119,7 +119,7 @@ SWRITE(UNIT_StdOut,'(132("-"))')
 ! build p4est mesh
 CALL p4_build_mesh(p4est,mesh)
 ! Get arrays from p4est: use pointers for c arrays (QT,QQ,..), duplicate data for QuadCoords,Level
-CALL p4_get_mesh_info(p4est,mesh,nQuads,nGlobalQuadsTmp,offsetQuadTmp,nHalfFaces,nElems)
+CALL p4_get_mesh_info(p4est,mesh,nQuads,nGlobalQuadsTmp,offsetQuadTmp,nHalfFaces,nTrees)
 offsetQuad=offsetQuadTmp
 nGlobalQuads=nGlobalQuadsTmp
 
@@ -138,25 +138,25 @@ IF(nHalfFaces.GT.0) CALL C_F_POINTER(QH,QuadToHalf,(/4,nHalfFaces/))
 
 ! Get boundary conditions from p4est
 CALL p4_get_bcs(p4est,TB)
-CALL C_F_POINTER(TB,TreeToBC,(/6,nElems/))
+CALL C_F_POINTER(TB,TreeToBC,(/6,nTrees/))
 
-ALLOCATE(TreeToQuad(2,nElems))
+ALLOCATE(TreeToQuad(2,nTrees))
 TreeToQuad(1,1)=0
-TreeToQuad(2,nElems)=nQuads
+TreeToQuad(2,nTrees)=nQuads
 StartQuad=0
 EndQuad=0
-DO iElem=1,nElems
-  TreeToQuad(1,iElem)=StartQuad
+DO iTree=1,nTrees
+  TreeToQuad(1,iTree)=StartQuad
   DO iQuad=StartQuad+1,nQuads
-    IF(QuadToTree(iQuad)+1.EQ.iElem)THEN
+    IF(QuadToTree(iQuad)+1.EQ.iTree)THEN
       EndQuad=EndQuad+1
     ELSE
-      TreeToQuad(2,iElem)=EndQuad
+      TreeToQuad(2,iTree)=EndQuad
       StartQuad=EndQuad
       EXIT 
     END IF
   END DO !iQuad
-END DO !iElem
+END DO !iTree
 !----------------------------------------------------------------------------------------------------------------------------
 !             Start to build p4est datastructure in HOPEST
 !----------------------------------------------------------------------------------------------------------------------------
@@ -432,7 +432,7 @@ SUBROUTINE BuildBCs()
 USE, INTRINSIC :: ISO_C_BINDING
 USE MODH_Globals
 USE MODH_P4EST_Vars,   ONLY: H2P_FaceMap,p4est
-USE MODH_Mesh_Vars,    ONLY: tElem,tSide,nElems,Elems
+USE MODH_Mesh_Vars,    ONLY: tElem,tSide,nTrees,Trees
 USE MODH_P4EST_Binding,ONLY: p4_build_bcs
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
@@ -444,18 +444,18 @@ IMPLICIT NONE
 ! LOCAL VARIABLES
 TYPE(tElem),POINTER         :: Elem
 TYPE(tSide),POINTER         :: Side
-INTEGER                     :: iElem,iSide
-INTEGER(KIND=C_INT32_T)     :: BCElemMap(0:5,nElems)
+INTEGER                     :: iTree,iSide
+INTEGER(KIND=C_INT32_T)     :: BCElemMap(0:5,nTrees)
 !===================================================================================================================================
 BCElemMap=-1
-DO iELem=1,nElems
-  Elem=>Elems(iElem)%ep
+DO iTree=1,nTrees
+  Elem=>Trees(iTree)%ep
   DO iSide=1,6
     Side=>Elem%side(iSide)%sp
-    BCElemMap(H2P_FaceMap(iSide),iElem)=Side%BCIndex
+    BCElemMap(H2P_FaceMap(iSide),iTree)=Side%BCIndex
   END DO
 END DO
-CALL p4_build_bcs(p4est,nElems,BCElemMap)
+CALL p4_build_bcs(p4est,nTrees,BCElemMap)
 END SUBROUTINE BuildBCs
 
 SUBROUTINE Buildp4est()

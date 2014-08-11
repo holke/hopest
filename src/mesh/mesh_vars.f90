@@ -16,8 +16,8 @@ LOGICAL           :: useCurveds
 INTEGER           :: NGeo                        ! polynomial degree of geometric transformation
 REAL,ALLOCATABLE  :: Xi_NGeo(:)                  ! 1D equidistant point positions for curved elements (during readin)
 REAL,ALLOCATABLE  :: wBary_NGeo(:)               ! barycentric weights from xi_Ngeo
-REAL,ALLOCATABLE  :: XGeo(:,:,:,:,:)              ! High order geometry nodes, per element (1:3,0:Ngeo,0:Ngeo,0:Ngeo,nElems)
-REAL,ALLOCATABLE  :: XGeoQuad(:,:,:,:,:)              ! High order geometry nodes, per element (1:3,0:Ngeo,0:Ngeo,0:Ngeo,nElems)
+REAL,ALLOCATABLE  :: XGeo(:,:,:,:,:)              ! High order geometry nodes, per element (1:3,0:Ngeo,0:Ngeo,0:Ngeo,nTrees)
+REAL,ALLOCATABLE  :: XGeoQuad(:,:,:,:,:)              ! High order geometry nodes, per element (1:3,0:Ngeo,0:Ngeo,0:Ngeo,nQuads)
 INTEGER           :: Deform                       ! used for mesh deformations
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! GLOBAL VARIABLES 
@@ -29,8 +29,8 @@ INTEGER,ALLOCATABLE              :: AnalyzeSide(:)
 INTEGER,ALLOCATABLE              :: BoundaryType(:,:)
 CHARACTER(LEN=255),ALLOCATABLE   :: BoundaryName(:)
 !-----------------------------------------------------------------------------------------------------------------------------------
-INTEGER          :: nGlobalElems=0      ! number of elements in mesh
-INTEGER          :: nElems=0            ! number of local elements
+INTEGER          :: nGlobalTrees=0      ! number of elements in mesh
+INTEGER          :: nTrees=0            ! number of local elements
 INTEGER          :: offsetQuad=0
 INTEGER          :: nGlobalQuads=0      ! number of quadrants in mesh
 INTEGER          :: nQuads=0            ! local number of quadrants
@@ -105,7 +105,7 @@ TYPE tNode
   !REAL                         :: x(3)=0.
 END TYPE tNode
 !-----------------------------------------------------------------------------------------------------------------------------------
-TYPE(tElemPtr),POINTER         :: Elems(:)
+TYPE(tElemPtr),POINTER         :: Trees(:)
 TYPE(tNodePtr),POINTER         :: Nodes(:)
 INTEGER,ALLOCATABLE            :: HexMap(:,:,:)
 INTEGER,ALLOCATABLE            :: HexMapInv(:,:)
@@ -259,20 +259,20 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER             :: iElem,iQuad,iLocSide,iNode,nAssocNodes
+INTEGER             :: iTree,iQuad,iLocSide,iNode,nAssocNodes
 TYPE(tElem),POINTER :: aElem,aQuad
 TYPE(tSide),POINTER :: aSide
 !===================================================================================================================================
-IF(ASSOCIATED(Elems))THEN
-  DO iElem=1,nElems
-    aElem=>Elems(iElem)%ep
+IF(ASSOCIATED(Trees))THEN
+  DO iTree=1,nTrees
+    aElem=>Trees(iTree)%ep
     DO iLocSide=1,6
       aSide=>aElem%Side(iLocSide)%sp
       DEALLOCATE(aSide)
     END DO
     DEALLOCATE(aElem)
   END DO
-  DEALLOCATE(Elems)
+  DEALLOCATE(Trees)
   nAssocNodes=0
   DO iNode=1,nNodes
     IF(ASSOCIATED(Nodes(iNode)%np))THEN

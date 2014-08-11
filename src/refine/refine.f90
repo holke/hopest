@@ -47,7 +47,7 @@ INTEGER,ALLOCATABLE         :: refineType(:)
 SWRITE(UNIT_stdOut,'(A)')'BUILD P4EST MESH AND REFINE ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
 
-!ALLOCATE(RefineList(nElems))
+!ALLOCATE(RefineList(nTrees))
 !RefineList=0
 
 nRefines=CNTSTR('refineType',1)
@@ -91,7 +91,7 @@ SUBROUTINE InitRefineBoundaryElems()
 ! MODULES
 USE MODH_Globals
 USE MODH_Refine_Vars,ONLY: TreeSidesToRefine,refineBCIndex
-USE MODH_Mesh_Vars,  ONLY: Elems,nElems
+USE MODH_Mesh_Vars,  ONLY: Trees,nTrees
 USE MODH_P4EST_Vars,  ONLY: P2H_FaceMap
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
@@ -101,15 +101,15 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER                     :: iElem,iSide
+INTEGER                     :: iTree,iSide
 !===================================================================================================================================
 ! These are the refinement functions which are called by p4est
-ALLOCATE(TreeSidesToRefine(0:5,1:nElems))
+ALLOCATE(TreeSidesToRefine(0:5,1:nTrees))
 TreeSidesToRefine=0
-DO iElem=1,nElems
+DO iTree=1,nTrees
   DO iSide=0,5
-    IF (Elems(iElem)%ep%Side(P2H_FaceMap(iSide))%sp%BCIndex.EQ.refineBCIndex) THEN
-      TreeSidesToRefine(iSide,iElem)=1
+    IF (Trees(iTree)%ep%Side(P2H_FaceMap(iSide))%sp%BCIndex.EQ.refineBCIndex) THEN
+      TreeSidesToRefine(iSide,iTree)=1
     END IF
   END DO
 END DO

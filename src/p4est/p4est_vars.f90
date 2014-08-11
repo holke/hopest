@@ -23,7 +23,7 @@ INTEGER(KIND=4)             :: nHalfFaces         ! number of mortar sides
 INTEGER(KIND=4)             :: IntSize            ! used to transform INT coords/levels to REAL coords/levels: REAL=1/inssize*INT  [0. ; 1.]
 REAL                        :: sIntSize           ! 1./REAL(intsize)
 INTEGER(KIND=4),POINTER     :: QuadToTree(:)      ! from quadrant to tree ( ~ new element ID to old element ID) 
-INTEGER(KIND=4),ALLOCATABLE :: TreeToQuad(:,:)    ! from tree to quad range (2,nElems), entry 1: firstInd-1, entry2:lastInd 
+INTEGER(KIND=4),ALLOCATABLE :: TreeToQuad(:,:)    ! from tree to quad range (2,nTrees), entry 1: firstInd-1, entry2:lastInd 
 INTEGER(KIND=4),POINTER     :: QuadToQuad(:,:)    ! p4est quadrant connectivity (1:6,1:nQuads) => neighbor quadrant
 INTEGER(KIND=1),POINTER     :: QuadToFace(:,:)    ! p4est face connectivity (1:6,1:nQuads) => neighbor faceId + orientation + non-conform info
 INTEGER(KIND=4),POINTER     :: QuadToHalf(:,:)    ! p4est face connectivity for mortars (1:4,1:nHalfFaces), ( ~small sides)

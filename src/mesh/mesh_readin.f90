@@ -112,7 +112,7 @@ SUBROUTINE ReadMeshHeader()
 !===================================================================================================================================
 ! MODULES
 USE MODH_Globals
-USE MODH_Mesh_Vars,ONLY: NGeo,useCurveds,nGlobalElems
+USE MODH_Mesh_Vars,ONLY: NGeo,useCurveds,nGlobalTrees
 USE MODH_Mesh,     ONLY: SetCurvedInfo
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
@@ -125,7 +125,7 @@ IMPLICIT NONE
 INTEGER :: BoundaryOrder_mesh
 !===================================================================================================================================
 CALL GetDataSize(File_ID,'ElemInfo',nDims,HSize)
-nGlobalElems=HSize(1) !global number of elements
+nGlobalTrees=HSize(1) !global number of elements
 DEALLOCATE(HSize)
 
 CALL ReadAttribute(File_ID,'BoundaryOrder',1,IntegerScalar=BoundaryOrder_mesh)
@@ -159,7 +159,7 @@ CHARACTER(LEN=*),INTENT(IN)  :: FileString
 ! LOCAL VARIABLES
 INTEGER                        :: i,j,k,l
 INTEGER                        :: BCindex
-INTEGER                        :: iElem,ElemID
+INTEGER                        :: iTree,ElemID
 INTEGER                        :: iNode,jNode,NodeID,SideID
 INTEGER                        :: iLocSide,jLocSide
 INTEGER                        :: iSide
@@ -201,21 +201,21 @@ CALL ReadMeshHeader()
 !                              ELEMENTS
 !----------------------------------------------------------------------------------------------------------------------------
 
-nElems=nGlobalElems   !local number of Elements 
+nTrees=nGlobalTrees   !local number of Elements 
 !read local ElemInfo from data file
-ALLOCATE(ElemInfo(1:nElems,ELEM_InfoSize))
-CALL ReadArray('ElemInfo',2,(/nElems,ELEM_InfoSize/),0,1,IntegerArray=ElemInfo)
+ALLOCATE(ElemInfo(1:nTrees,ELEM_InfoSize))
+CALL ReadArray('ElemInfo',2,(/nTrees,ELEM_InfoSize/),0,1,IntegerArray=ElemInfo)
 
-ALLOCATE(Elems(1:nElems))
+ALLOCATE(Trees(1:nTrees))
 
-DO iElem=1,nElems
-  iSide=ElemInfo(iElem,ELEM_FirstSideInd) !first index -1 in Sideinfo
-  iNode=ElemInfo(iElem,ELEM_FirstNodeInd) !first index -1 in NodeInfo
-  Elems(iElem)%ep=>GETNEWELEM()
-  aElem=>Elems(iElem)%ep
-  aElem%Ind    = iElem
-  aElem%Type   = ElemInfo(iElem,ELEM_Type)
-  aElem%Zone   = ElemInfo(iElem,ELEM_Zone)
+DO iTree=1,nTrees
+  iSide=ElemInfo(iTree,ELEM_FirstSideInd) !first index -1 in Sideinfo
+  iNode=ElemInfo(iTree,ELEM_FirstNodeInd) !first index -1 in NodeInfo
+  Trees(iTree)%ep=>GETNEWELEM()
+  aElem=>Trees(iTree)%ep
+  aElem%Ind    = iTree
+  aElem%Type   = ElemInfo(iTree,ELEM_Type)
+  aElem%Zone   = ElemInfo(iTree,ELEM_Zone)
 END DO
 
 !----------------------------------------------------------------------------------------------------------------------------
@@ -223,11 +223,11 @@ END DO
 !----------------------------------------------------------------------------------------------------------------------------
 
 !read local Node Info from data file 
-nNodeIDs=ElemInfo(nElems,ELEM_LastNodeInd)-ElemInfo(1,ELEM_FirstNodeInd)
+nNodeIDs=ElemInfo(nTrees,ELEM_LastNodeInd)-ElemInfo(1,ELEM_FirstNodeInd)
 ALLOCATE(NodeInfo(1:nNodeIDs))
 CALL ReadArray('NodeInfo',1,(/nNodeIDs/),0,1,IntegerArray=NodeInfo)
 
-ALLOCATE(ElemCurvedNode(nCurvedNodes,nElems))
+ALLOCATE(ElemCurvedNode(nCurvedNodes,nTrees))
 
 CALL GetDataSize(File_ID,'NodeCoords',nDims,HSize)
 nNodes=HSize(1) !global number of unique nodes
@@ -238,9 +238,9 @@ DO iNode=1,nNodes
   NULLIFY(Nodes(iNode)%np)
 END DO
 !assign nodes 
-DO iElem=1,nElems
-  aElem=>Elems(iElem)%ep
-  iNode=ElemInfo(iElem,ELEM_FirstNodeInd) !first index -1 in NodeInfo
+DO iTree=1,nTrees
+  aElem=>Trees(iTree)%ep
+  iNode=ElemInfo(iTree,ELEM_FirstNodeInd) !first index -1 in NodeInfo
   DO jNode=1,8
     iNode=iNode+1
     NodeID=ABS(NodeInfo(iNode))     !global, unique NodeID
@@ -252,7 +252,7 @@ DO iElem=1,nElems
   END DO
   CALL createSides(aElem)
   IF(NGeo.GT.1)THEN
-    nCurvedNodes_loc = ElemInfo(iElem,ELEM_LastNodeInd) - ElemInfo(iElem,ELEM_FirstNodeInd) - 14 ! corner + oriented nodes
+    nCurvedNodes_loc = ElemInfo(iTree,ELEM_LastNodeInd) - ElemInfo(iTree,ELEM_FirstNodeInd) - 14 ! corner + oriented nodes
     IF(nCurvedNodes.NE.nCurvedNodes_loc) &
       CALL abort(__STAMP__, &
            'Wrong number of curved nodes for hexahedra.')
@@ -263,7 +263,7 @@ DO iElem=1,nElems
         ALLOCATE(Nodes(NodeID)%np)
         Nodes(NodeID)%np%ind=NodeID 
       END IF
-      ElemCurvedNode(i,iElem)%np=>Nodes(NodeID)%np
+      ElemCurvedNode(i,iTree)%np=>Nodes(NodeID)%np
     END DO
   END IF
 END DO
@@ -272,16 +272,16 @@ END DO
 !                              SIDES
 !----------------------------------------------------------------------------------------------------------------------------
 
-nSideIDs=ElemInfo(nElems,ELEM_LastSideInd)-ElemInfo(1,ELEM_FirstSideInd)
+nSideIDs=ElemInfo(nTrees,ELEM_LastSideInd)-ElemInfo(1,ELEM_FirstSideInd)
 !read local SideInfo from data file 
 ALLOCATE(SideInfo(1:nSideIDs,SIDE_InfoSize))
 CALL ReadArray('SideInfo',2,(/nSideIDs,SIDE_InfoSize/),0,1,IntegerArray=SideInfo)
 
-DO iElem=1,nElems
-  aElem=>Elems(iElem)%ep
-  iNode=ElemInfo(iElem,ELEM_LastNodeInd) !first index -1 in NodeInfo
+DO iTree=1,nTrees
+  aElem=>Trees(iTree)%ep
+  iNode=ElemInfo(iTree,ELEM_LastNodeInd) !first index -1 in NodeInfo
   iNode=iNode-6
-  iSide=ElemInfo(iElem,ELEM_FirstSideInd) !first index -1 in Sideinfo
+  iSide=ElemInfo(iTree,ELEM_FirstSideInd) !first index -1 in Sideinfo
   !build up sides of the element using element Nodes and CGNS standard
   ! assign flip
   DO iLocSide=1,6
@@ -312,13 +312,13 @@ DO iElem=1,nElems
     END IF
 
   END DO !i=1,locnSides
-END DO !iElem
+END DO !iTree
 
  
 ! build up side connection 
-DO iElem=1,nElems
-  aElem=>Elems(iElem)%ep
-  iSide=ElemInfo(iElem,ELEM_FirstSideInd) !first index -1 in Sideinfo
+DO iTree=1,nTrees
+  aElem=>Trees(iTree)%ep
+  iSide=ElemInfo(iTree,ELEM_FirstSideInd) !first index -1 in Sideinfo
   DO iLocSide=1,6
     aSide=>aElem%Side(iLocSide)%sp
     iSide=iSide+1
@@ -341,9 +341,9 @@ DO iElem=1,nElems
 
     IF(.NOT.ASSOCIATED(aSide%connection))THEN
       IF((elemID.NE.0).AND.doConnection)THEN !connection 
-        IF((elemID.LE.nElems).AND.(elemID.GE.1))THEN !local connection
+        IF((elemID.LE.nTrees).AND.(elemID.GE.1))THEN !local connection
           DO jLocSide=1,6
-            bSide=>Elems(elemID)%ep%Side(jLocSide)%sp
+            bSide=>Trees(elemID)%ep%Side(jLocSide)%sp
             IF(bSide%ind.EQ.aSide%ind)THEN
               aSide%connection=>bSide
               bSide%connection=>aSide
@@ -357,7 +357,7 @@ DO iElem=1,nElems
       END IF
     END IF !connection associated
   END DO !iLocSide 
-END DO !iElem
+END DO !iTree
 
 DEALLOCATE(ElemInfo,SideInfo,NodeInfo)
 
@@ -367,28 +367,28 @@ ALLOCATE(NodeCoords(nNodes,3))
 
 CALL ReadArray('NodeCoords',2,(/nNodes,3/),0,1,RealArray=NodeCoords)
 
-ALLOCATE(Xgeo(1:3,0:Ngeo,0:Ngeo,0:Ngeo,nElems))
+ALLOCATE(Xgeo(1:3,0:Ngeo,0:Ngeo,0:Ngeo,nTrees))
 IF(Ngeo.EQ.1)THEN !use the corner nodes
-  DO iElem=1,nElems
-    aElem=>Elems(iElem)%ep
-    Xgeo(:,0,0,0,iElem)=NodeCoords(aElem%Node(1)%np%ind,:)
-    Xgeo(:,1,0,0,iElem)=NodeCoords(aElem%Node(2)%np%ind,:)
-    Xgeo(:,1,1,0,iElem)=NodeCoords(aElem%Node(3)%np%ind,:)
-    Xgeo(:,0,1,0,iElem)=NodeCoords(aElem%Node(4)%np%ind,:)
-    Xgeo(:,0,0,1,iElem)=NodeCoords(aElem%Node(5)%np%ind,:)
-    Xgeo(:,1,0,1,iElem)=NodeCoords(aElem%Node(6)%np%ind,:)
-    Xgeo(:,1,1,1,iElem)=NodeCoords(aElem%Node(7)%np%ind,:)
-    Xgeo(:,0,1,1,iElem)=NodeCoords(aElem%Node(8)%np%ind,:)
- END DO !iElem=1,nElems
+  DO iTree=1,nTrees
+    aElem=>Trees(iTree)%ep
+    Xgeo(:,0,0,0,iTree)=NodeCoords(aElem%Node(1)%np%ind,:)
+    Xgeo(:,1,0,0,iTree)=NodeCoords(aElem%Node(2)%np%ind,:)
+    Xgeo(:,1,1,0,iTree)=NodeCoords(aElem%Node(3)%np%ind,:)
+    Xgeo(:,0,1,0,iTree)=NodeCoords(aElem%Node(4)%np%ind,:)
+    Xgeo(:,0,0,1,iTree)=NodeCoords(aElem%Node(5)%np%ind,:)
+    Xgeo(:,1,0,1,iTree)=NodeCoords(aElem%Node(6)%np%ind,:)
+    Xgeo(:,1,1,1,iTree)=NodeCoords(aElem%Node(7)%np%ind,:)
+    Xgeo(:,0,1,1,iTree)=NodeCoords(aElem%Node(8)%np%ind,:)
+ END DO !iTree=1,nTrees
 ELSE
-  DO iElem=1,nElems
-    aElem=>Elems(iElem)%ep
+  DO iTree=1,nTrees
+    aElem=>Trees(iTree)%ep
     l=0
     DO k=0,Ngeo; DO j=0,Ngeo; DO i=0,Ngeo
       l=l+1
-      Xgeo(:,i,j,k,iElem)=NodeCoords(ElemCurvedNode(l,iElem)%np%ind,:)
+      Xgeo(:,i,j,k,iTree)=NodeCoords(ElemCurvedNode(l,iTree)%np%ind,:)
     END DO ; END DO ; END DO 
- END DO !iElem=1,nElems
+ END DO !iTree=1,nTrees
 END IF
 
 CALL CloseDataFile() 
@@ -403,8 +403,8 @@ DO iNode=1,nNodes
   Nodes(iNode)%np%tmp=-1
 END DO
 num_vertices=0
-DO iElem=1,nElems
-  aElem=>Elems(iElem)%ep
+DO iTree=1,nTrees
+  aElem=>Trees(iTree)%ep
   DO iNode=1,8
     aNode=>aElem%Node(iNode)%np
     IF(aNode%tmp.EQ.-1)THEN
@@ -412,7 +412,7 @@ DO iElem=1,nElems
       aElem%Node(iNode)%np%tmp=num_vertices
     END IF
   END DO
-END DO !iElem
+END DO !iTree
 
 ALLOCATE(Vertices(3,num_vertices))
 DO iNode=1,nNodes
@@ -425,19 +425,19 @@ END DO
 
 DEALLOCATE(NodeCoords)
 
-num_trees=nElems
+num_trees=nTrees
 ALLOCATE(tree_to_vertex(8,num_trees))
-DO iElem=1,nElems
-  aElem=>Elems(iElem)%ep
+DO iTree=1,nTrees
+  aElem=>Trees(iTree)%ep
   DO iNode=1,8
-    tree_to_vertex(iNode,iElem)=aElem%Node(H2P_VertexMap(iNode)+1)%np%tmp-1
+    tree_to_vertex(iNode,iTree)=aElem%Node(H2P_VertexMap(iNode)+1)%np%tmp-1
   END DO
 END DO
 
 !periodic Boundaries
 num_periodics=0
-DO iElem=1,nElems
-  aElem=>Elems(iElem)%ep
+DO iTree=1,nTrees
+  aElem=>Trees(iTree)%ep
   DO iLocSide=1,6
     aSide=>aElem%Side(iLocSide)%sp
     IF(aSide%BCIndex.EQ.0) CYCLE ! NO Boundary Condition
@@ -445,21 +445,21 @@ DO iElem=1,nElems
       num_periodics=num_periodics+1
     END IF
   END DO !iLocSide
-END DO !iElem
+END DO !iTree
 
 
 IF(num_periodics.GT.0) THEN
   ALLOCATE(JoinFaces(5,num_periodics))
-  DO iElem=1,nElems
-    aElem=>Elems(iElem)%ep
+  DO iTree=1,nTrees
+    aElem=>Trees(iTree)%ep
     DO iLocSide=1,6
       aElem%Side(iLocSide)%sp%tmp=H2P_FaceMap(iLocSide)  !local Face ID in p4est
     END DO
   END DO
   
   iperiodic=0
-  DO iElem=1,nElems
-    aElem=>Elems(iElem)%ep
+  DO iTree=1,nTrees
+    aElem=>Trees(iTree)%ep
     DO iLocSide=1,6
       aSide=>aElem%Side(iLocSide)%sp
       IF(aSide%BCIndex.EQ.0) CYCLE ! NO Boundary Condition
@@ -484,7 +484,7 @@ IF(num_periodics.GT.0) THEN
         !  WRITE(*,*)'DEBUG,JoinFaces,iPeriodic',iPeriodic,JoinFaces(:,iPeriodic)
       END IF
     END DO !iLocSide
-  END DO !iElem
+  END DO !iTree
 END IF !num_periodics>0
 
 CALL p4_connectivity_treevertex(num_vertices,num_trees,vertices,tree_to_vertex, &
@@ -499,15 +499,15 @@ IF(num_periodics.GT.0) DEALLOCATE(JoinFaces)
 nBCSides=0
 nSides=0
 nPeriodicSides=0
-DO iElem=1,nElems
-  aElem=>Elems(iElem)%ep
+DO iTree=1,nTrees
+  aElem=>Trees(iTree)%ep
   DO iLocSide=1,6
     aSide=>aElem%Side(iLocSide)%sp
     aSide%tmp=0 
   END DO !iLocSide
-END DO !iElem
-DO iElem=1,nElems
-  aElem=>Elems(iElem)%ep
+END DO !iTree
+DO iTree=1,nTrees
+  aElem=>Trees(iTree)%ep
   DO iLocSide=1,6
     aSide=>aElem%Side(iLocSide)%sp
 
@@ -524,13 +524,13 @@ DO iElem=1,nElems
       END IF
     END IF
   END DO !iLocSide
-END DO !iElem
+END DO !iTree
 
 
 WRITE(*,*)'-------------------------------------------------------'
 WRITE(*,'(A22,I8)' )'NGeo:',NGeo
 WRITE(*,'(A22,X7L)')'useCurveds:',useCurveds
-WRITE(*,'(A22,I8)' )'nElems:',nElems
+WRITE(*,'(A22,I8)' )'nTrees:',nTrees
 WRITE(*,'(A22,I8)' )'nNodes:',nNodes
 WRITE(*,'(A22,I8)' )'nSides:',nSides
 WRITE(*,'(A22,I8)' )'nBCSides:',nBCSides
@@ -559,7 +559,7 @@ SUBROUTINE ReadGeoFromHDF5(FileString)
 !===================================================================================================================================
 ! MODULES
 USE MODH_Globals
-USE MODH_Mesh_Vars, ONLY: nElems,XGeo,Ngeo,nNodes,HexMap
+USE MODH_Mesh_Vars, ONLY: nTrees,XGeo,Ngeo,nNodes,HexMap
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -570,7 +570,7 @@ CHARACTER(LEN=*),INTENT(IN)  :: FileString
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 INTEGER                        :: i,j,k
-INTEGER                        :: iElem
+INTEGER                        :: iTree
 INTEGER                        :: nNodeIDs
 INTEGER                        :: FirstNodeInd,LastNodeInd
 LOGICAL                        :: fileExists
@@ -598,15 +598,15 @@ DEALLOCATE(HSize)
 !----------------------------------------------------------------------------------------------------------------------------
 
 !read local ElemInfo from data file
-ALLOCATE(ElemInfo(1:nElems,ELEM_InfoSize))
-CALL ReadArray('ElemInfo',2,(/nElems,ELEM_InfoSize/),0,1,IntegerArray=ElemInfo)
+ALLOCATE(ElemInfo(1:nTrees,ELEM_InfoSize))
+CALL ReadArray('ElemInfo',2,(/nTrees,ELEM_InfoSize/),0,1,IntegerArray=ElemInfo)
 
 !----------------------------------------------------------------------------------------------------------------------------
 !                              NODES
 !----------------------------------------------------------------------------------------------------------------------------
 
 !read local Node Info from data file 
-nNodeIDs=ElemInfo(nElems,ELEM_LastNodeInd)-ElemInfo(1,ELEM_FirstNodeInd)
+nNodeIDs=ElemInfo(nTrees,ELEM_LastNodeInd)-ElemInfo(1,ELEM_FirstNodeInd)
 ALLOCATE(NodeInfo(1:nNodeIDs))
 CALL ReadArray('NodeInfo',1,(/nNodeIDs/),0,1,IntegerArray=NodeInfo)
 
@@ -617,29 +617,29 @@ CALL ReadArray('NodeCoords',2,(/nNodes,3/),0,1,RealArray=NodeCoords)
 
 CALL CloseDataFile() 
 
-ALLOCATE(Xgeo(1:3,0:Ngeo,0:Ngeo,0:Ngeo,nElems))
+ALLOCATE(Xgeo(1:3,0:Ngeo,0:Ngeo,0:Ngeo,nTrees))
 IF(Ngeo.EQ.1)THEN !use the corner nodes
-  DO iElem=1,nElems
-    firstNodeInd=ElemInfo(iElem,ELEM_FirstNodeInd) !first index -1 in NodeInfo
-    Xgeo(:,0,0,0,iElem)=NodeCoords(NodeInfo(firstNodeInd+1),:)
-    Xgeo(:,1,0,0,iElem)=NodeCoords(NodeInfo(firstNodeInd+2),:)
-    Xgeo(:,1,1,0,iElem)=NodeCoords(NodeInfo(firstNodeInd+3),:)
-    Xgeo(:,0,1,0,iElem)=NodeCoords(NodeInfo(firstNodeInd+4),:)
-    Xgeo(:,0,0,1,iElem)=NodeCoords(NodeInfo(firstNodeInd+5),:)
-    Xgeo(:,1,0,1,iElem)=NodeCoords(NodeInfo(firstNodeInd+6),:)
-    Xgeo(:,1,1,1,iElem)=NodeCoords(NodeInfo(firstNodeInd+7),:)
-    Xgeo(:,0,1,1,iElem)=NodeCoords(NodeInfo(firstNodeInd+8),:)
- END DO !iElem=1,nElems
+  DO iTree=1,nTrees
+    firstNodeInd=ElemInfo(iTree,ELEM_FirstNodeInd) !first index -1 in NodeInfo
+    Xgeo(:,0,0,0,iTree)=NodeCoords(NodeInfo(firstNodeInd+1),:)
+    Xgeo(:,1,0,0,iTree)=NodeCoords(NodeInfo(firstNodeInd+2),:)
+    Xgeo(:,1,1,0,iTree)=NodeCoords(NodeInfo(firstNodeInd+3),:)
+    Xgeo(:,0,1,0,iTree)=NodeCoords(NodeInfo(firstNodeInd+4),:)
+    Xgeo(:,0,0,1,iTree)=NodeCoords(NodeInfo(firstNodeInd+5),:)
+    Xgeo(:,1,0,1,iTree)=NodeCoords(NodeInfo(firstNodeInd+6),:)
+    Xgeo(:,1,1,1,iTree)=NodeCoords(NodeInfo(firstNodeInd+7),:)
+    Xgeo(:,0,1,1,iTree)=NodeCoords(NodeInfo(firstNodeInd+8),:)
+ END DO !iTree=1,nTrees
 ELSE
-  DO iElem=1,nElems
-    firstNodeInd=ElemInfo(iElem,ELEM_FirstNodeInd) !first index -1 in NodeInfo
-    lastNodeInd=ElemInfo(iElem,ELEM_LastNodeInd)
+  DO iTree=1,nTrees
+    firstNodeInd=ElemInfo(iTree,ELEM_FirstNodeInd) !first index -1 in NodeInfo
+    lastNodeInd=ElemInfo(iTree,ELEM_LastNodeInd)
     IF(LastNodeInd-firstNodeInd-14.NE.(Ngeo+1)**3) STOP 'Problem with curved'
     firstNodeInd=firstNodeInd +8
     DO k=0,Ngeo; DO j=0,Ngeo; DO i=0,Ngeo
-      Xgeo(:,i,j,k,iElem)=NodeCoords(NodeInfo(firstNodeInd+HexMap(i,j,k)),:)
+      Xgeo(:,i,j,k,iTree)=NodeCoords(NodeInfo(firstNodeInd+HexMap(i,j,k)),:)
     END DO ; END DO ; END DO 
- END DO !iElem=1,nElems
+ END DO !iTree=1,nTrees
 END IF
 
 DEALLOCATE(ElemInfo,NodeInfo,NodeCoords)

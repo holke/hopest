@@ -62,7 +62,7 @@ CALL InitMesh()
 CALL InitP4EST()
 CALL InitIO()
 
-CALL readMeshFromHDF5(MeshFile) !set nElems
+CALL readMeshFromHDF5(MeshFile) !set nTrees
 
 CALL deformMesh()
 

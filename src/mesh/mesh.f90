@@ -64,7 +64,7 @@ INTEGER :: i
 SWRITE(UNIT_StdOut,'(132("-"))')
 SWRITE(UNIT_stdOut,'(A)') ' INIT MESH DUE...'
 
-! prepare pointer structure (get nElems, etc.)
+! prepare pointer structure (get nTrees, etc.)
 MeshFile = GETSTR('MeshFile')
 IF(CNTSTR('ProjectName',0).EQ.0)THEN
   !default project name frommesh file
@@ -141,7 +141,7 @@ SUBROUTINE BuildHOMesh()
 !===================================================================================================================================
 ! MODULES
 USE MODH_Globals
-USE MODH_Mesh_Vars,   ONLY: Ngeo,nElems,nQuads,Xgeo,XgeoQuad
+USE MODH_Mesh_Vars,   ONLY: Ngeo,nTrees,nQuads,Xgeo,XgeoQuad
 USE MODH_Mesh_Vars,   ONLY: wBary_Ngeo,xi_Ngeo
 USE MODH_P4EST_Vars,  ONLY: TreeToQuad,QuadCoords,QuadLevel,sIntSize
 USE MODH_Basis,       ONLY: LagrangeInterpolationPolys 
@@ -158,16 +158,16 @@ REAL                          :: xi0(3)
 REAL                          :: dxi,length
 REAL,DIMENSION(0:Ngeo,0:Ngeo) :: Vdm_xi,Vdm_eta,Vdm_zeta
 INTEGER                       :: StartQuad,EndQuad,nLocalQuads
-INTEGER                       :: i,iQuad,iElem 
+INTEGER                       :: i,iQuad,iTree 
 !===================================================================================================================================
 ALLOCATE(XgeoQuad(3,0:Ngeo,0:Ngeo,0:Ngeo,nQuads))
 
-DO iElem=1,nElems
-  StartQuad = TreeToQuad(1,iElem)+1
-  EndQuad   = TreeToQuad(2,iElem)
-  nLocalQuads = TreeToQuad(2,iElem)-TreeToQuad(1,iElem)
+DO iTree=1,nTrees
+  StartQuad = TreeToQuad(1,iTree)+1
+  EndQuad   = TreeToQuad(2,iTree)
+  nLocalQuads = TreeToQuad(2,iTree)-TreeToQuad(1,iTree)
   IF(nLocalQuads.EQ.1)THEN !no refinement in this tree
-    XgeoQuad(:,:,:,:,StartQuad)=Xgeo(:,:,:,:,iElem)
+    XgeoQuad(:,:,:,:,StartQuad)=Xgeo(:,:,:,:,iTree)
   ELSE
     DO iQuad=StartQuad,EndQuad
       ! transform p4est first corner coordinates (integer from 0... intsize) to [-1,1] reference element
@@ -182,10 +182,10 @@ DO iElem=1,nElems
         CALL LagrangeInterpolationPolys(xi0(3) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_zeta(i,:)) 
       END DO
       !interpolate tree HO mapping to quadrant HO mapping
-      CALL ChangeBasis3D_XYZ(3,Ngeo,Ngeo,Vdm_xi,Vdm_eta,Vdm_zeta,XGeo(:,:,:,:,iElem),XgeoQuad(:,:,:,:,iQuad))
+      CALL ChangeBasis3D_XYZ(3,Ngeo,Ngeo,Vdm_xi,Vdm_eta,Vdm_zeta,XGeo(:,:,:,:,iTree),XgeoQuad(:,:,:,:,iQuad))
     END DO !iQuad=StartQuad,EndQuad
   END IF !nLocalQuads==1
-END DO !iElem=1,nElems
+END DO !iTree=1,nTrees
 END SUBROUTINE BuildHOMesh
 
 
@@ -195,7 +195,7 @@ SUBROUTINE DeformMesh()
 !===================================================================================================================================
 ! MODULES
 USE MODH_Globals
-USE MODH_Mesh_Vars, ONLY: nElems,XGeo,Ngeo,Deform
+USE MODH_Mesh_Vars, ONLY: nTrees,XGeo,Ngeo,Deform
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -205,7 +205,7 @@ IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 INTEGER                        :: i,j,k
-INTEGER                        :: iElem
+INTEGER                        :: iTree
 REAL                           :: Pi,x(3)
 !-----------------------------------------------------------------------------------------------------------------------------------
 IF(Deform.EQ.0) RETURN
@@ -213,10 +213,10 @@ IF(Deform.EQ.0) RETURN
 SELECT CASE(Deform)
 CASE(1) !sinus -1,1 deformation
   Pi = ACOS(-1.) 
-  DO iElem=1,nElems
+  DO iTree=1,nTrees
     DO k=0,NGeo; DO j=0,NGeo; DO i=0,NGeo
-      x(:)=Xgeo(:,i,j,k,iElem)
-      Xgeo(:,i,j,k,iElem) = x+ 0.1*SIN(Pi*x(1))*SIN(Pi*x(2))*SIN(Pi*x(3))
+      x(:)=Xgeo(:,i,j,k,iTree)
+      Xgeo(:,i,j,k,iTree) = x+ 0.1*SIN(Pi*x(1))*SIN(Pi*x(2))*SIN(Pi*x(3))
     END DO; END DO; END DO;
   END DO
 CASE DEFAULT
@@ -240,16 +240,16 @@ IMPLICIT NONE
 !output parameters
 !----------------------------------------------------------------------------------------------------------------------------
 !local variables
-INTEGER       :: iElem,iLocSide,iNode
+INTEGER       :: iTree,iLocSide,iNode
 !============================================================================================================================
 ! Deallocate global variables, needs to go somewhere else later
-DO iElem=1,nElems
+DO iTree=1,nTrees
   DO iLocSide=1,6
-    DEALLOCATE(Elems(iElem)%ep%Side(iLocSide)%sp)
+    DEALLOCATE(Trees(iTree)%ep%Side(iLocSide)%sp)
   END DO
-  DEALLOCATE(Elems(iElem)%ep)
+  DEALLOCATE(Trees(iTree)%ep)
 END DO
-DEALLOCATE(Elems)
+DEALLOCATE(Trees)
 DO iNode=1,nNodes
     DEALLOCATE(Nodes(iNode)%np)
 END DO
