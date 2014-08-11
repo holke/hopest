@@ -26,6 +26,6 @@ void p4_geometry_X (p8est_geometry_t * geom,
                                            p4est_topidx_t which_tree,
                                            const double abc[3],
                                            double xyz[3]){
-    int which_tree_p1=which_tree+1;
-    buildHOp4GeometryX_FC(abc[0],abc[1],abc[2],xyz+0,xyz+1,xyz+2,(which_tree_p1));
+    const p4est_topidx_t which_tree_p1 = which_tree + 1;
+    buildHOp4GeometryX_FC(abc[0],abc[1],abc[2],xyz+0,xyz+1,xyz+2,which_tree_p1);
 }

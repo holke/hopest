@@ -27,6 +27,10 @@ INTERFACE BuildBCs
   MODULE PROCEDURE BuildBCs
 END INTERFACE
 
+INTERFACE Buildp4est
+  MODULE PROCEDURE Buildp4est
+END INTERFACE
+
 INTERFACE testHOabc
   MODULE PROCEDURE testHOabc
 END INTERFACE
@@ -39,6 +43,7 @@ PUBLIC::InitP4EST
 PUBLIC::BuildMeshFromP4EST
 PUBLIC::getHFlip
 PUBLIC::BuildBCs
+PUBLIC::Buildp4est
 PUBLIC::testHOabc
 PUBLIC::FinalizeP4EST
 !===================================================================================================================================
@@ -87,7 +92,6 @@ USE MODH_Globals
 USE MODH_Mesh_Vars
 USE MODH_P4EST_Vars
 USE MODH_P4EST_Binding
-USE MODH_Output_Vars, ONLY:Projectname
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -97,16 +101,16 @@ IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 TYPE(C_PTR)                 :: QT,QQ,QF,QH,TB
-TYPE(tElem),POINTER         :: aQuad,nbQuad,Tree
+TYPE(tElem),POINTER         :: aQuad,nbQuad
 TYPE(tSide),POINTER         :: aSide
-INTEGER                     :: iQuad,iMortar,iElem
+INTEGER                     :: iQuad,iMortar,jMortar,iElem
 INTEGER                     :: PSide,PnbSide,nbSide
 INTEGER                     :: nbQuadInd
 INTEGER                     :: PMortar,PFlip,HFlip,QHInd
 INTEGER                     :: iLocSide
 INTEGER                     :: StartQuad,EndQuad
 INTEGER                     :: BClocSide,BCindex
-INTEGER(KIND=C_INT16_T),POINTER :: TreeToBC(:,:)
+INTEGER(KIND=C_INT32_T),POINTER :: TreeToBC(:,:)
 INTEGER(KIND=8)             :: offsetQuadTmp,nGlobalQuadsTmp
 !===================================================================================================================================
 SWRITE(UNIT_stdOut,'(A)')'GENERATE HOPEST MESH FROM P4EST ...'
@@ -196,10 +200,13 @@ DO iQuad=1,nQuads
       aSide%MortarType=1             ! 1->4 case
       aSide%flip=HFlip
       ALLOCATE(aSide%MortarSide(4))
-      DO iMortar=1,4
-        nbQuadInd=QuadToHalf(iMortar,QHInd)+1
+      DO jMortar=0,3
+        nbQuadInd=QuadToHalf(jMortar+1,QHInd)+1
         nbQuad=>Quads(nbQuadInd)%ep
         nbSide=P2H_FaceMap(PnbSide)
+
+        iMortar=GetHMortar(jMortar,PSide,PnbSide,PFlip)
+
         aSide%MortarSide(iMortar)%sp=>nbQuad%side(nbSide)%sp
         aSide%MortarSide(iMortar)%sp%flip=HFlip
         nMortarSides=nMortarSides+1
@@ -223,8 +230,8 @@ DO iQuad=1,nQuads
       END IF !BC side
       IF(PMortar.NE.-1) aSide%MortarType= - (PMortar+1)  ! Pmortar 0...3, small side belonging to  mortar group -> -1..-4
     END IF ! PMortar
-  END DO
-END DO
+  END DO !iLocSide
+END DO !iQuad
 
 DO iQuad=1,nQuads
   aQuad=>Quads(iQuad)%ep
@@ -350,7 +357,7 @@ END SUBROUTINE EvalP4ESTConnectivity
 
 FUNCTION GetHFlip(PSide0,PSide1,PFlip)
 !===================================================================================================================================
-! Subroutine to read the mesh from a mesh data file
+! transform an p4est orientation (r = PFlip)  in HOPR Flip, using local Side and neighbor side  
 !===================================================================================================================================
 ! MODULES
 USE MODH_P4EST_Vars,ONLY:P2H_FaceMap,H2P_FaceNodeMap,P2H_FaceNodeMap,P4R,P4Q,P4P
@@ -380,6 +387,43 @@ GetHFlip=P2H_FaceNodeMap(PNode1,PSide1)
 END FUNCTION GetHFlip
 
 
+FUNCTION GetHMortar(PMortar,PSide,PnbSide,PFlip)
+!===================================================================================================================================
+! Transform a p4est mortar ID to a HOPR mortar ID 
+!===================================================================================================================================
+! MODULES
+USE MODH_P4EST_Vars,ONLY:P2H_FaceMap,H2P_FaceNodeMap,P2H_FaceNodeMap,P4R,P4Q,P4P
+USE MODH_P4EST_Vars,ONLY:H_MortarCase,P2H_MortarMap
+! IMPLICIT VARIABLE HANDLING
+IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+INTEGER,INTENT(IN)   :: PMortar ! Index of mortar side: 0...3
+INTEGER,INTENT(IN)   :: PSide   ! local side ID of HOPEST
+INTEGER,INTENT(IN)   :: PnbSide ! P4EST neighbour local side id
+INTEGER,INTENT(IN)   :: PFlip   ! Neighbour side in p4est convention: 0..5
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+INTEGER              :: GetHMortar   ! Index of mortar side: 1..4
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES
+INTEGER              :: PNodeA,PNodeB,HNode1,HNode2
+!-----------------------------------------------------------------------------------------------------------------------------------
+
+! Side 1: neighbor
+!1. Get node a and b from node 0 and 1 of neighbor side P
+PNodeA=P4P(P4Q(P4R(PnbSide,PSide),PFlip),0)
+PNodeB=P4P(P4Q(P4R(PnbSide,PSide),PFlip),1)
+
+!2. Get CGNS node 1 and 2 from p4est node a and b 
+HNode1=P2H_FaceNodeMap(PNodeA,PSide)
+HNode2=P2H_FaceNodeMap(PNodeB,PSide)
+
+!3. 8 possible combinations (MortarCase),using node 1 and 2 and map PMortar index to Hmortar index
+GetHMortar = P2H_MortarMap(PMortar, H_MortarCase(HNode1,HNode2)) 
+
+END FUNCTION GetHMortar
+
 SUBROUTINE BuildBCs()
 !===================================================================================================================================
 ! Subroutine to translate p4est mesh datastructure to HOPR datastructure
@@ -401,7 +445,7 @@ IMPLICIT NONE
 TYPE(tElem),POINTER         :: Elem
 TYPE(tSide),POINTER         :: Side
 INTEGER                     :: iElem,iSide
-INTEGER(KIND=C_INT16_T)     :: BCElemMap(0:5,nElems)
+INTEGER(KIND=C_INT32_T)     :: BCElemMap(0:5,nElems)
 !===================================================================================================================================
 BCElemMap=-1
 DO iELem=1,nElems
@@ -414,6 +458,18 @@ END DO
 CALL p4_build_bcs(p4est,nElems,BCElemMap)
 END SUBROUTINE BuildBCs
 
+SUBROUTINE Buildp4est()
+!===================================================================================================================================
+! Subroutine to build the p4est and the p4est_geometry from connectivity
+!===================================================================================================================================
+! MODULES
+USE MODH_P4EST_Vars,    ONLY: connectivity,p4est,geom
+USE MODH_P4EST_Binding, ONLY: p4_build_p4est
+!-----------------------------------------------------------------------------------------------------------------------------------
+CALL p4_build_p4est(connectivity,p4est,geom)
+END SUBROUTINE Buildp4est
+
+
 SUBROUTINE buildHOp4GeometryX(a,b,c,x,y,z,tree)
 !===================================================================================================================================
 ! Subroutine to translate p4est mesh datastructure to HOPR datastructure
@@ -423,13 +479,12 @@ USE, INTRINSIC :: ISO_C_BINDING
 USE MODH_Globals
 USE MODH_Basis,        ONLY: LagrangeInterpolationPolys
 USE MODH_Mesh_Vars,    ONLY: XGeo,xi_Ngeo,wBary_Ngeo,NGeo
-USE, intrinsic :: ISO_C_BINDING
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! INPUT VARIABLES
 REAL( KIND = C_DOUBLE ),INTENT(IN),VALUE    :: a,b,c
-INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE    :: tree
+P4EST_F90_TOPIDX,INTENT(IN),VALUE    :: tree
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! OUTPUT VARIABLES
 REAL( KIND = C_DOUBLE ),INTENT(OUT)         :: x,y,z
@@ -466,6 +521,7 @@ SUBROUTINE testHOabc()
 ! Subroutine to translate p4est mesh datastructure to HOPR datastructure
 !===================================================================================================================================
 ! MODULES
+USE, INTRINSIC :: ISO_C_BINDING
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -475,7 +531,7 @@ IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 REAL        :: a,b,c,x,y,z
-INTEGER      :: tree
+P4EST_F90_TOPIDX      :: tree
 !-----------------------------------------------------------------------------------------------------------------------------------
 a=1
 b=0
@@ -495,7 +551,8 @@ SUBROUTINE FinalizeP4EST()
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
-USE MODH_P4EST_Vars,    ONLY: TreeToQuad,QuadCoords,QuadLevel
+USE MODH_P4EST_Vars,    ONLY: TreeToQuad,QuadCoords,QuadLevel,p4est,mesh,connectivity
+USE MODH_Mesh_Vars,    ONLY: nQuads,Quads
 USE MODH_P4EST_Binding
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
@@ -505,9 +562,20 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
+INTEGER           :: iQuad,iLocSide
 !===================================================================================================================================
 ! TODO: DEALLOCATE P4EST BC POINTER ARRAY
+DO iQuad=1,nQuads
+  DO iLocSide=1,6
+    DEALLOCATE(Quads(iQuad)%ep%Side(iLocSide)%sp)
+  END DO
+  DEALLOCATE(Quads(iQuad)%ep)
+END DO
+DEALLOCATE(Quads)
 ! TODO: DEALLOCATE P4EST / CONNECTIVITY THEMSELVES
+CALL p4_destroy_p4est(p4est)
+CALL p4_destroy_mesh(mesh)
+CALL p4_destroy_connectivity(connectivity)
 SDEALLOCATE(TreeToQuad)
 SDEALLOCATE(QuadCoords)
 SDEALLOCATE(QuadLevel)

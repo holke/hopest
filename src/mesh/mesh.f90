@@ -25,6 +25,10 @@ INTERFACE BuildHOMesh
   MODULE PROCEDURE BuildHOMesh
 END INTERFACE
 
+INTERFACE DeformMesh
+  MODULE PROCEDURE DeformMesh
+END INTERFACE
+
 INTERFACE FinalizeMesh
   MODULE PROCEDURE FinalizeMesh
 END INTERFACE
@@ -32,6 +36,7 @@ END INTERFACE
 PUBLIC::InitMesh
 PUBLIC::SetCurvedInfo
 PUBLIC::BuildHOMesh
+PUBLIC::DeformMesh
 PUBLIC::FinalizeMesh
 !===================================================================================================================================
 
@@ -44,7 +49,7 @@ SUBROUTINE InitMesh()
 ! MODULES
 USE MODH_Globals
 USE MODH_Output_Vars, ONLY: Projectname
-USE MODH_Mesh_Vars,   ONLY: BoundaryName,BoundaryType,MeshFile,nUserBCs,MeshInitIsDone
+USE MODH_Mesh_Vars,   ONLY: BoundaryName,BoundaryType,MeshFile,nUserBCs,Deform
 USE MODH_ReadInTools, ONLY: GETINT,GETSTR,GETINTARRAY,CNTSTR
 IMPLICIT NONE
 ! INPUT VARIABLES
@@ -61,8 +66,13 @@ SWRITE(UNIT_stdOut,'(A)') ' INIT MESH DUE...'
 
 ! prepare pointer structure (get nElems, etc.)
 MeshFile = GETSTR('MeshFile')
-SWRITE(UNIT_stdOut,'(A)') ' NOCH DA ...'
-ProjectName=Meshfile(1:INDEX(Meshfile,'_mesh.h5')-1)
+IF(CNTSTR('ProjectName',0).EQ.0)THEN
+  !default project name frommesh file
+  ProjectName=TRIM(Meshfile(1:INDEX(Meshfile,'_mesh.h5')-1))
+ELSE
+  ProjectName = GETSTR('ProjectName')
+END IF
+Deform = GETINT('Deform','0')
 
 ! read in boundary conditions, will overwrite BCs from meshfile!
 nUserBCs = CNTSTR('BoundaryName',0)
@@ -179,6 +189,42 @@ END DO !iElem=1,nElems
 END SUBROUTINE BuildHOMesh
 
 
+SUBROUTINE DeformMesh()
+!===================================================================================================================================
+! Subroutine to read the mesh from a mesh data file
+!===================================================================================================================================
+! MODULES
+USE MODH_Globals
+USE MODH_Mesh_Vars, ONLY: nElems,XGeo,Ngeo,Deform
+! IMPLICIT VARIABLE HANDLING
+IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES
+INTEGER                        :: i,j,k
+INTEGER                        :: iElem
+REAL                           :: Pi,x(3)
+!-----------------------------------------------------------------------------------------------------------------------------------
+IF(Deform.EQ.0) RETURN
+!deform the mesh
+SELECT CASE(Deform)
+CASE(1) !sinus -1,1 deformation
+  Pi = ACOS(-1.) 
+  DO iElem=1,nElems
+    DO k=0,NGeo; DO j=0,NGeo; DO i=0,NGeo
+      x(:)=Xgeo(:,i,j,k,iElem)
+      Xgeo(:,i,j,k,iElem) = x+ 0.1*SIN(Pi*x(1))*SIN(Pi*x(2))*SIN(Pi*x(3))
+    END DO; END DO; END DO;
+  END DO
+CASE DEFAULT
+  STOP 'This deform case is not defined'
+END SELECT !Deform
+END SUBROUTINE DeformMesh
+
+
 SUBROUTINE FinalizeMesh()
 !============================================================================================================================
 ! Deallocate all global interpolation variables.
@@ -194,8 +240,23 @@ IMPLICIT NONE
 !output parameters
 !----------------------------------------------------------------------------------------------------------------------------
 !local variables
+INTEGER       :: iElem,iLocSide,iNode
 !============================================================================================================================
 ! Deallocate global variables, needs to go somewhere else later
+DO iElem=1,nElems
+  DO iLocSide=1,6
+    DEALLOCATE(Elems(iElem)%ep%Side(iLocSide)%sp)
+  END DO
+  DEALLOCATE(Elems(iElem)%ep)
+END DO
+DEALLOCATE(Elems)
+DO iNode=1,nNodes
+    DEALLOCATE(Nodes(iNode)%np)
+END DO
+DEALLOCATE(Nodes)
+SDEALLOCATE(XGeo)
+SDEALLOCATE(HexMap)
+SDEALLOCATE(HexMapInv)
 SDEALLOCATE(Xi_NGeo)
 SDEALLOCATE(BoundaryName)
 SDEALLOCATE(BoundaryType)

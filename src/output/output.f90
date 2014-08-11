@@ -40,10 +40,6 @@ IMPLICIT NONE
 ! INPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER                        :: OpenStat
-CHARACTER(LEN=8)               :: StrDate
-CHARACTER(LEN=10)              :: StrTime
-CHARACTER(LEN=255)             :: LogFile
 !===================================================================================================================================
 IF(OutputInitIsDone)THEN
   CALL abort(__STAMP__,&

@@ -30,6 +30,7 @@
 // 3D mode; must be included AFTER every other file
 #include <p4est_to_p8est.h>
 
+p8est_connectivity_t *global_conn;
 
 static sc_MPI_Comm           mpicomm;
 
@@ -124,7 +125,11 @@ void p4_connectivity_treevertex (p4est_topidx_t num_vertices,
      (long long) conn->num_trees, (long long) conn->num_vertices);
 
   *conn_out=conn;
-  printf("DEBUG connectivity %p \n",conn);
+}
+
+void p4_destroy_connectivity (p4est_connectivity_t  *conn)
+{
+ p4est_connectivity_destroy (conn);
 }
 
 void p4_build_p4est ( p4est_connectivity_t *conn,
@@ -134,7 +139,6 @@ void p4_build_p4est ( p4est_connectivity_t *conn,
   p4est_t* p4est;
   p4est_geometry_t   *geom;
 
-  printf("DEBUG: connectivity %p \n",conn);
   fflush(stdout);
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
   /* Create a forest that is not refined; it consists of the root octant. */
@@ -144,16 +148,18 @@ void p4_build_p4est ( p4est_connectivity_t *conn,
   geom->name = "hopest_readfromhdf5";
   geom->X = p4_geometry_X;
 
-  printf("DEBUG: saved geometry at address %p\n",geom);
-  printf("DEBUG: p4est %p \n",p4est);
   *p4est_out=p4est;
   *geom_out=geom;
 }
 
+void p4_destroy_p4est ( p4est_t  *p4est)
+{
+ p4est_destroy (p4est);
+}
 
 void p4_build_bcs(p4est_t        *p4est,
                   p4est_topidx_t num_trees,
-                  int16_t        *bcelemmap)
+                  int32_t        *bcelemmap)
 {
   int itree,iside;
 
@@ -161,12 +167,12 @@ void p4_build_bcs(p4est_t        *p4est,
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 
   P4EST_ASSERT (p4est->trees->elem_count == num_trees);
-  p4est_connectivity_set_attr(conn,6*sizeof(int16_t));
+  p4est_connectivity_set_attr(conn,6*sizeof(int32_t));
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
   
   for(itree=0; itree<num_trees; itree++) {
     for(iside=0; iside<6; iside++) {
-      ((int16_t*) conn->tree_to_attr)[itree*6+iside]=bcelemmap[itree*6+iside];
+      ((int32_t*) conn->tree_to_attr)[itree*6+iside]=bcelemmap[itree*6+iside];
     }
   }
 }
@@ -184,14 +190,20 @@ void p4_build_mesh(p4est_t  *p4est,
 
   //return mesh as pointer adress;
   *mesh_out=(p4est_mesh_t *)mesh;
+  p4est_ghost_destroy (ghost);
+}
+
+void p4_destroy_mesh ( p4est_mesh_t  *mesh)
+{
+ p4est_mesh_destroy (mesh);
 }
 
 void p4_get_bcs(p4est_t        *p4est,
-                int16_t        **bcelemmap)
+                int32_t        **bcelemmap)
 {
   
   p8est_connectivity_t *conn=p4est->connectivity;
-  *bcelemmap=(int16_t*) conn->tree_to_attr;
+  *bcelemmap=(int32_t*) conn->tree_to_attr;
 }
 
 
@@ -200,14 +212,15 @@ void p4_get_mesh_info ( p4est_t        *p4est,
                         p4est_locidx_t *local_num_quadrants,
                         p4est_gloidx_t *global_num_quadrants,
                         p4est_gloidx_t *global_first_quadrant,
-                        int32_t         *num_half_faces,
-                        int32_t         *num_trees )
+                        p4est_locidx_t *num_half_faces,
+                        p4est_topidx_t *num_trees )
 {
   *local_num_quadrants   = p4est->local_num_quadrants;
   *global_num_quadrants  = p4est->global_num_quadrants;
   *global_first_quadrant = p4est->global_first_quadrant[p4est->mpirank];
-  num_half_faces = (int32_t*) mesh->quad_to_half->elem_count;      // big face with 4 small neighbours
-  *num_trees = (int32_t) p4est->trees->elem_count;
+  /* big face with 4 small neighbours */
+  *num_half_faces = (p4est_locidx_t) mesh->quad_to_half->elem_count;
+  *num_trees = (p4est_topidx_t) p4est->trees->elem_count;
   SC_CHECK_ABORTF (mesh->local_num_quadrants == p4est->global_num_quadrants,
                    "Global quads %lld and local quads %d mismatch ! ",
                    (long long) p4est->global_num_quadrants, mesh->local_num_quadrants );
@@ -225,7 +238,7 @@ void p4_get_mesh_info ( p4est_t        *p4est,
 void p4_get_quadrants( p4est_t       *p4est,
                        p4est_mesh_t   *mesh,
                        p4est_locidx_t local_num_quadrants,
-                       int32_t        num_half_faces,
+                       p4est_locidx_t num_half_faces,
                        p4est_qcoord_t  *intsize,
                        p4est_topidx_t **quad_to_tree,
                        p4est_locidx_t **quad_to_quad,
@@ -277,5 +290,9 @@ void p4_savemesh ( char    filename[],
   p4est_destroy(p4est2);
   p4est_connectivity_destroy(conn2);
 }
+
+
+
+
 
 

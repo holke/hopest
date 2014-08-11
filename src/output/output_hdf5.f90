@@ -48,9 +48,8 @@ TYPE(tElem),POINTER            :: master
 TYPE(tSide),POINTER            :: Side
 INTEGER,ALLOCATABLE            :: ElemInfo(:,:),SideInfo(:,:),NodeInfo(:)
 REAL,ALLOCATABLE               :: ElemBary(:,:)
-REAL,ALLOCATABLE               :: NodeCoords(:,:)
 REAL,ALLOCATABLE               :: ElemWeight(:)
-INTEGER                        :: iQuad,i,j,k
+INTEGER                        :: iQuad,i
 INTEGER                        :: NodeID,iNode
 INTEGER                        :: iSide,SideID,iLocSide,iMortar
 INTEGER                        :: ElemCounter(11,2)
@@ -379,6 +378,13 @@ IF(NodeID.NE.nTotalNodes) &
 !WRITE NodeInfo,into (1,nTotalNodes) 
 CALL WriteArrayToHDF5(File_ID,'NodeInfo',nTotalNodes,1,(/nTotalNodes/),0,IntegerArray=NodeInfo)
 DEALLOCATE(NodeInfo)
+DO iLocSide=1,6
+  DEALLOCATE(master%Side(iLocSide)%sp)
+END DO
+DO iNode=1,8
+  DEALLOCATE(master%Node(iNode)%np)
+END DO
+DEALLOCATE(master)
 
 
 

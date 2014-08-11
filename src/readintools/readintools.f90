@@ -78,6 +78,8 @@ INTERFACE DeleteString
   MODULE PROCEDURE DeleteString
 END INTERFACE
 
+
+
 TYPE tString
   TYPE(Varying_String)::Str
   TYPE(tString),POINTER::NextStr,PrevStr
@@ -585,7 +587,7 @@ DO WHILE(ASSOCIATED(FirstString))
   DEALLOCATE(FirstString)
   FirstString=>Str
 END DO
-NULLIFY(FirstString)
+DEALLOCATE(FirstString)
 ReadInDone=.FALSE.
 END SUBROUTINE DeleteStrings
 

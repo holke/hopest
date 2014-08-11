@@ -26,8 +26,8 @@
 
 #define FillStrings_FC \
   HOPEST_FC_FUNC (wrapfillstrings, WRAPFILLSTRINGS)
-#define InitMesh_FC \
-  HOPEST_FC_FUNC (wrapinitmesh, WRAPINITMESH)
+#define ReadMeshFromHDF5_FC \
+  HOPEST_FC_FUNC (wrapreadmeshfromhdf5nobuildp4est,WRAPREADMESHFROMHDF5NOBUILDP4EST)
 
 #ifdef __cplusplus
 extern              "C"         /* prevent C++ name mangling */
@@ -38,7 +38,7 @@ extern              "C"         /* prevent C++ name mangling */
 #endif
 
 void FillStrings_FC(char *inifile,int inifile_len);
-void InitMesh_FC(char *hdf5file,int hdf5file_len,p8est_connectivity_t **conn);
+void ReadMeshFromHDF5_FC(char *hdf5file,int hdf5file_len,p8est_connectivity_t **conn);
 
 #ifdef __cplusplus
 #if 0

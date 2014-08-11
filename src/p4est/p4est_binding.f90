@@ -68,6 +68,21 @@ INTERFACE
   !=================================================================================================================================
   END SUBROUTINE p4_connectivity_treevertex 
 
+  SUBROUTINE p4_destroy_connectivity(connectivity) BIND(C)
+  !=================================================================================================================================
+  ! read p4est connectivity from file and build p4est
+  !=================================================================================================================================
+  ! MODULES
+  USE, INTRINSIC :: ISO_C_BINDING  
+  ! IMPLICIT VARIABLE HANDLING
+  IMPLICIT NONE
+  !---------------------------------------------------------------------------------------------------------------------------------
+  ! INPUT VARIABLES
+  TYPE(C_PTR),VALUE,INTENT(IN)        :: connectivity
+  !---------------------------------------------------------------------------------------------------------------------------------
+  ! OUTPUT VARIABLES
+  !=================================================================================================================================
+  END SUBROUTINE p4_destroy_connectivity 
 
   SUBROUTINE p4_build_mesh(p4est,mesh) BIND(C)
   !=================================================================================================================================
@@ -85,6 +100,22 @@ INTERFACE
   TYPE(C_PTR),INTENT(OUT)             :: mesh
   !=================================================================================================================================
   END SUBROUTINE p4_build_mesh 
+
+  SUBROUTINE p4_destroy_mesh(mesh) BIND(C)
+  !=================================================================================================================================
+  ! read p4est connectivity from file and build p4est
+  !=================================================================================================================================
+  ! MODULES
+  USE, INTRINSIC :: ISO_C_BINDING  
+  ! IMPLICIT VARIABLE HANDLING
+  IMPLICIT NONE
+  !---------------------------------------------------------------------------------------------------------------------------------
+  ! INPUT VARIABLES
+  TYPE(C_PTR),VALUE,INTENT(IN)        :: mesh
+  !---------------------------------------------------------------------------------------------------------------------------------
+  ! OUTPUT VARIABLES
+  !=================================================================================================================================
+  END SUBROUTINE p4_destroy_mesh 
 
 
   SUBROUTINE p4_build_p4est(connectivity,p4est,geom) BIND(C)
@@ -106,6 +137,23 @@ INTERFACE
   END SUBROUTINE p4_build_p4est
 
 
+  SUBROUTINE p4_destroy_p4est(p4est) BIND(C)
+  !=================================================================================================================================
+  ! builds up p4est connectivit, using only element connectivity and vertex positions
+  !=================================================================================================================================
+  ! MODULES
+  USE, INTRINSIC :: ISO_C_BINDING  
+  ! IMPLICIT VARIABLE HANDLING
+  IMPLICIT NONE
+  !---------------------------------------------------------------------------------------------------------------------------------
+  ! INPUT VARIABLES
+  TYPE(C_PTR),VALUE,INTENT(IN)           :: p4est
+  !---------------------------------------------------------------------------------------------------------------------------------
+  ! OUTPUT VARIABLES
+  !=================================================================================================================================
+  END SUBROUTINE p4_destroy_p4est
+
+
   SUBROUTINE p4_build_bcs(p4est,num_trees,bcelemmap) BIND(C)
   !=================================================================================================================================
   ! simple refine function, giving the level and if refine_elem < 0 then a conformal refinement is applied.
@@ -118,7 +166,7 @@ INTERFACE
   ! INPUT VARIABLES
   TYPE(C_PTR),VALUE,INTENT(IN)       :: p4est
   INTEGER( KIND = C_INT),VALUE       :: num_trees 
-  INTEGER(KIND=C_INT16_T),INTENT(IN) :: bcelemmap(0:5,num_trees)
+  INTEGER(KIND=C_INT32_T),INTENT(IN) :: bcelemmap(0:5,num_trees)
   !---------------------------------------------------------------------------------------------------------------------------------
   ! OUTPUT VARIABLES
   !=================================================================================================================================
@@ -162,8 +210,8 @@ INTERFACE
   P4EST_F90_LOCIDX,INTENT(OUT)              :: local_num_quadrants
   P4EST_F90_GLOIDX,INTENT(OUT)              :: global_num_quadrants
   P4EST_F90_GLOIDX,INTENT(OUT)              :: global_first_quadrant
-  INTEGER(KIND=C_INT32_T),INTENT(OUT)       :: num_half_faces
-  INTEGER(KIND=C_INT32_T),INTENT(OUT)       :: num_trees
+  P4EST_F90_LOCIDX,INTENT(OUT)              :: num_half_faces
+  P4EST_F90_TOPIDX,INTENT(OUT)              :: num_trees
   !=================================================================================================================================
   END SUBROUTINE p4_get_mesh_info
 

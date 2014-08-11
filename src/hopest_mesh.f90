@@ -35,13 +35,14 @@ SUBROUTINE HopestMesh()
 USE MODH_Globals
 USE MODH_IO_HDF5
 USE MODH_P4EST_Vars,         ONLY: p4est,p4estFile
-USE MODH_P4EST,              ONLY: InitP4EST,BuildMeshFromP4EST,BuildBCs,testHOabc
+USE MODH_P4EST,              ONLY: InitP4EST,BuildMeshFromP4EST,BuildBCs,testHOabc,FinalizeP4EST
 USE MODH_P4EST_Binding,      ONLY: p4_savemesh
 USE MODH_Mesh_Vars
-USE MODH_Mesh,               ONLY: InitMesh,BuildHOMesh
+USE MODH_Mesh,               ONLY: InitMesh,BuildHOMesh,FinalizeMesh
 USE MODH_Output_Vars,        ONLY: Projectname
 USE MODH_Output_HDF5,        ONLY: writeMeshToHDF5
 USE MODH_Mesh_ReadIn,        ONLY: readMeshFromHDF5
+USE MODH_Mesh,               ONLY: DeformMesh
 USE MODH_Basis,              ONLY: BarycentricWeights
 USE MODH_Refine,             ONLY: RefineMesh
 USE MODH_ReadInTools,        ONLY: GETINT,GETSTR,GETINTARRAY,CNTSTR
@@ -53,7 +54,6 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER :: i
 !===================================================================================================================================
 SWRITE(UNIT_StdOut,'(132("-"))')
 SWRITE(UNIT_stdOut,'(A)') ' START HOPEST MESH...'
@@ -63,6 +63,8 @@ CALL InitP4EST()
 CALL InitIO()
 
 CALL readMeshFromHDF5(MeshFile) !set nElems
+
+CALL deformMesh()
 
 CALL RefineMesh()
 CALL BuildBCs()
@@ -77,7 +79,10 @@ CALL writeMeshToHDF5(TRIM(ProjectName)//'_mesh_p4est.h5')
 SWRITE(UNIT_stdOut,'(A)') "NOW CALLING deleteMeshPointer..."
 !CALL deleteMeshPointer()
 
+CALL FinalizeP4EST()
+CALL FinalizeMesh()
 CALL FinalizeHopestMesh()
+
 SWRITE(UNIT_stdOut,'(A)')' HOPEST MESH DONE!'
 SWRITE(UNIT_StdOut,'(132("-"))')
 END SUBROUTINE HopestMesh

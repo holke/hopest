@@ -29,7 +29,6 @@ SUBROUTINE RefineMesh()
 USE MODH_Globals
 USE MODH_Refine_Vars
 USE MODH_Refine_Binding,ONLY: p4_refine_mesh
-USE MODH_Mesh_Vars,     ONLY: nElems
 USE MODH_P4EST_Vars,    ONLY: p4est,mesh,geom
 USE MODH_Readintools,   ONLY: GETINT,CNTSTR
 USE, INTRINSIC :: ISO_C_BINDING
@@ -136,8 +135,6 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER                     :: iElem
-REAL                     :: XBary(3)
 !===================================================================================================================================
 ! These are the refinement functions which are called by p4est
 refineGeomType =GETINT('refineGeomType') ! 
@@ -158,7 +155,7 @@ END SELECT
 
 END SUBROUTINE InitRefineGeom
 
-FUNCTION RefineAll(x,y,z,tree,level) BIND(C)
+FUNCTION RefineAll(x,y,z,tree,level,childID) BIND(C)
 !===================================================================================================================================
 ! Subroutine to refine the the mesh
 !===================================================================================================================================
@@ -169,9 +166,10 @@ USE MODH_Refine_Vars, ONLY: RefineLevel
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! INPUT VARIABLES
-INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: x,y,z
-INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: tree
-INTEGER(KIND=C_INT8_T ),INTENT(IN),VALUE :: level
+P4EST_F90_QCOORD,    INTENT(IN),VALUE :: x,y,z
+P4EST_F90_TOPIDX,    INTENT(IN),VALUE :: tree
+P4EST_F90_QLEVEL,    INTENT(IN),VALUE :: level
+INTEGER(KIND=C_INT ),INTENT(IN),VALUE :: childID
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! OUTPUT VARIABLES
 INTEGER(KIND=C_INT) :: refineAll
@@ -194,16 +192,16 @@ USE MODH_Refine_Vars, ONLY: refineLevel,TreeSidesToRefine
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! INPUT VARIABLES
-INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: x,y,z
-INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: tree
-INTEGER(KIND=C_INT8_T ),INTENT(IN),VALUE :: level
+P4EST_F90_QCOORD,    INTENT(IN),VALUE :: x,y,z
+P4EST_F90_TOPIDX,    INTENT(IN),VALUE :: tree
+P4EST_F90_QLEVEL,    INTENT(IN),VALUE :: level
 INTEGER(KIND=C_INT ),INTENT(IN),VALUE :: childID
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! OUTPUT VARIABLES
-INTEGER(KIND=C_INT)                      :: refineByList
+INTEGER(KIND=C_INT)                   :: refineByList
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER(KIND=C_INT32_T)  IntSize,length
+P4EST_F90_QCOORD                      ::  IntSize,length
 !-----------------------------------------------------------------------------------------------------------------------------------
 RefineByList=0
 IF(level.GE.refineLevel) RETURN
@@ -240,31 +238,29 @@ FUNCTION RefineByGeom(x,y,z,tree,level,childID) BIND(C)
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
-USE MODH_Refine_Vars, ONLY: RefineList,refineBoundary,refineGeomType,refineLevel
+USE MODH_Refine_Vars, ONLY: refineGeomType,refineLevel
 USE MODH_Refine_Vars, ONLY: sphereCenter,sphereRadius,boxBoundary
 USE MODH_Refine_Vars, ONLY: shellRadius_inner,shellRadius_outer,shellCenter
 USE MODH_Mesh_Vars,   ONLY: XGeo,Ngeo
 USE MODH_Mesh_Vars,   ONLY: wBary_Ngeo,xi_Ngeo
-USE MODH_P4EST_Vars,  ONLY: Quadcoords 
 USE MODH_Basis,       ONLY: LagrangeInterpolationPolys 
 USE MODH_ChangeBasis, ONLY: ChangeBasis3D_XYZ
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! INPUT VARIABLES
-INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: x,y,z
-INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: tree
-INTEGER(KIND=C_INT8_T ),INTENT(IN),VALUE :: level
-INTEGER(KIND=C_INT ),INTENT(IN),VALUE    :: childID
-REAL                                     :: xi0(3)
-REAL                                     :: xiBary(3)
-REAL                                     :: dxi,length
-REAL,DIMENSION(0:Ngeo,0:Ngeo)            :: Vdm_xi,Vdm_eta,Vdm_zeta
-REAL                                     :: XQuadCoord(3),ElemLength(3),ElemFirstCorner(3),VectorToBaryQuad(3)
-REAL                                     :: XCorner(3), XBaryQuad(3),lengthQuad,test,IntSize,sIntSize
-REAL                                     :: XGeoQuad(3,0:NGeo,0:NGeo,0:NGeo)
-REAL                                     :: l_xi(0:NGeo),l_eta(0:NGeo),l_zeta(0:NGeo),l_etazeta
-INTEGER                                  :: i,j,k
+P4EST_F90_QCOORD,    INTENT(IN),VALUE :: x,y,z
+P4EST_F90_TOPIDX,    INTENT(IN),VALUE :: tree
+P4EST_F90_QLEVEL,    INTENT(IN),VALUE :: level
+INTEGER(KIND=C_INT ),INTENT(IN),VALUE :: childID
+REAL                                  :: xi0(3)
+REAL                                  :: xiBary(3)
+REAL                                  :: dxi,length
+REAL,DIMENSION(0:Ngeo,0:Ngeo)         :: Vdm_xi,Vdm_eta,Vdm_zeta
+REAL                                  :: XCorner(3), XBaryQuad(3),test,IntSize,sIntSize
+REAL                                  :: XGeoQuad(3,0:NGeo,0:NGeo,0:NGeo)
+REAL                                  :: l_xi(0:NGeo),l_eta(0:NGeo),l_zeta(0:NGeo),l_etazeta
+INTEGER                               :: i,j,k
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! OUTPUT VARIABLES
 INTEGER(KIND=C_INT) :: refineByGeom
@@ -383,7 +379,7 @@ END SELECT
 END FUNCTION RefineByGeom
 
 
-FUNCTION RefineFirst(x,y,z,tree,level) BIND(C)
+FUNCTION RefineFirst(x,y,z,tree,level,childID) BIND(C)
 !===================================================================================================================================
 ! Subroutine to refine the the mesh
 !===================================================================================================================================
@@ -394,9 +390,10 @@ USE MODH_Refine_Vars, ONLY: refineLevel
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! INPUT VARIABLES
-INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: x,y,z
-INTEGER(KIND=C_INT32_T),INTENT(IN),VALUE :: tree
-INTEGER(KIND=C_INT8_T ),INTENT(IN),VALUE :: level
+P4EST_F90_QCOORD,INTENT(IN),VALUE :: x,y,z
+P4EST_F90_TOPIDX,INTENT(IN),VALUE :: tree
+P4EST_F90_QLEVEL,INTENT(IN),VALUE :: level
+P4EST_F90_LOCIDX,INTENT(IN),VALUE :: childID
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! OUTPUT VARIABLES
 INTEGER(KIND=C_INT)                      :: refineFirst
