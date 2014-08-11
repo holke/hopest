@@ -27,6 +27,10 @@ INTERFACE BuildBCs
   MODULE PROCEDURE BuildBCs
 END INTERFACE
 
+INTERFACE Buildp4est
+  MODULE PROCEDURE Buildp4est
+END INTERFACE
+
 INTERFACE testHOabc
   MODULE PROCEDURE testHOabc
 END INTERFACE
@@ -39,6 +43,7 @@ PUBLIC::InitP4EST
 PUBLIC::BuildMeshFromP4EST
 PUBLIC::getHFlip
 PUBLIC::BuildBCs
+PUBLIC::Buildp4est
 PUBLIC::testHOabc
 PUBLIC::FinalizeP4EST
 !===================================================================================================================================
@@ -450,6 +455,18 @@ END DO
 CALL p4_build_bcs(p4est,nElems,BCElemMap)
 END SUBROUTINE BuildBCs
 
+SUBROUTINE Buildp4est()
+!===================================================================================================================================
+! Subroutine to build the p4est and the p4est_geometry from connectivity
+!===================================================================================================================================
+! MODULES
+USE MOD_P4EST_Vars,    ONLY: connectivity,p4est,geom
+USE MOD_P4EST_Binding, ONLY: p4_build_p4est
+!-----------------------------------------------------------------------------------------------------------------------------------
+CALL p4_build_p4est(connectivity,p4est,geom)
+END SUBROUTINE Buildp4est
+
+
 SUBROUTINE buildHOp4GeometryX(a,b,c,x,y,z,tree)
 !===================================================================================================================================
 ! Subroutine to translate p4est mesh datastructure to HOPR datastructure
@@ -531,7 +548,8 @@ SUBROUTINE FinalizeP4EST()
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
-USE MOD_P4EST_Vars,    ONLY: TreeToQuad,QuadCoords,QuadLevel
+USE MOD_P4EST_Vars,    ONLY: TreeToQuad,QuadCoords,QuadLevel,p4est,mesh,connectivity
+USE MOD_Mesh_Vars,    ONLY: nQuads,Quads
 USE MOD_P4EST_Binding
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
@@ -541,9 +559,20 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
+INTEGER           :: iQuad,iLocSide
 !===================================================================================================================================
 ! TODO: DEALLOCATE P4EST BC POINTER ARRAY
+DO iQuad=1,nQuads
+  DO iLocSide=1,6
+    DEALLOCATE(Quads(iQuad)%ep%Side(iLocSide)%sp)
+  END DO
+  DEALLOCATE(Quads(iQuad)%ep)
+END DO
+DEALLOCATE(Quads)
 ! TODO: DEALLOCATE P4EST / CONNECTIVITY THEMSELVES
+CALL p4_destroy_p4est(p4est)
+CALL p4_destroy_mesh(mesh)
+CALL p4_destroy_connectivity(connectivity)
 SDEALLOCATE(TreeToQuad)
 SDEALLOCATE(QuadCoords)
 SDEALLOCATE(QuadLevel)

@@ -127,6 +127,11 @@ void p4_connectivity_treevertex (p4est_topidx_t num_vertices,
   *conn_out=conn;
 }
 
+void p4_destroy_connectivity (p4est_connectivity_t  *conn)
+{
+ p4est_connectivity_destroy (conn);
+}
+
 void p4_build_p4est ( p4est_connectivity_t *conn,
                       p4est_t              **p4est_out,
                       p4est_geometry_t     **geom_out)
@@ -147,6 +152,10 @@ void p4_build_p4est ( p4est_connectivity_t *conn,
   *geom_out=geom;
 }
 
+void p4_destroy_p4est ( p4est_t  *p4est)
+{
+ p4est_destroy (p4est);
+}
 
 void p4_build_bcs(p4est_t        *p4est,
                   p4est_topidx_t num_trees,
@@ -181,6 +190,12 @@ void p4_build_mesh(p4est_t  *p4est,
 
   //return mesh as pointer adress;
   *mesh_out=(p4est_mesh_t *)mesh;
+  p4est_ghost_destroy (ghost);
+}
+
+void p4_destroy_mesh ( p4est_mesh_t  *mesh)
+{
+ p4est_mesh_destroy (mesh);
 }
 
 void p4_get_bcs(p4est_t        *p4est,
@@ -275,5 +290,9 @@ void p4_savemesh ( char    filename[],
   p4est_destroy(p4est2);
   p4est_connectivity_destroy(conn2);
 }
+
+
+
+
 
 
