@@ -99,7 +99,8 @@ SUBROUTINE SetCurvedInfo()
 ! MODULES
 USE MOD_Globals
 USE MOD_Mesh_Vars,ONLY: NGeo,Xi_NGeo,wBary_NGeo,HexMap,HexMapInv
-USE MOD_Mesh_Vars,ONLY: NGeo_out,XiCL_NGeo_out,Vdm_CL_EQ_out,HexMap_out
+USE MOD_Mesh_Vars,ONLY: NGeo_out,XiCL_NGeo_out,HexMap_out
+USE MOD_Mesh_Vars,ONLY: Vdm_CL_EQ_01,Vdm_CL_EQ_10,Vdm_CL_EQ_out
 USE MOD_Mesh_Vars,ONLY: nCurvedNodes 
 USE MOD_Basis,    ONLY: BarycentricWeights,ChebyGaussLobNodesAndWeights,InitializeVandermonde
 USE MOD_ReadInTools, ONLY: GETINT
@@ -141,6 +142,13 @@ END DO
 
 ALLOCATE(Vdm_CL_EQ_out(0:Ngeo_out,0:Ngeo_out))
 CALL InitializeVandermonde(Ngeo_out,Ngeo_out,wBaryCL_Ngeo_out,xiCL_Ngeo_out,xi_Ngeo_Out,Vdm_CL_EQ_out)
+
+
+ALLOCATE(Vdm_CL_EQ_10(0:Ngeo_out,0:NGeo_out),Vdm_CL_EQ_01(0:Ngeo_out,0:NGeo_out))
+! change form CL to EQ, and interval [-1,1] -> [-1,0] Vdm_CL_EQ_10 and interval [-1,1]-> [0,1] Vdm_CL_EQ_01
+CALL InitializeVandermonde(Ngeo_out,Ngeo_out,wBaryCL_Ngeo_out,xiCL_Ngeo_out,-1+0.5*(xi_Ngeo_Out+1),Vdm_CL_EQ_10)
+CALL InitializeVandermonde(Ngeo_out,Ngeo_out,wBaryCL_Ngeo_out,xiCL_Ngeo_out,0.5*(xi_Ngeo_Out+1),Vdm_CL_EQ_01)
+
 ! mapping form one-dimensional list [1 ; (Ngeo+1)^3] to tensor-product 0 <= i,j,k <= Ngeo and back
 ALLOCATE(HexMap(0:Ngeo,0:Ngeo,0:Ngeo),HexMapInv(3,(Ngeo+1)**3))
 l=0
@@ -172,11 +180,15 @@ SUBROUTINE BuildHOMesh()
 ! MODULES
 USE MOD_Globals
 USE MOD_Mesh_Vars,   ONLY: Ngeo,nElems,nQuads,Xgeo,XgeoQuad
+USE MOD_Mesh_Vars,   ONLY: Quads
 USE MOD_Mesh_Vars,   ONLY: wBary_Ngeo,xi_Ngeo
-USE MOD_Mesh_Vars,   ONLY: Ngeo_out,xiCL_Ngeo_out,Vdm_CL_EQ_out
+USE MOD_Mesh_Vars,   ONLY: Ngeo_out,xiCL_Ngeo_out
+USE MOD_Mesh_Vars,   ONLY: Vdm_CL_EQ_out,Vdm_CL_EQ_01,Vdm_CL_EQ_10
 USE MOD_P4EST_Vars,  ONLY: TreeToQuad,QuadCoords,QuadLevel,sIntSize
+USE MOD_P4EST_Vars,  ONLY: P2H_FaceMap
 USE MOD_Basis,       ONLY: LagrangeInterpolationPolys 
 USE MOD_ChangeBasis, ONLY: ChangeBasis3D_XYZ ,ChangeBasis3D
+USE MOD_ChangeBasis, ONLY: ChangeBasis2D_XY
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -191,6 +203,16 @@ REAL,DIMENSION(0:Ngeo_out,0:Ngeo) :: Vdm_xi,Vdm_eta,Vdm_zeta
 REAL                              :: Xgeo_out(3,0:Ngeo_out,0:Ngeo_out,0:Ngeo_out)
 INTEGER                           :: StartQuad,EndQuad,nLocalQuads
 INTEGER                           :: i,iQuad,iElem 
+!-----------------------------------------------------------------------------------------------------------------------------------
+INTEGER                           :: j,k,plus
+INTEGER                           :: Pmortar,PlocSide 
+INTEGER                           :: MortarType(0:5)
+LOGICAL                           :: MarkForTrans(0:5)
+REAL,DIMENSION(0:Ngeo_out,0:Ngeo) :: Vdm_a,Vdm_b
+REAL                              :: l_1D(0:Ngeo)
+REAL                              :: XgeoSlice(3,0:Ngeo,0:Ngeo)
+REAL                              :: XgeoFace(3,0:Ngeo_out,0:Ngeo_out,0:5)
+REAL                              :: XgeoBigFace(3,0:Ngeo_out,0:Ngeo_out)
 !===================================================================================================================================
 ALLOCATE(XgeoQuad(3,0:Ngeo_out,0:Ngeo_out,0:Ngeo_out,nQuads))
 
@@ -224,6 +246,155 @@ END DO !iElem=1,nElems
 IF((Ngeo_out.LT.Ngeo).AND.(Ngeo.GT.1))THEN
   WRITE(*,*)'!!!!!!!!! WARNING: Ngeo_out<Ngeo: non-conforming interfaces are not watertight!!!!'
 END IF
+
+IF((Ngeo_out.GE.Ngeo).OR.(Ngeo.EQ.1)) RETURN
+! For Ngeo>1 and Ngeo_out < Ngeo, we need to correct the mortar faces!!
+
+
+DO iElem=1,nElems
+  StartQuad = TreeToQuad(1,iElem)+1
+  EndQuad   = TreeToQuad(2,iElem)
+  nLocalQuads = TreeToQuad(2,iElem)-TreeToQuad(1,iElem)
+  DO iQuad=StartQuad,EndQuad
+    DO PLocSide=0,5
+      MortarType(PlocSide)=Quads(iQuad)%ep%Side(P2H_FaceMap(PLocSide))%sp%MortarType
+    END DO !PlocSide
+    IF(SUM(ABS(MortarType)).EQ.0) CYCLE !no mortar sides found
+WRITE(*,*)'DEBUG:MortarType',MortarType
+
+    !initialize Face Data
+    XGeoFace(:,:,:,0)=XGeoQuad(:,       0,:,:,iQuad)     
+    XGeoFace(:,:,:,1)=XGeoQuad(:,Ngeo_out,:,:,iQuad)     
+    XGeoFace(:,:,:,2)=XGeoQuad(:,:,       0,:,iQuad)     
+    XGeoFace(:,:,:,3)=XGeoQuad(:,:,Ngeo_out,:,iQuad)     
+    XGeoFace(:,:,:,4)=XGeoQuad(:,:,:,       0,iQuad)     
+    XGeoFace(:,:,:,5)=XGeoQuad(:,:,:,Ngeo_out,iQuad)     
+    MarkForTrans=.FALSE.
+
+    DO PLocSide=0,5
+      IF(MortarType(PlocSide).LT.0)THEN  !small mortar face:
+        ! transform p4est first corner coordinates (integer from 0... intsize) to [-1,1] reference element
+        xi0(:)=-1.+2.*REAL(QuadCoords(:,iQuad))*sIntSize
+        ! length of each quadrant in integers
+        length=2./REAL(2**(QuadLevel(iQuad)))
+        PMortar=-MortarType(PlocSide)-1
+        SELECT CASE(PlocSide)
+        CASE(0,1) !ximinus,xiplus
+          MarkForTrans(2:5)=.TRUE.
+          plus=PlocSide ! plus=0: minus side, plus=1: plus Side
+          xi0(1)=xi0(1)+plus*length
+          SELECT CASE(PMortar)
+          CASE(0)! lower left
+            !xi0(2),xi0(3) same
+          CASE(1)! lower right
+            xi0(2)=xi0(2)+length
+          CASE(2)! upper left 
+            xi0(3)=xi0(3)+length
+          CASE(3)! upper right 
+            xi0(2)=xi0(2)+length
+            xi0(3)=xi0(3)+length
+          END SELECT !Pmortar
+          !extract slice from tree:
+          CALL LagrangeInterpolationPolys(xi0(1),Ngeo,xi_Ngeo,wBary_Ngeo,l_1D(:)) 
+          XgeoSlice=0.
+          DO i=0,Ngeo
+            XgeoSlice(:,:,:)=XgeoSlice(:,:,:)+l_1D(i)*Xgeo(:,i,:,:,iElem)
+          END DO 
+          !build Vdm for interpolation to Ngeo_out on big face
+          DO i=0,Ngeo_out
+            dxi=(xiCL_Ngeo_out(i)+1.)*Length !large element side (length*2)!!
+            CALL LagrangeInterpolationPolys(xi0(2) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_a(i,:)) 
+            CALL LagrangeInterpolationPolys(xi0(3) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_b(i,:)) 
+          END DO
+        CASE(2,3) !etaminus,etaplus
+          MarkForTrans(0:1)=.TRUE.
+          MarkForTrans(4:5)=.TRUE.
+          plus=PlocSide-2 ! plus=0: minus side, plus=1: plus Side
+          xi0(2)=xi0(2)+plus*length
+          SELECT CASE(PMortar)
+          CASE(0)! lower left
+            !xi0(1),xi0(3) same
+          CASE(1)! lower right
+            xi0(1)=xi0(1)+length
+          CASE(2)! upper left 
+            xi0(3)=xi0(3)+length
+          CASE(3)! upper right 
+            xi0(1)=xi0(1)+length
+            xi0(3)=xi0(3)+length
+          END SELECT !Pmortar
+          !extract slice from tree:
+          CALL LagrangeInterpolationPolys(xi0(2),Ngeo,xi_Ngeo,wBary_Ngeo,l_1D(:)) 
+          XgeoSlice=0.
+          DO j=0,Ngeo
+            XgeoSlice(:,:,:)=XgeoSlice(:,:,:)+l_1D(j)*Xgeo(:,:,j,:,iElem)
+          END DO 
+          !build Vdm for interpolation to Ngeo_out on big face
+          DO i=0,Ngeo_out
+            dxi=(xiCL_Ngeo_out(i)+1.)*Length !large element side (length*2)!!
+            CALL LagrangeInterpolationPolys(xi0(1) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_a(i,:)) 
+            CALL LagrangeInterpolationPolys(xi0(3) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_b(i,:)) 
+          END DO
+        CASE(4,5) !zetaminus,zetaplus
+          MarkForTrans(0:3)=.TRUE.
+          plus=PlocSide-4 !  plus=0: minus side, plus=1: plus Side
+          xi0(3)=xi0(3)+plus*length
+          SELECT CASE(PMortar)
+          CASE(0)! lower left
+            !xi0(1),xi0(3) same
+          CASE(1)! lower right
+            xi0(1)=xi0(1)+length
+          CASE(2)! upper left 
+            xi0(2)=xi0(2)+length
+          CASE(3)! upper right 
+            xi0(1)=xi0(1)+length
+            xi0(2)=xi0(2)+length
+          END SELECT !Pmortar
+          !extract slice from tree:
+          CALL LagrangeInterpolationPolys(xi0(3),Ngeo,xi_Ngeo,wBary_Ngeo,l_1D(:)) 
+          XgeoSlice=0.
+          DO k=0,Ngeo
+            XgeoSlice(:,:,:)=XgeoSlice(:,:,:)+l_1D(k)*Xgeo(:,:,:,k,iElem)
+          END DO 
+          !build Vdm for interpolation to Ngeo_out on big face
+          DO i=0,Ngeo_out
+            dxi=(xiCL_Ngeo_out(i)+1.)*Length !large element side (length*2)!!
+            CALL LagrangeInterpolationPolys(xi0(1) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_a(i,:)) 
+            CALL LagrangeInterpolationPolys(xi0(2) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_b(i,:)) 
+          END DO
+        END SELECT !PlocSide
+        !interpolate slice of tree to quadrant big neighbor face (length*2) 
+        CALL ChangeBasis2D_XY(3,Ngeo,Ngeo_out,Vdm_a,Vdm_b,XGeoSlice(:,:,:),XgeoBigFace(:,:,:))
+        !transfinite face remap!!
+        !!!CALL TransFace(XgeoBigFace(:,:,:)) 
+        ! interplation to small face
+        SELECT CASE(PMortar)
+        CASE(0)! lower left [-1,1]^2 -> [-1,0]x[-1,0]
+          CALL ChangeBasis2D_XY(3,Ngeo_out,Ngeo_out,Vdm_CL_EQ_10,Vdm_CL_EQ_10,XgeoBigFace(:,:,:),XgeoFace(:,:,:,PlocSide))
+        CASE(1)! lower right [-1,1]^2 -> [1,0]x[-1,0]
+          CALL ChangeBasis2D_XY(3,Ngeo_out,Ngeo_out,Vdm_CL_EQ_01,Vdm_CL_EQ_10,XgeoBigFace(:,:,:),XgeoFace(:,:,:,PlocSide))
+        CASE(2)! upper left [-1,1]^2 -> [-1,0]x[0,1]
+          CALL ChangeBasis2D_XY(3,Ngeo_out,Ngeo_out,Vdm_CL_EQ_10,Vdm_CL_EQ_01,XgeoBigFace(:,:,:),XgeoFace(:,:,:,PlocSide))
+        CASE(3)! upper right [-1,1]^2 -> [0,1]x[0,1] 
+          CALL ChangeBasis2D_XY(3,Ngeo_out,Ngeo_out,Vdm_CL_EQ_01,Vdm_CL_EQ_01,XgeoBigFace(:,:,:),XgeoFace(:,:,:,PlocSide))
+        END SELECT !Pmortar
+      END IF !smallmortarSide
+    END DO !PlocSide=0,5
+
+WRITE(*,*)'DEBUG:MarkForTrans',MarkForTrans
+
+    DO PLocSide=0,5
+      IF(MortarType(PlocSide).GE.0)THEN  !remaining faces: tranfinite mapping
+        IF(MarkForTrans(PlocSide)) THEN
+          !transfinite face remap!!
+          !!!CALL TransFace(XgeoFace(:,:,:,PlocSide))
+        END IF
+      END IF !mortarSide
+    END DO !PlocSide=0,5
+    !replace quad with transfinite volume mapping
+    !!!CALL TransVol(XgeoFace(:,:,:,:),XgeoQuad(:,:,:,:,iQuad))
+
+  END DO !iQuad=StartQuad,EndQuad
+END DO !iElem=1,nElems
 
 END SUBROUTINE BuildHOMesh
 

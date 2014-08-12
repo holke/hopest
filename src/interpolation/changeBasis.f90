@@ -26,9 +26,14 @@ INTERFACE ChangeBasis3D_XYZ
   MODULE PROCEDURE ChangeBasis3D_XYZ
 END INTERFACE
 
+INTERFACE ChangeBasis2D_XY 
+  MODULE PROCEDURE ChangeBasis2D_XY
+END INTERFACE
+
 PUBLIC :: ChangeBasis3D
 PUBLIC :: ChangeBasis2D
 PUBLIC :: ChangeBasis3D_XYZ
+PUBLIC :: ChangeBasis2D_XY
 !===================================================================================================================================
 
 CONTAINS
@@ -201,5 +206,51 @@ DO kN_In=0,N_In
   END DO
 END DO
 END SUBROUTINE ChangeBasis3D_XYZ
+
+
+SUBROUTINE ChangeBasis2D_XY(Dim1,N_In,N_Out,Vdm_xi,Vdm_eta,X2D_In,X2D_Out)
+!===================================================================================================================================
+! interpolate a 2D tensor product Lagrange basis defined by (N_in+1) 1D interpolation point positions xi_In(0:N_In)
+! to another 2D tensor product node positions (number of nodes N_out+1) 
+! defined by (N_out+1) interpolation point  positions xi_Out(0:N_Out)
+!  xi is defined in the 1DrefElem xi=[-1,1]
+!===================================================================================================================================
+! MODULES
+! IMPLICIT VARIABLE HANDLING
+IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+INTEGER,INTENT(IN)  :: Dim1,N_In,N_Out
+REAL,INTENT(IN)     :: X2D_In(1:Dim1,0:N_In,0:N_In)
+REAL,INTENT(IN)     :: Vdm_xi(0:N_Out,0:N_In)
+REAL,INTENT(IN)     :: Vdm_eta(0:N_Out,0:N_In)
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+REAL,INTENT(OUT)    :: X2D_Out(1:Dim1,0:N_Out,0:N_Out)
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES 
+INTEGER             :: iN_In,jN_In,iN_Out,jN_Out
+REAL                :: X2D_Buf1(1:Dim1,0:N_Out,0:N_In)  ! first intermediate results from 1D interpolations
+!===================================================================================================================================
+X2D_buf1=0.
+! first direction iN_In
+DO jN_In=0,N_In
+  DO iN_In=0,N_In
+    DO iN_Out=0,N_Out
+      X2D_Buf1(:,iN_Out,jN_In)=X2D_Buf1(:,iN_Out,jN_In)+Vdm_xi(iN_Out,iN_In)*X2D_In(:,iN_In,jN_In)
+    END DO
+  END DO
+END DO
+X2D_Out=0.
+! second direction jN_In
+DO jN_In=0,N_In
+  DO jN_Out=0,N_Out
+    DO iN_Out=0,N_Out
+      X2D_Out(:,iN_Out,jN_Out)=X2D_Out(:,iN_Out,jN_Out)+Vdm_eta(jN_Out,jN_In)*X2D_Buf1(:,iN_Out,jN_In)
+    END DO
+  END DO
+END DO
+END SUBROUTINE ChangeBasis2D_XY
+
 
 END MODULE MOD_changeBasis
