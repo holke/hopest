@@ -153,9 +153,15 @@ CALL OpenHDF5File(FileString,create=.TRUE.,single=.TRUE.)
 !-----------------------------------------------------------------
 !attributes 
 !-----------------------------------------------------------------
+IF(Ngeo_out.EQ.1) THEN
+  useCurveds=.FALSE.
+  nCurvedNodes=0
+ELSE
+  nCurvedNodes=(Ngeo_out+1)**3
+END IF
 
-CALL WriteAttributeToHDF5(File_ID,'BoundaryOrder',1,IntegerScalar=Ngeo+1)
 CALL WriteAttributeToHDF5(File_ID,'CurvedFound',1,LogicalScalar=useCurveds)
+CALL WriteAttributeToHDF5(File_ID,'BoundaryOrder',1,IntegerScalar=Ngeo_out+1)
 
 !-----------------------------------------------------------------
 ! WRITE BC 
@@ -174,7 +180,7 @@ DO iQuad=1,nQuads
   ElemBary(iQuad,2)=SUM(XgeoQuad(2,:,:,:,iQuad))
   ElemBary(iQuad,3)=SUM(XgeoQuad(3,:,:,:,iQuad))
 END DO !iQuad=1,nElem
-ElemBary(:,:)=ElemBary(:,:)*(1./(Ngeo+1)**3)
+ElemBary(:,:)=ElemBary(:,:)*(1./(Ngeo_out+1)**3)
 
 CALL WriteArrayToHDF5(File_ID,'ElemBarycenters',nQuads,2,(/nQuads,3/),0,RealArray=ElemBary)
 DEALLOCATE(ElemBary)
@@ -182,7 +188,7 @@ DEALLOCATE(ElemBary)
 !-----------------------------------------------------------------
 ! WRITE NodeCoords  for each element !!!! (multiple nodes!!!)
 !-----------------------------------------------------------------
-nNodeIDs=(Ngeo+1)**3*nQuads
+nNodeIDs=(Ngeo_out+1)**3*nQuads
 CALL WriteArrayToHDF5(File_ID,'NodeCoords',nNodeIDs,2,(/nNodeIDs,3/),0,  &
           RealArray=TRANSPOSE(RESHAPE(XgeoQuad,(/3,nNodeIDs/))) )
 DEALLOCATE(XgeoQuad)
@@ -270,7 +276,7 @@ DO iQuad=1,nQuads
     Side=>Elem%Side(iLocSide)%sp
     iSide=iSide+1
     !Side Tpye
-    IF(Ngeo.GT.1)THEN
+    IF(Ngeo_out.GT.1)THEN
       SideInfo(iSide,SIDE_Type)=7            ! Side Type: NL quad
     ELSE
       SideInfo(iSide,SIDE_Type)=5            ! Side Type: bilinear
@@ -286,7 +292,7 @@ DO iQuad=1,nQuads
       DO iMortar=1,Side%nMortars
         iSide=iSide+1
         !Side Tpye
-        IF(Ngeo.GT.1)THEN
+        IF(Ngeo_out.GT.1)THEN
           SideInfo(iSide,SIDE_Type)=7            ! Side Type: NL quad
         ELSE
           SideInfo(iSide,SIDE_Type)=5            ! Side Type: bilinear
@@ -326,14 +332,14 @@ master=>GETNEWELEM()
 DO iNode=1,8
   ALLOCATE(master%Node(iNode)%np)
 END DO
-master%Node(1)%np%ind=HexMap(   0,   0,   0)
-master%Node(2)%np%ind=HexMap(Ngeo,   0,   0)
-master%Node(3)%np%ind=HexMap(Ngeo,Ngeo,   0)
-master%Node(4)%np%ind=HexMap(   0,Ngeo,   0)
-master%Node(5)%np%ind=HexMap(   0,   0,Ngeo)
-master%Node(6)%np%ind=HexMap(Ngeo,   0,Ngeo)
-master%Node(7)%np%ind=HexMap(Ngeo,Ngeo,Ngeo)
-master%Node(8)%np%ind=HexMap(   0,Ngeo,Ngeo)
+master%Node(1)%np%ind=HexMap_Out(       0,       0,       0)
+master%Node(2)%np%ind=HexMap_Out(Ngeo_out,       0,       0)
+master%Node(3)%np%ind=HexMap_Out(Ngeo_out,Ngeo_out,       0)
+master%Node(4)%np%ind=HexMap_Out(       0,Ngeo_out,       0)
+master%Node(5)%np%ind=HexMap_Out(       0,       0,Ngeo_out)
+master%Node(6)%np%ind=HexMap_Out(Ngeo_out,       0,Ngeo_out)
+master%Node(7)%np%ind=HexMap_Out(Ngeo_out,Ngeo_out,Ngeo_out)
+master%Node(8)%np%ind=HexMap_Out(       0,Ngeo_out,Ngeo_out)
 CALL createSides(master)
 
 IF(nTotalNodes.NE.locnNodes*nQuads) &
@@ -348,7 +354,7 @@ NodeID=0
 
 
 offsetID=0
-locnNodes=(Ngeo+1)**3
+locnNodes=(Ngeo_out+1)**3
 DO iQuad=1,nQuads
   Elem=>Quads(iQuad)%ep
   DO iNode=1,8

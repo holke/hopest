@@ -10,9 +10,11 @@ IMPLICIT NONE
 PUBLIC
 SAVE
 !-----------------------------------------------------------------------------------------------------------------------------------
+INTEGER                          :: Nsuper
 INTEGER                          :: refineLevel
 INTEGER                          :: refineGeomType
 INTEGER                          :: refineBCIndex
+REAL,ALLOCATABLE                 :: xi_Nsuper(:) 
 INTEGER,ALLOCATABLE              :: RefineList(:)
 REAL,ALLOCATABLE                 :: refineBoundary(:)
 INTEGER,ALLOCATABLE              :: TreeSidesToRefine(:,:)
