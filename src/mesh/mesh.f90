@@ -132,7 +132,7 @@ SUBROUTINE BuildHOMesh()
 USE MODH_Globals
 USE MODH_Mesh_Vars,   ONLY: Ngeo,nTrees,nElems,Xgeo,XgeoElem
 USE MODH_Mesh_Vars,   ONLY: wBary_Ngeo,xi_Ngeo
-USE MODH_P4EST_Vars,  ONLY: TreeToQuad,QuadCoords,QuadLevel,sIntSize
+USE MODH_P4EST_Vars,  ONLY: QuadToTree,QuadCoords,QuadLevel,sIntSize
 USE MODH_Basis,       ONLY: LagrangeInterpolationPolys 
 USE MODH_ChangeBasis, ONLY: ChangeBasis3D_XYZ 
 ! IMPLICIT VARIABLE HANDLING
@@ -151,30 +151,26 @@ INTEGER                       :: i,iElem,iTree
 !===================================================================================================================================
 ALLOCATE(XgeoElem(3,0:Ngeo,0:Ngeo,0:Ngeo,nElems))
 
-DO iTree=1,nTrees
-  StartElem = TreeToQuad(1,iTree)+1
-  EndElem   = TreeToQuad(2,iTree)
-  nLocalElems = TreeToQuad(2,iTree)-TreeToQuad(1,iTree)
-  IF(nLocalElems.EQ.1)THEN !no refinement in this tree
-    XgeoElem(:,:,:,:,StartElem)=Xgeo(:,:,:,:,iTree)
+DO iElem=1,nElems
+  iTree=QuadToTree(iElem)+1
+  IF(QuadLevel(iElem).EQ.0)THEN !no refinement in this tree
+    XgeoElem(:,:,:,:,iElem)=Xgeo(:,:,:,:,iTree)
   ELSE
-    DO iElem=StartElem,EndElem
-      ! transform p4est first corner coordinates (integer from 0... intsize) to [-1,1] reference element
-      xi0(:)=-1.+2.*REAL(QuadCoords(:,iElem))*sIntSize
-      ! length of each quadrant in integers
-      length=2./REAL(2**QuadLevel(iElem))
-      ! Build Vandermonde matrices for each parameter range in xi, eta,zeta
-      DO i=0,Ngeo
-        dxi=0.5*(xi_Ngeo(i)+1.)*Length
-        CALL LagrangeInterpolationPolys(xi0(1) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_xi(i,:)) 
-        CALL LagrangeInterpolationPolys(xi0(2) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_eta(i,:)) 
-        CALL LagrangeInterpolationPolys(xi0(3) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_zeta(i,:)) 
-      END DO
-      !interpolate tree HO mapping to quadrant HO mapping
-      CALL ChangeBasis3D_XYZ(3,Ngeo,Ngeo,Vdm_xi,Vdm_eta,Vdm_zeta,XGeo(:,:,:,:,iTree),XgeoElem(:,:,:,:,iElem))
-    END DO !iElem=StartElem,EndElem
-  END IF !nLocalElems==1
-END DO !iTree=1,nTrees
+    ! transform p4est first corner coordinates (integer from 0... intsize) to [-1,1] reference element
+    xi0(:)=-1.+2.*REAL(QuadCoords(:,iElem))*sIntSize
+    ! length of each quadrant in integers
+    length=2./REAL(2**QuadLevel(iElem))
+    ! Build Vandermonde matrices for each parameter range in xi, eta,zeta
+    DO i=0,Ngeo
+      dxi=0.5*(xi_Ngeo(i)+1.)*Length
+      CALL LagrangeInterpolationPolys(xi0(1) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_xi(i,:)) 
+      CALL LagrangeInterpolationPolys(xi0(2) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_eta(i,:)) 
+      CALL LagrangeInterpolationPolys(xi0(3) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_zeta(i,:)) 
+    END DO
+    !interpolate tree HO mapping to quadrant HO mapping
+    CALL ChangeBasis3D_XYZ(3,Ngeo,Ngeo,Vdm_xi,Vdm_eta,Vdm_zeta,XGeo(:,:,:,:,iTree),XgeoElem(:,:,:,:,iElem))
+  END IF
+END DO
 END SUBROUTINE BuildHOMesh
 
 

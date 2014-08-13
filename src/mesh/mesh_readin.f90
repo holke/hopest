@@ -20,8 +20,13 @@ INTERFACE ReadGeoFromHDF5
   MODULE PROCEDURE ReadGeoFromHDF5
 END INTERFACE
 
+INTERFACE ReadMeshHeader
+  MODULE PROCEDURE ReadMeshHeader
+END INTERFACE
+
 PUBLIC::ReadMeshFromHDF5
 PUBLIC::ReadGeoFromHDF5
+PUBLIC::ReadMeshHeader
 !===================================================================================================================================
 
 CONTAINS
@@ -95,8 +100,8 @@ IF(nUserBCs.EQ.0) RETURN
 ALLOCATE(BoundaryNameUser(nUserBCs))
 ALLOCATE(BoundaryTypeUser(nUserBCs,2))
 DO iBC=1,nUserBCs
-  BoundaryName(iBC)   = GETSTR('BoundaryName')
-  BoundaryType(iBC,:) = GETINTARRAY('BoundaryType',2) !(/Type,State/)
+  BoundaryNameUser(iBC)   = GETSTR('BoundaryName')
+  BoundaryTypeUser(iBC,:) = GETINTARRAY('BoundaryType',2) !(/Type,State/)
 END DO
 
 ! Override BCs
@@ -118,7 +123,7 @@ DEALLOCATE(BoundaryNameUser,BoundaryTypeUser)
 END SUBROUTINE SetUserBCs
 
 
-SUBROUTINE ReadMeshHeader()
+SUBROUTINE ReadMeshHeader(FileString)
 !===================================================================================================================================
 ! Subroutine to read the mesh from a mesh data file
 !===================================================================================================================================
@@ -130,12 +135,14 @@ USE MODH_Mesh,     ONLY: SetCurvedInfo
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! INPUT VARIABLES
+CHARACTER(LEN=*),INTENT(IN)  :: FileString
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 INTEGER :: BoundaryOrder_mesh
 !===================================================================================================================================
+CALL OpenDataFile(FileString,create=.FALSE.,single=.FALSE.)
 CALL GetDataSize(File_ID,'ElemInfo',nDims,HSize)
 nGlobalTrees=HSize(1) !global number of elements
 DEALLOCATE(HSize)
@@ -148,6 +155,7 @@ CALL ReadAttribute(File_ID,'CurvedFound',1,LogicalScalar=useCurveds)
 
 CALL readBCs()
 IF(hopestMode.EQ.2) CALL setUserBCs()
+CALL CloseDataFile() 
 
 END SUBROUTINE ReadMeshHeader
 
@@ -207,8 +215,6 @@ SWRITE(UNIT_stdOut,'(A)')'READ MESH FROM DATA FILE "'//TRIM(FileString)//'" ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
 ! Open data file
 CALL OpenDataFile(FileString,create=.FALSE.,single=.FALSE.)
-
-CALL ReadMeshHeader()
 
 !----------------------------------------------------------------------------------------------------------------------------
 !                              ELEMENTS
@@ -494,7 +500,7 @@ IF(num_periodics.GT.0) THEN
           IF(HFlip_test.EQ.HFlip) EXIT
         END DO
         JoinFaces(5,iPeriodic)=PFlip
-        !  WRITE(*,*)'DEBUG,JoinFaces,iPeriodic',iPeriodic,JoinFaces(:,iPeriodic)
+        WRITE(*,*)'DEBUG,JoinFaces,iPeriodic',iPeriodic,JoinFaces(:,iPeriodic)
       END IF
     END DO !iLocSide
   END DO !iTree
@@ -587,8 +593,6 @@ SWRITE(UNIT_stdOut,'(A)')'READ GEOMETRY DATA FROM DATA FILE "'//TRIM(FileString)
 SWRITE(UNIT_StdOut,'(132("-"))')
 ! Open data file
 CALL OpenDataFile(FileString,create=.FALSE.,single=.FALSE.)
-
-CALL ReadMeshHeader()
 
 CALL GetDataSize(File_ID,'NodeCoords',nDims,HSize)
 nNodes=HSize(1) !global number of unique nodes

@@ -86,6 +86,7 @@ END TYPE tElem
 TYPE tSide
   INTEGER                      :: ind             ! global side ID 
   INTEGER                      :: sideID          ! local side ID on Proc 
+  INTEGER                      :: locSide         ! local side in element [1..6]
   INTEGER                      :: tmp 
   INTEGER                      :: NbProc 
   INTEGER                      :: BCindex         ! index in BoundaryType array! 

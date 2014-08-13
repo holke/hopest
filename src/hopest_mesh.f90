@@ -42,7 +42,7 @@ USE MODH_Mesh_Vars,          ONLY: MeshFile
 USE MODH_Mesh,               ONLY: InitMesh,BuildHOMesh,FinalizeMesh
 USE MODH_Output_Vars,        ONLY: Projectname
 USE MODH_Output_HDF5,        ONLY: writeMeshToHDF5
-USE MODH_Mesh_ReadIn,        ONLY: readMeshFromHDF5
+USE MODH_Mesh_ReadIn,        ONLY: ReadMeshFromHDF5,ReadMeshHeader
 USE MODH_Mesh,               ONLY: DeformMesh
 USE MODH_Refine,             ONLY: RefineMesh
 IMPLICIT NONE
@@ -57,19 +57,23 @@ IMPLICIT NONE
 SWRITE(UNIT_StdOut,'(132("-"))')
 SWRITE(UNIT_stdOut,'(A)') ' START HOPEST MESH...'
 
+! If this routine is called then hopest is run in solver mode
+hopestMode = 1
+
 CALL InitMesh()
 CALL InitP4EST()
 CALL InitIO()
 
-CALL readMeshFromHDF5(MeshFile) !set nTrees
+CALL ReadMeshHeader(MeshFile)   ! read mesh header file including BCs
+CALL ReadMeshFromHDF5(MeshFile) ! read tree connectivity and geometry
 CALL p4_build_p4est(connectivity,p4est,geom)
 
 CALL deformMesh()
 
-CALL RefineMesh()
-CALL BuildBCs()
+CALL RefineMesh()               ! perform mesh refinement using p4est
+CALL BuildBCs()                 ! store BCs in p4est file
 CALL p4_savemesh(TRIM(p4estFile)//C_NULL_CHAR,p4est)
-CALL BuildMeshFromP4EST()
+CALL BuildMeshFromP4EST()       ! build p4est mesh in flexi datastructure
 
 CALL BuildHOMesh()
 !output new mesh

@@ -92,17 +92,18 @@ IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 TYPE(C_PTR)                 :: QT,QQ,QF,QH,TB
-TYPE(tElem),POINTER         :: aElem,nbQuad
+TYPE(tElem),POINTER         :: aElem,nbElem
 TYPE(tSide),POINTER         :: aSide
 INTEGER                     :: iElem,iMortar,jMortar,iTree
-INTEGER                     :: PSide,PnbSide,nbSide
-INTEGER                     :: nbQuadInd
+INTEGER                     :: PSide,PnbSide,nbSide,iSide
+INTEGER                     :: nbElemInd
 INTEGER                     :: PMortar,PFlip,HFlip,QHInd
 INTEGER                     :: iLocSide
-INTEGER                     :: StartQuad,EndQuad
+INTEGER                     :: StartElem,EndElem
 INTEGER                     :: BClocSide,BCindex
 INTEGER(KIND=C_INT32_T),POINTER :: TreeToBC(:,:)
 INTEGER(KIND=8)             :: offsetElemTmp,nGlobalElemsTmp
+LOGICAL                     :: doConnection
 !===================================================================================================================================
 SWRITE(UNIT_stdOut,'(A)')'GENERATE HOPEST MESH FROM P4EST ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
@@ -131,23 +132,6 @@ IF(nHalfFaces.GT.0) CALL C_F_POINTER(QH,QuadToHalf,(/4,nHalfFaces/))
 CALL p4_get_bcs(p4est,TB)
 CALL C_F_POINTER(TB,TreeToBC,(/6,nTrees/))
 
-ALLOCATE(TreeToQuad(2,nTrees))
-TreeToQuad(1,1)=0
-TreeToQuad(2,nTrees)=nElems
-StartQuad=0
-EndQuad=0
-DO iTree=1,nTrees
-  TreeToQuad(1,iTree)=StartQuad
-  DO iElem=StartQuad+1,nElems
-    IF(QuadToTree(iElem)+1.EQ.iTree)THEN
-      EndQuad=EndQuad+1
-    ELSE
-      TreeToQuad(2,iTree)=EndQuad
-      StartQuad=EndQuad
-      EXIT 
-    END IF
-  END DO !iElem
-END DO !iTree
 !----------------------------------------------------------------------------------------------------------------------------
 !             Start to build p4est datastructure in HOPEST
 !----------------------------------------------------------------------------------------------------------------------------
@@ -155,20 +139,22 @@ END DO !iTree
 !----------------------------------------------------------------------------------------------------------------------------
 
 !read local ElemInfo from data file
+iSide=0
 ALLOCATE(Elems(1:nElems))
 DO iElem=1,nElems
   Elems(iElem)%ep=>GETNEWELEM()
   aElem=>Elems(iElem)%ep
-  aElem%Ind    = iElem
+  aElem%Ind = iElem
   CALL CreateSides(aElem)
   DO iLocSide=1,6
-    aElem%Side(iLocSide)%sp%tmp=0
-    aElem%Side(iLocSide)%sp%flip=-999
+    iSide=iSide+1
+    aSide=>aElem%Side(iLocSide)%sp
+    aSide%locSide=iLocSide
+    aSide%tmp=0
+    aSide%flip=-999
   END DO
 END DO
 
-nBCSides=0
-nMortarSides=0
 DO iElem=1,nElems
   aElem=>Elems(iElem)%ep
   IF(useCurveds)THEN
@@ -192,38 +178,45 @@ DO iElem=1,nElems
       aSide%flip=HFlip
       ALLOCATE(aSide%MortarSide(4))
       DO jMortar=0,3
-        nbQuadInd=QuadToHalf(jMortar+1,QHInd)+1
-        nbQuad=>Elems(nbQuadInd)%ep
+        nbElemInd=QuadToHalf(jMortar+1,QHInd)+1
+        nbElem=>Elems(nbElemInd)%ep
         nbSide=P2H_FaceMap(PnbSide)
 
         iMortar=GetHMortar(jMortar,PSide,PnbSide,PFlip)
 
-        aSide%MortarSide(iMortar)%sp=>nbQuad%side(nbSide)%sp
+        aSide%MortarSide(iMortar)%sp=>nbElem%side(nbSide)%sp
         aSide%MortarSide(iMortar)%sp%flip=HFlip
-        nMortarSides=nMortarSides+1
       END DO ! iMortar
     ELSE
-      nbQuadInd=QuadToQuad(PSide+1,iElem)+1
-      nbQuad=>Elems(nbQuadInd)%ep
+      nbElemInd=QuadToQuad(PSide+1,iElem)+1
+      nbElem=>Elems(nbElemInd)%ep
       nbSide=P2H_FaceMap(PnbSide)
-      IF((nbQuadInd.EQ.iElem).AND.(nbSide.EQ.iLocSide))THEN
+
+      aSide%BCIndex=0
+      doConnection=.TRUE.
+      IF((nbElemInd.EQ.iElem).AND.(nbSide.EQ.iLocSide))&
+        aSide%BCindex=TreeToBC(PSide+1,QuadToTree(iElem)+1)
+      IF(aSide%BCIndex.GT.0)THEN
+        IF(BoundaryType(aSide%BCindex,BC_TYPE).GT.1)&
+          doConnection=.FALSE.
+      END IF
+
+      IF(doConnection)THEN
+        !this is an inner side (either no mortar or small side mortar)
+        aSide%connection=>nbElem%side(nbSide)%sp
+        aSide%flip=HFlip
+      ELSE
         ! this is a boundary side: 
-        BCindex=TreeToBC(PSide+1,QuadToTree(iElem)+1)
-        IF(BCIndex.EQ.0) STOP 'Problem in Boundary assignment'
-        aSide%BCIndex=BCIndex
         NULLIFY(aSide%connection)
         aSide%Flip=0
-        nBCSides=nBCSides+1
-      ELSE
-        !this is an inner side (either no mortar or small side mortar)
-        aSide%connection=>nbQuad%side(nbSide)%sp
-        aSide%flip=HFlip
       END IF !BC side
       IF(PMortar.NE.-1) aSide%MortarType= - (PMortar+1)  ! Pmortar 0...3, small side belonging to  mortar group -> -1..-4
     END IF ! PMortar
   END DO !iLocSide
 END DO !iElem
 
+nBCSides=0
+nMortarSides=0
 DO iElem=1,nElems
   aElem=>Elems(iElem)%ep
   IF(useCurveds)THEN
@@ -235,6 +228,7 @@ DO iElem=1,nElems
     aSide=>aElem%Side(iLocSide)%sp
     IF(aSide%tmp.NE.0) CYCLE
     nSides=nSides+1
+    aSide%tmp=-1
     IF(ASSOCIATED(aSide%connection)) aSide%connection%tmp=-1
     IF(aSide%BCindex.NE.0)THEN !side is BC or periodic side
       IF(ASSOCIATED(aSide%connection))THEN
@@ -249,6 +243,7 @@ DO iElem=1,nElems
   END DO
 END DO
 nInnerSides=nSides-nBCSides-nMortarSides
+IF(nMortarSides.NE.0) STOP 'Bisher noch keine Mortars erlaubt'
 
 ! set master slave,  element with lower element ID is master (flip=0)
 DO iElem=1,nElems
@@ -265,6 +260,10 @@ DO iElem=1,nElems
         IF(ASSOCIATED(aSide%connection))THEN
           IF(aSide%connection%elem%ind.GT.iElem)THEN
             aSide%flip=0
+          ELSEIF(aSide%connection%elem%ind.EQ.iElem)THEN
+            ! special case: perdiodic within one element
+            IF(aSide%locSide.LT.aSide%connection%locSide)&
+              aSide%flip=0
           END IF
         END IF
       END IF
@@ -436,17 +435,17 @@ IMPLICIT NONE
 TYPE(tElem),POINTER         :: Elem
 TYPE(tSide),POINTER         :: Side
 INTEGER                     :: iTree,iSide
-INTEGER(KIND=C_INT32_T)     :: BCElemMap(0:5,nTrees)
+INTEGER(KIND=C_INT32_T)     :: TreeToBC(0:5,nTrees)
 !===================================================================================================================================
-BCElemMap=-1
+TreeToBC=-1
 DO iTree=1,nTrees
   Elem=>Trees(iTree)%ep
   DO iSide=1,6
     Side=>Elem%side(iSide)%sp
-    BCElemMap(H2P_FaceMap(iSide),iTree)=Side%BCIndex
+    TreeToBC(H2P_FaceMap(iSide),iTree)=Side%BCIndex
   END DO
 END DO
-CALL p4_build_bcs(p4est,nTrees,BCElemMap)
+CALL p4_build_bcs(p4est,nTrees,TreeToBC)
 END SUBROUTINE BuildBCs
 
 
@@ -531,7 +530,7 @@ SUBROUTINE FinalizeP4EST()
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
-USE MODH_P4EST_Vars,    ONLY: TreeToQuad,QuadCoords,QuadLevel,p4est,mesh,connectivity
+USE MODH_P4EST_Vars,   ONLY: QuadCoords,QuadLevel,p4est,mesh,connectivity
 USE MODH_Mesh_Vars,    ONLY: nElems,Elems
 USE MODH_P4EST_Binding
 ! IMPLICIT VARIABLE HANDLING
@@ -556,7 +555,6 @@ DEALLOCATE(Elems)
 CALL p4_destroy_p4est(p4est)
 CALL p4_destroy_mesh(mesh)
 !CALL p4_destroy_connectivity(connectivity)
-SDEALLOCATE(TreeToQuad)
 SDEALLOCATE(QuadCoords)
 SDEALLOCATE(QuadLevel)
 ! TO NOT TOUCH QuadToTree/Quad/Face/Half -> belongs to p4est

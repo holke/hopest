@@ -45,7 +45,7 @@ USE MODH_P4EST,              ONLY: InitP4EST,BuildMeshFromP4EST
 USE MODH_P4EST_Binding,      ONLY: p4_loadmesh
 USE MODH_Mesh_Vars
 USE MODH_Mesh,               ONLY: InitMesh,BuildHOMesh
-USE MODH_Mesh_ReadIn,        ONLY: ReadGeoFromHDF5
+USE MODH_Mesh_ReadIn,        ONLY: ReadGeoFromHDF5,ReadMeshHeader
 USE MODH_ReadInTools,        ONLY: GETINT,GETSTR
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -74,11 +74,11 @@ IF(.NOT.fileExists) CALL abort(__STAMP__,&
   'p4est Input file does not exists: '//p4estFile)
 CALL p4_loadmesh(TRIM(p4estFile)//C_NULL_CHAR,p4est)
 !CALL p4_partition_info !start and end tree and quadrants
-CALL BuildMeshFromP4EST()
 
-!STOP 'Weiter gehts nicht'
-CALL ReadGeoFromHDF5(MeshFile)
-CALL BuildHOMesh()
+CALL ReadMeshHeader(MeshFile)   ! get BC information
+CALL BuildMeshFromP4EST()       ! build mesh connectivity
+CALL ReadGeoFromHDF5(MeshFile)  ! get tree geometry
+CALL BuildHOMesh()              ! build quads from trees
 
 SWRITE(UNIT_stdOut,'(A)')' INIT MESH DONE!'
 SWRITE(UNIT_StdOut,'(132("-"))')
@@ -101,7 +101,6 @@ IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 !===================================================================================================================================
-CALL countSides()
 ALLOCATE(ElemToSide(2,6,nElems))
 ALLOCATE(SideToElem(5,nSides))
 ALLOCATE(BC(nBCSides))

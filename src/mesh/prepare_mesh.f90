@@ -13,10 +13,6 @@ PRIVATE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! Public Part ----------------------------------------------------------------------------------------------------------------------
 
-INTERFACE countSides
-  MODULE PROCEDURE countSides
-END INTERFACE
-
 INTERFACE setLocalSideIDs
   MODULE PROCEDURE setLocalSideIDs
 END INTERFACE
@@ -25,7 +21,7 @@ INTERFACE fillMeshInfo
   MODULE PROCEDURE fillMeshInfo
 END INTERFACE
 
-PUBLIC::countSides,setLocalSideIDs,fillMeshInfo
+PUBLIC::setLocalSideIDs,fillMeshInfo
 
 #ifdef MPI
 INTERFACE exchangeFlip
@@ -38,67 +34,6 @@ PUBLIC::exchangeFlip
 
 CONTAINS
 
-
-SUBROUTINE countSides()
-!===================================================================================================================================
-! 
-!===================================================================================================================================
-! MODULES
-USE MODH_Globals
-USE MODH_Mesh_Vars,  ONLY: tElem,tSide,Elems
-USE MODH_Mesh_Vars,  ONLY: nElems,nInnerSides,nSides,nBCSides
-#ifdef MPI
-USE MODH_Mesh_Vars,  ONLY: nMPISides
-#endif /*MPI*/
-IMPLICIT NONE
-! INPUT VARIABLES
-!-----------------------------------------------------------------------------------------------------------------------------------
-! INPUT/OUTPUT VARIABLES
-!-----------------------------------------------------------------------------------------------------------------------------------
-! OUTPUT VARIABLES
-!-----------------------------------------------------------------------------------------------------------------------------------
-! LOCAL VARIABLES
-TYPE(tElem),POINTER :: Elem
-TYPE(tSide),POINTER :: Side
-INTEGER             :: iElem,iSide
-!-----------------------------------------------------------------------------------------------------------------------------------
-DO iElem=1,nElems
-  Elem=>Elems(iElem)%ep
-  DO iSide=1,6
-    Side=>Elem%Side(iSide)%sp
-    Side%tmp=0
-    IF(ASSOCIATED(Side%Connection))THEN
-      Side%connection%tmp=0
-    END IF
-  END DO
-END DO
-
-nSides=0
-nInnerSides=0
-nBCSides=0
-DO iElem=1,nElems
-  Elem=>Elems(iElem)%ep
-  DO iSide=1,6
-    Side=>Elem%Side(iSide)%sp
-    IF(Side%tmp.NE.0) CYCLE
-    Side%tmp=-1
-    IF(ASSOCIATED(Side%Connection))THEN
-      nInnerSides=nInnerSides+1
-      Side%connection%tmp=-1
-    ELSE
-      nBCSides=nBCSides+1
-    END IF
-#ifdef MPI
-    IF(Side%NbProc.NE.-1) THEN
-      nMPISides=nMPISides+1
-      MPISideCount(Side%NbProc)=MPISideCount(Side%NbProc)+1
-    END IF
-#endif /*MPI*/
-    nSides=nSides+1
-  END DO
-END DO
-
-END SUBROUTINE
 
 SUBROUTINE setLocalSideIDs()
 !===================================================================================================================================
@@ -176,6 +111,7 @@ DO iElem=FirstElemInd,LastElemInd
       IF(iMortar.GT.0) aSide=>aElem%Side(iLocSide)%sp%mortarSide(iMortar)%sp
 
       aSide%sideID=-1
+      aSide%tmp=0
       ! periodics have two bcs: set to (positive) master bc (e.g. from -1 to 1)
       IF(aSide%BCIndex.GE.1)THEN
         IF(PeriodicBCMap(aSide%BCIndex).NE.-1)&
@@ -184,6 +120,7 @@ DO iElem=FirstElemInd,LastElemInd
     END DO !iMortar
   END DO
 END DO
+
 
 iSide=0
 iBCSide=0
@@ -203,6 +140,7 @@ DO iElem=FirstElemInd,LastElemInd
             iInnerSide=iInnerSide+1
             iSide=iSide+1
             aSide%SideID=iInnerSide
+            IF(aSide%connection%SideID.NE.-1) STOP 'ERROR: SideID of connection already set!'
             aSide%connection%SideID=iInnerSide
           ELSE
             IF(aSide%MortarType.GT.0) THEN
@@ -446,7 +384,7 @@ SUBROUTINE fillMeshInfo()
 !===================================================================================================================================
 ! MODULES
 USE MODH_Globals
-USE MODH_Mesh_Vars,  ONLY: tElem,tSide
+USE MODH_Mesh_Vars,ONLY:tElem,tSide,BoundaryType
 USE MODH_Mesh_Vars,ONLY:nElems,offsetElem,nSides,nInnerSides,nBCSides,nMPISides,nMortarSides
 USE MODH_Mesh_Vars,ONLY:nMPISides_MINE
 USE MODH_Mesh_Vars,ONLY:ElemToSide,SideToElem,BC,AnalyzeSide
@@ -495,10 +433,13 @@ DO iElem=1,nElems
       SideToElem(S2E_NB_LOC_SIDE_ID,aSide%SideID)  = LocSideID
       SideToElem(S2E_FLIP,aSide%SideID)            = aSide%Flip
     END IF
-    IF(aSide%sideID .LE. nBCSides) BC(aSide%sideID)=aSide%BCIndex
+    IF(aSide%sideID .LE. nBCSides)THEN
+      BC(aSide%sideID)=aSide%BCIndex
+    ENDIF
     AnalyzeSide(aSide%sideID)=aSide%BCIndex
   END DO ! LocSideID
 END DO ! iElem
+
 
 ! Mapping of Mortar Master Side to Mortar Slave Side
 nSides_MortarType=0
