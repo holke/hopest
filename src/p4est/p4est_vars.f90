@@ -101,7 +101,28 @@ INTEGER,PARAMETER   :: P2H_MortarMap(0:3,1:8) = &                 !p4est mortar 
                                                  4,3,2,1,&
                                                  3,1,4,2,&
                                                  3,4,1,2 /),(/4,8/))
-                                    
+INTEGER,PARAMETER   :: P_FaceToEdge(0:3,0:5) = &  !mapping from face edges 0...3 (zordered) for each face 0..5 -> element edges  0..11
+                                      RESHAPE((/  4, 6, 8,10,&     
+                                                  5, 7, 9,11,&
+                                                  0, 2, 8, 9,&
+                                                  1, 3,10,11,&
+                                                  0, 1, 4, 5,&
+                                                  2, 3, 6, 7 /),(/4,6/))
+INTEGER,PARAMETER   :: P_EdgeToFaces(1:6,0:11) = & !mapping from element edges  0..11 -> first and second adjacent face 0...6 , i/j direction(0/1) and lower/upper bound(0/1)
+                                      RESHAPE((/  2,1,0,4,1,0,&    !edge 0: Face2,j=0-Face4,j=0
+                                                  3,1,0,4,1,1,&    !edge 1: Face3,j=0-Face4,j=N
+                                                  2,1,1,5,1,0,&    !edge 2: Face2,j=N-Face5,j=0
+                                                  3,1,1,5,1,1,&    !edge 3: Face3,j=N-Face5,j=N
+                                                  0,1,0,4,0,0,&    !edge 4: Face0,j=0-Face4,i=0
+                                                  1,1,0,4,0,1,&    !edge 5: Face1,j=0-Face4,i=N
+                                                  0,1,1,5,0,0,&    !edge 6: Face0,j=N-Face5,i=0
+                                                  1,1,1,5,0,1,&    !edge 7: Face1,j=N-Face5,i=N
+                                                  0,0,0,2,0,0,&    !edge 8: Face0,i=0-Face2,i=0
+                                                  1,0,0,2,0,1,&    !edge 9: Face1,i=0-Face2,i=N
+                                                  0,0,1,3,0,0,&    !edge10: Face0,i=N-Face3,i=0
+                                                  1,0,1,3,0,1 &    !edge11: Face1,i=N-Face3,i=N
+                                                  /),(/6,12/))
+
 !===================================================================================================================================
 
 
