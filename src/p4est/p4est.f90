@@ -329,11 +329,11 @@ INTEGER                      :: tmp
 
 SELECT CASE(Conn)
 CASE(0:23)   ! 1. conformal neighbour
-  nbSide = MOD(Conn,6)       ! 0..5
+  nbSide = MOD(Conn,INT(6,KIND=1))       ! 0..5
   Flip   = (Conn-nbSide)/6   ! 0..3
   Mortar = -1
 CASE(24:119) ! 2. double-size neighbour
-  tmp    = MOD(Conn,24)      ! 0..3
+  tmp    = MOD(Conn,INT(24,KIND=1))      ! 0..3
   nbSide = MOD(tmp,6)        ! 0..5  
   Flip   = (tmp-nbSide)/6    ! 0..3
   Mortar = (Conn-tmp-24)/24  ! 0..3 

@@ -158,7 +158,7 @@ DO iElem=FirstElemInd,LastElemInd
     END DO !iMortar
   END DO ! iLocSide=1,6
 END DO !iElem
-IF(iSide.NE.nInnerSides+nBCSides+nMortarSides) STOP'not all SideIDs are set!'
+IF(iSide.NE.nInnerSides+nBCSides+nMortarSides) STOP 'not all SideIDs are set!'
 
 nMPISides_MINE=0
 nMPISides_YOUR=0

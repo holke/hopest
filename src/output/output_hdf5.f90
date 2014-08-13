@@ -146,7 +146,7 @@ DO iElem=1,nElems
   END DO !iLocSide
 END DO !Elem
 
-IF(SideID.NE.nSideIDs) STOP' problem: SideID <> nSideIDs'
+IF(SideID.NE.nSideIDs) STOP 'problem: SideID <> nSideIDs'
 
 ! start output
 CALL OpenHDF5File(FileString,create=.TRUE.,single=.TRUE.)  
