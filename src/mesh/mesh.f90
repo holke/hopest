@@ -99,8 +99,8 @@ SUBROUTINE SetCurvedInfo()
 ! MODULES
 USE MOD_Globals
 USE MOD_Mesh_Vars,ONLY: NGeo,Xi_NGeo,wBary_NGeo,HexMap,HexMapInv
-USE MOD_Mesh_Vars,ONLY: NGeo_out,XiCL_NGeo_out,Xi_NGeo_out,HexMap_out
-USE MOD_Mesh_Vars,ONLY: Vdm_CL_EQ_01,Vdm_CL_EQ_10,Vdm_CL_EQ_out
+USE MOD_Mesh_Vars,ONLY: NGeo_out,XiCL_NGeo_out,wBaryCL_Ngeo_out,HexMap_out
+USE MOD_Mesh_Vars,ONLY: Vdm_01,Vdm_10,Vdm_CL_EQ_out
 USE MOD_Mesh_Vars,ONLY: nCurvedNodes 
 USE MOD_Basis,    ONLY: BarycentricWeights,ChebyGaussLobNodesAndWeights,InitializeVandermonde
 USE MOD_ReadInTools, ONLY: GETINT
@@ -114,7 +114,7 @@ IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 INTEGER :: i,j,k,l
-REAL,ALLOCATABLE    :: wBaryCL_Ngeo_out(:)
+REAL,ALLOCATABLE    :: xi_Ngeo_out(:)
 CHARACTER(LEN=5) :: tmpstr
 !===================================================================================================================================
 
@@ -140,14 +140,15 @@ DO i=0,NGeo_out
   Xi_Ngeo_out(i)=-1+REAL(i)*2./REAL(NGeo_out)
 END DO
 
+!only used in output!!!
 ALLOCATE(Vdm_CL_EQ_out(0:Ngeo_out,0:Ngeo_out))
 CALL InitializeVandermonde(Ngeo_out,Ngeo_out,wBaryCL_Ngeo_out,xiCL_Ngeo_out,xi_Ngeo_Out,Vdm_CL_EQ_out)
 
 
-ALLOCATE(Vdm_CL_EQ_10(0:Ngeo_out,0:NGeo_out),Vdm_CL_EQ_01(0:Ngeo_out,0:NGeo_out))
-! change form CL to EQ, and interval [-1,1] -> [-1,0] Vdm_CL_EQ_10 and interval [-1,1]-> [0,1] Vdm_CL_EQ_01
-CALL InitializeVandermonde(Ngeo_out,Ngeo_out,wBaryCL_Ngeo_out,xiCL_Ngeo_out,-1+0.5*(xi_Ngeo_Out+1),Vdm_CL_EQ_10)
-CALL InitializeVandermonde(Ngeo_out,Ngeo_out,wBaryCL_Ngeo_out,xiCL_Ngeo_out,0.5*(xi_Ngeo_Out+1),Vdm_CL_EQ_01)
+ALLOCATE(Vdm_10(0:Ngeo_out,0:NGeo_out),Vdm_01(0:Ngeo_out,0:NGeo_out))
+! change from interval [-1,1] -> [-1,0] Vdm_10 and interval [-1,1]-> [0,1] Vdm__01
+CALL InitializeVandermonde(Ngeo_out,Ngeo_out,wBaryCL_Ngeo_out,xiCL_Ngeo_out,-1+0.5*(xiCL_Ngeo_Out+1),Vdm_10)
+CALL InitializeVandermonde(Ngeo_out,Ngeo_out,wBaryCL_Ngeo_out,xiCL_Ngeo_out,   0.5*(xiCL_Ngeo_Out+1),Vdm_01)
 
 ! mapping form one-dimensional list [1 ; (Ngeo+1)^3] to tensor-product 0 <= i,j,k <= Ngeo and back
 ALLOCATE(HexMap(0:Ngeo,0:Ngeo,0:Ngeo),HexMapInv(3,(Ngeo+1)**3))
@@ -182,13 +183,13 @@ USE MOD_Globals
 USE MOD_Mesh_Vars,   ONLY: Ngeo,nElems,nQuads,Xgeo,XgeoQuad
 USE MOD_Mesh_Vars,   ONLY: Quads
 USE MOD_Mesh_Vars,   ONLY: wBary_Ngeo,xi_Ngeo
-USE MOD_Mesh_Vars,   ONLY: Ngeo_out,xiCL_Ngeo_out,xi_Ngeo_out
-USE MOD_Mesh_Vars,   ONLY: Vdm_CL_EQ_out,Vdm_CL_EQ_01,Vdm_CL_EQ_10
+USE MOD_Mesh_Vars,   ONLY: Ngeo_out,xiCL_Ngeo_out
 USE MOD_P4EST_Vars,  ONLY: TreeToQuad,QuadCoords,QuadLevel,sIntSize
 USE MOD_P4EST_Vars,  ONLY: P2H_FaceMap,P_FaceToEdge,P_EdgeToFaces
 USE MOD_Basis,       ONLY: LagrangeInterpolationPolys 
-USE MOD_ChangeBasis, ONLY: ChangeBasis3D_XYZ ,ChangeBasis3D
+USE MOD_ChangeBasis, ONLY: ChangeBasis3D_XYZ
 USE MOD_ChangeBasis, ONLY: ChangeBasis2D_XY
+USE MOD_Mesh_Vars,   ONLY: Vdm_01,Vdm_10
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -200,7 +201,6 @@ IMPLICIT NONE
 REAL                              :: xi0(3)
 REAL                              :: dxi,length
 REAL,DIMENSION(0:Ngeo_out,0:Ngeo) :: Vdm_xi,Vdm_eta,Vdm_zeta
-REAL                              :: Xgeo_out(3,0:Ngeo_out,0:Ngeo_out,0:Ngeo_out)
 INTEGER                           :: StartQuad,EndQuad,nLocalQuads
 INTEGER                           :: i,iQuad,iElem 
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -214,8 +214,8 @@ LOGICAL                           :: MarkForTrans(0:5)
 REAL,DIMENSION(0:Ngeo_out,0:Ngeo) :: Vdm_a,Vdm_b
 REAL                              :: l_1D(0:Ngeo)
 REAL                              :: XgeoSlice(3,0:Ngeo,0:Ngeo)
-REAL                              :: XgeoFace(3,0:Ngeo_out,0:Ngeo_out,0:5)
-REAL                              :: XgeoVol(3,0:Ngeo_out,0:Ngeo_out,0:Ngeo_out)
+REAL                              :: XGeoCLFace(3,0:Ngeo_out,0:Ngeo_out,0:5)
+REAL                              :: XGeoCLVol(3,0:Ngeo_out,0:Ngeo_out,0:Ngeo_out)
 REAL                              :: XgeoCLBigFace(3,0:Ngeo_out,0:Ngeo_out)
 REAL                              :: maxdist(0:11)
 !===================================================================================================================================
@@ -225,27 +225,21 @@ DO iElem=1,nElems
   StartQuad = TreeToQuad(1,iElem)+1
   EndQuad   = TreeToQuad(2,iElem)
   nLocalQuads = TreeToQuad(2,iElem)-TreeToQuad(1,iElem)
-  IF((Ngeo.EQ.Ngeo_out).AND.(nLocalQuads.EQ.1))THEN !no refinement in this tree
-    XgeoQuad(:,:,:,:,StartQuad)=Xgeo(:,:,:,:,iElem)
-  ELSE
-    DO iQuad=StartQuad,EndQuad
-      ! transform p4est first corner coordinates (integer from 0... intsize) to [-1,1] reference element
-      xi0(:)=-1.+2.*REAL(QuadCoords(:,iQuad))*sIntSize
-      ! length of each quadrant in integers
-      length=2./REAL(2**QuadLevel(iQuad))
-      ! Build Vandermonde matrices for each parameter range in xi, eta,zeta
-      DO i=0,Ngeo_out
-        dxi=0.5*(xiCL_Ngeo_out(i)+1.)*Length
-        CALL LagrangeInterpolationPolys(xi0(1) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_xi(i,:)) 
-        CALL LagrangeInterpolationPolys(xi0(2) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_eta(i,:)) 
-        CALL LagrangeInterpolationPolys(xi0(3) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_zeta(i,:)) 
-      END DO
-      !interpolate tree HO mapping to quadrant HO mapping (If Ngeo_out < Ngeo: Interpolation error!)
-      CALL ChangeBasis3D_XYZ(3,Ngeo,Ngeo_out,Vdm_xi,Vdm_eta,Vdm_zeta,XGeo(:,:,:,:,iElem),Xgeo_out(:,:,:,:))
-      ! for output: change points (exactly! Ngeo_out->Ngeo_out) from CL to EQ point distribution
-      CALL ChangeBasis3D(3,Ngeo_out,Ngeo_out,Vdm_CL_EQ_out,XGeo_out(:,:,:,:),XgeoQuad(:,:,:,:,iQuad))
-    END DO !iQuad=StartQuad,EndQuad
-  END IF !nLocalQuads==1
+  DO iQuad=StartQuad,EndQuad
+    ! transform p4est first corner coordinates (integer from 0... intsize) to [-1,1] reference element
+    xi0(:)=-1.+2.*REAL(QuadCoords(:,iQuad))*sIntSize
+    ! length of each quadrant in integers
+    length=2./REAL(2**QuadLevel(iQuad))
+    ! Build Vandermonde matrices for each parameter range in xi, eta,zeta
+    DO i=0,Ngeo_out
+      dxi=0.5*(xiCL_Ngeo_out(i)+1.)*Length
+      CALL LagrangeInterpolationPolys(xi0(1) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_xi(i,:)) 
+      CALL LagrangeInterpolationPolys(xi0(2) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_eta(i,:)) 
+      CALL LagrangeInterpolationPolys(xi0(3) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_zeta(i,:)) 
+    END DO
+    !interpolate tree HO mapping to quadrant HO mapping (If Ngeo_out < Ngeo: Interpolation error!)
+    CALL ChangeBasis3D_XYZ(3,Ngeo,Ngeo_out,Vdm_xi,Vdm_eta,Vdm_zeta,XGeo(:,:,:,:,iElem),XgeoQuad(:,:,:,:,iQuad))
+  END DO !iQuad=StartQuad,EndQuad
 END DO !iElem=1,nElems
 
 
@@ -268,13 +262,13 @@ DO iElem=1,nElems
     END DO !PlocSide
     IF(SUM(ABS(MortarType)).EQ.0) CYCLE !no mortar sides found
     !initialize Face Data (equidistant point distribution )
-    XgeoVol=XGeoQuad(:,:,:,:,iQuad)
-    XGeoFace(:,:,:,0)=XGeoVol(:,       0,:,:)     
-    XGeoFace(:,:,:,1)=XGeoVol(:,Ngeo_out,:,:)     
-    XGeoFace(:,:,:,2)=XGeoVol(:,:,       0,:)     
-    XGeoFace(:,:,:,3)=XGeoVol(:,:,Ngeo_out,:)     
-    XGeoFace(:,:,:,4)=XGeoVol(:,:,:,       0)     
-    XGeoFace(:,:,:,5)=XGeoVol(:,:,:,Ngeo_out)     
+    XGeoCLVol=XGeoQuad(:,:,:,:,iQuad)
+    XGeoCLFace(:,:,:,0)=XGeoCLVol(:,       0,:,:)     
+    XGeoCLFace(:,:,:,1)=XGeoCLVol(:,Ngeo_out,:,:)     
+    XGeoCLFace(:,:,:,2)=XGeoCLVol(:,:,       0,:)     
+    XGeoCLFace(:,:,:,3)=XGeoCLVol(:,:,Ngeo_out,:)     
+    XGeoCLFace(:,:,:,4)=XGeoCLVol(:,:,:,       0)     
+    XGeoCLFace(:,:,:,5)=XGeoCLVol(:,:,:,Ngeo_out)     
     !Mark already sides which are big mortars
     MarkForTrans=(MortarType.GT.0)  
     !initialize EdgeMarker
@@ -356,28 +350,28 @@ DO iElem=1,nElems
         ! interplation to small face 
         SELECT CASE(PMortar)
         CASE(0)! lower left [-1,1]^2 -> [-1,0]x[-1,0]
-          CALL ChangeBasis2D_XY(3,Ngeo_out,Ngeo_out,Vdm_CL_EQ_10,Vdm_CL_EQ_10,XgeoCLBigFace(:,:,:),XgeoFace(:,:,:,PlocSide))
+          CALL ChangeBasis2D_XY(3,Ngeo_out,Ngeo_out,Vdm_10,Vdm_10,XgeoCLBigFace(:,:,:),XGeoCLFace(:,:,:,PlocSide))
         CASE(1)! lower right [-1,1]^2 -> [1,0]x[-1,0]
-          CALL ChangeBasis2D_XY(3,Ngeo_out,Ngeo_out,Vdm_CL_EQ_01,Vdm_CL_EQ_10,XgeoCLBigFace(:,:,:),XgeoFace(:,:,:,PlocSide))
+          CALL ChangeBasis2D_XY(3,Ngeo_out,Ngeo_out,Vdm_01,Vdm_10,XgeoCLBigFace(:,:,:),XGeoCLFace(:,:,:,PlocSide))
         CASE(2)! upper left [-1,1]^2 -> [-1,0]x[0,1]
-          CALL ChangeBasis2D_XY(3,Ngeo_out,Ngeo_out,Vdm_CL_EQ_10,Vdm_CL_EQ_01,XgeoCLBigFace(:,:,:),XgeoFace(:,:,:,PlocSide))
+          CALL ChangeBasis2D_XY(3,Ngeo_out,Ngeo_out,Vdm_10,Vdm_01,XgeoCLBigFace(:,:,:),XGeoCLFace(:,:,:,PlocSide))
         CASE(3)! upper right [-1,1]^2 -> [0,1]x[0,1] 
-          CALL ChangeBasis2D_XY(3,Ngeo_out,Ngeo_out,Vdm_CL_EQ_01,Vdm_CL_EQ_01,XgeoCLBigFace(:,:,:),XgeoFace(:,:,:,PlocSide))
+          CALL ChangeBasis2D_XY(3,Ngeo_out,Ngeo_out,Vdm_01,Vdm_01,XgeoCLBigFace(:,:,:),XGeoCLFace(:,:,:,PlocSide))
         END SELECT !Pmortar
         !copy modified faces into volume (produces unique edges)
         SELECT CASE(PlocSide)
         CASE(0)
-          XGeoVol(:,       0,:,:)=XGeoFace(:,:,:,0)     
+          XGeoCLVol(:,       0,:,:)=XGeoCLFace(:,:,:,0)     
         CASE(1)
-          XGeoVol(:,Ngeo_out,:,:)=XGeoFace(:,:,:,1)     
+          XGeoCLVol(:,Ngeo_out,:,:)=XGeoCLFace(:,:,:,1)     
         CASE(2)
-          XGeoVol(:,:,       0,:)=XGeoFace(:,:,:,2)     
+          XGeoCLVol(:,:,       0,:)=XGeoCLFace(:,:,:,2)     
         CASE(3)
-          XGeoVol(:,:,Ngeo_out,:)=XGeoFace(:,:,:,3)     
+          XGeoCLVol(:,:,Ngeo_out,:)=XGeoCLFace(:,:,:,3)     
         CASE(4)
-          XGeoVol(:,:,:,       0)=XGeoFace(:,:,:,4)     
+          XGeoCLVol(:,:,:,       0)=XGeoCLFace(:,:,:,4)     
         CASE(5)
-          XGeoVol(:,:,:,Ngeo_out)=XGeoFace(:,:,:,5)     
+          XGeoCLVol(:,:,:,Ngeo_out)=XGeoCLFace(:,:,:,5)     
         END SELECT !PlocSide
       END IF !smallmortarSide
     END DO !PlocSide=0,5
@@ -395,23 +389,23 @@ DO iElem=1,nElems
       IF(EdgeMarker(iEdge).GT.10)THEN
         IF(dirside1.EQ.0)THEN !first side in i
           IF(dirside2.EQ.0)THEN !second side in i
-             maxdist(iEdge)=MAXVAL( (XgeoFace(1,pos1,:,PlocSide1)-XgeoFace(1,pos2,:,PlocSide2))**2 &    
-                                   +(XgeoFace(2,pos1,:,PlocSide1)-XgeoFace(2,pos2,:,PlocSide2))**2 &
-                                   +(XgeoFace(3,pos1,:,PlocSide1)-XgeoFace(3,pos2,:,PlocSide2))**2)
+             maxdist(iEdge)=MAXVAL( (XGeoCLFace(1,pos1,:,PlocSide1)-XGeoCLFace(1,pos2,:,PlocSide2))**2 &    
+                                   +(XGeoCLFace(2,pos1,:,PlocSide1)-XGeoCLFace(2,pos2,:,PlocSide2))**2 &
+                                   +(XGeoCLFace(3,pos1,:,PlocSide1)-XGeoCLFace(3,pos2,:,PlocSide2))**2)
           ELSE !second side in j
-             maxdist(iEdge)=MAXVAL( (XgeoFace(1,pos1,:,PlocSide1)-XgeoFace(1,:,pos2,PlocSide2))**2 &    
-                                   +(XgeoFace(2,pos1,:,PlocSide1)-XgeoFace(2,:,pos2,PlocSide2))**2 &
-                                   +(XgeoFace(3,pos1,:,PlocSide1)-XgeoFace(3,:,pos2,PlocSide2))**2)
+             maxdist(iEdge)=MAXVAL( (XGeoCLFace(1,pos1,:,PlocSide1)-XGeoCLFace(1,:,pos2,PlocSide2))**2 &    
+                                   +(XGeoCLFace(2,pos1,:,PlocSide1)-XGeoCLFace(2,:,pos2,PlocSide2))**2 &
+                                   +(XGeoCLFace(3,pos1,:,PlocSide1)-XGeoCLFace(3,:,pos2,PlocSide2))**2)
           END IF
         ELSE !dirside1=1 ->  first side in j
           IF(dirside2.EQ.0)THEN !second side in i
-             maxdist(iEdge)=MAXVAL( (XgeoFace(1,:,pos1,PlocSide1)-XgeoFace(1,pos2,:,PlocSide2))**2 &    
-                                   +(XgeoFace(2,:,pos1,PlocSide1)-XgeoFace(2,pos2,:,PlocSide2))**2 &
-                                   +(XgeoFace(3,:,pos1,PlocSide1)-XgeoFace(3,pos2,:,PlocSide2))**2)
+             maxdist(iEdge)=MAXVAL( (XGeoCLFace(1,:,pos1,PlocSide1)-XGeoCLFace(1,pos2,:,PlocSide2))**2 &    
+                                   +(XGeoCLFace(2,:,pos1,PlocSide1)-XGeoCLFace(2,pos2,:,PlocSide2))**2 &
+                                   +(XGeoCLFace(3,:,pos1,PlocSide1)-XGeoCLFace(3,pos2,:,PlocSide2))**2)
           ELSE !second side in j                       
-             maxdist(iEdge)=MAXVAL( (XgeoFace(1,:,pos1,PlocSide1)-XgeoFace(1,:,pos2,PlocSide2))**2 &    
-                                   +(XgeoFace(2,:,pos1,PlocSide1)-XgeoFace(2,:,pos2,PlocSide2))**2 &
-                                   +(XgeoFace(3,:,pos1,PlocSide1)-XgeoFace(3,:,pos2,PlocSide2))**2)
+             maxdist(iEdge)=MAXVAL( (XGeoCLFace(1,:,pos1,PlocSide1)-XGeoCLFace(1,:,pos2,PlocSide2))**2 &    
+                                   +(XGeoCLFace(2,:,pos1,PlocSide1)-XGeoCLFace(2,:,pos2,PlocSide2))**2 &
+                                   +(XGeoCLFace(3,:,pos1,PlocSide1)-XGeoCLFace(3,:,pos2,PlocSide2))**2)
           END IF
         END IF
       END IF
@@ -430,22 +424,22 @@ DO iElem=1,nElems
           !transfinite face remap!!
           SELECT CASE(PlocSide)
           CASE(0)
-            CALL TransFace(3,Ngeo_out,xi_Ngeo_out,XGeoVol(:,       0,:,:))     
+            CALL TransFace(3,Ngeo_out,xiCL_Ngeo_out,XGeoCLVol(:,       0,:,:))     
           CASE(1)
-            CALL TransFace(3,Ngeo_out,xi_Ngeo_out,XGeoVol(:,Ngeo_out,:,:))     
+            CALL TransFace(3,Ngeo_out,xiCL_Ngeo_out,XGeoCLVol(:,Ngeo_out,:,:))     
           CASE(2)
-            CALL TransFace(3,Ngeo_out,xi_Ngeo_out,XGeoVol(:,:,       0,:))     
+            CALL TransFace(3,Ngeo_out,xiCL_Ngeo_out,XGeoCLVol(:,:,       0,:))     
           CASE(3)
-            CALL TransFace(3,Ngeo_out,xi_Ngeo_out,XGeoVol(:,:,Ngeo_out,:))     
+            CALL TransFace(3,Ngeo_out,xiCL_Ngeo_out,XGeoCLVol(:,:,Ngeo_out,:))     
           CASE(4)
-            CALL TransFace(3,Ngeo_out,xi_Ngeo_out,XGeoVol(:,:,:,       0))     
+            CALL TransFace(3,Ngeo_out,xiCL_Ngeo_out,XGeoCLVol(:,:,:,       0))     
           CASE(5)
-            CALL TransFace(3,Ngeo_out,xi_Ngeo_out,XGeoVol(:,:,:,Ngeo_out))     
+            CALL TransFace(3,Ngeo_out,xiCL_Ngeo_out,XGeoCLVol(:,:,:,Ngeo_out))     
           END SELECT !PlocSide
         END IF
       END IF !mortarSide
     END DO !PlocSide=0,5
-    CALL TransVol(3,Ngeo_out,Xi_Ngeo_out,XGeoVol,XgeoQuad(:,:,:,:,iQuad))
+    CALL TransVol(3,Ngeo_out,XiCL_Ngeo_out,XGeoCLVol,XgeoQuad(:,:,:,:,iQuad))
   END DO !iQuad=StartQuad,EndQuad
 END DO !iElem=1,nElems
 

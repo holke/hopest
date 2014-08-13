@@ -32,7 +32,7 @@ SUBROUTINE InitAnalyze()
 ! Basic Analyze initialization. 
 !===================================================================================================================================
 ! MODULES
-USE MOD_Mesh_Vars,ONLY:Ngeo_out,Xi_Ngeo_out
+USE MOD_Mesh_Vars,ONLY:Ngeo_out,XiCL_Ngeo_out,wBaryCL_NGeo_out
 USE MOD_Analyze_Vars
 USE MOD_ReadInTools,ONLY:GETINT,GETLOGICAL
 USE MOD_Basis,    ONLY: BarycentricWeights,InitializeVandermonde,PolynomialDerivativeMatrix
@@ -46,7 +46,6 @@ IMPLICIT NONE
 ! LOCAL VARIABLES 
 CHARACTER(LEN=5)           :: tmpstr
 INTEGER                    :: i
-REAL,DIMENSION(0:Ngeo_out) :: wBary_Ngeo_out
 REAL,ALLOCATABLE           :: xi(:)
 !===================================================================================================================================
 
@@ -59,13 +58,12 @@ ALLOCATE(xi(0:Nanalyze))
 DO i=0,Nanalyze
   xi(i)=-1.+2*REAL(i)/REAL(Nanalyze)
 END DO
-CALL BarycentricWeights(Ngeo_out,xi_Ngeo_out,wBary_Ngeo_out)
 ALLOCATE(Vdm_analyze(0:Nanalyze,0:Ngeo_out))
-CALL InitializeVandermonde(Ngeo_out,Nanalyze,wBary_Ngeo_out,xi_Ngeo_out,xi,Vdm_analyze)
+CALL InitializeVandermonde(Ngeo_out,Nanalyze,wBaryCL_Ngeo_out,xiCL_Ngeo_out,xi,Vdm_analyze)
 
 ALLOCATE(D_Ngeo_out(0:Ngeo_out,0:Ngeo_out))
 
-CALL PolynomialDerivativeMatrix(Ngeo_out,xi_Ngeo_out,D_Ngeo_out)
+CALL PolynomialDerivativeMatrix(Ngeo_out,xiCL_Ngeo_out,D_Ngeo_out)
 
 END SUBROUTINE InitAnalyze
 

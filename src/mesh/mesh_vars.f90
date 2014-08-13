@@ -17,10 +17,10 @@ INTEGER           :: NGeo                        ! polynomial degree of geometri
 INTEGER           :: NGeo_out                    ! polynomial degree of geometric transformation for output
 REAL,ALLOCATABLE  :: Xi_NGeo(:)                  ! 1D equidistant point positions for curved elements (during readin)
 REAL,ALLOCATABLE  :: XiCL_NGeo_out(:)            ! 1D Chebychev-Lobatto point positions for curved elements (after refinement)
-REAL,ALLOCATABLE  :: Xi_NGeo_out(:)              ! 1D equidistant point positions 
+REAL,ALLOCATABLE  :: wBaryCL_NGeo_out(:)          ! 1D Chebychev-Lobatto barycentric weights
 REAL,ALLOCATABLE  :: Vdm_CL_EQ_out(:,:)          ! transform from internally used CL points to equidistant points for output 
-REAL,ALLOCATABLE  :: Vdm_CL_EQ_10(:,:)           ! change form CL to EQ, and interval [-1,1] -> [-1,0]
-REAL,ALLOCATABLE  :: Vdm_CL_EQ_01(:,:)           ! change form CL to EQ, and interval [-1,1] -> [ 0,1]
+REAL,ALLOCATABLE  :: Vdm_10(:,:)                 ! change from  interval [-1,1] -> [-1,0]
+REAL,ALLOCATABLE  :: Vdm_01(:,:)                 ! change from  interval [-1,1] -> [ 0,1]
 
 REAL,ALLOCATABLE  :: wBary_NGeo(:)               ! barycentric weights from xi_Ngeo
 REAL,ALLOCATABLE  :: XGeo(:,:,:,:,:)              ! High order geometry nodes, per element (1:3,0:Ngeo,0:Ngeo,0:Ngeo,nElems)

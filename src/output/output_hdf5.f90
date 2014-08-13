@@ -31,6 +31,7 @@ SUBROUTINE WriteMeshToHDF5(FileString)
 !===================================================================================================================================
 ! MODULES
 USE MOD_Mesh_Vars
+USE MOD_ChangeBasis, ONLY:ChangeBasis3D
 USE MOD_IO_HDF5
 USE MOD_HDF5_output
 ! IMPLICIT VARIABLE HANDLING
@@ -188,6 +189,10 @@ DEALLOCATE(ElemBary)
 !-----------------------------------------------------------------
 ! WRITE NodeCoords  for each element !!!! (multiple nodes!!!)
 !-----------------------------------------------------------------
+!transform to equidistant nodes (overwrite!!!):
+DO iQuad=1,nQuads
+  CALL ChangeBasis3D(3,Ngeo_out,Ngeo_out,Vdm_CL_EQ_out,XgeoQuad(:,:,:,:,iQuad),XgeoQuad(:,:,:,:,iQuad))
+END DO
 nNodeIDs=(Ngeo_out+1)**3*nQuads
 CALL WriteArrayToHDF5(File_ID,'NodeCoords',nNodeIDs,2,(/nNodeIDs,3/),0,  &
           RealArray=TRANSPOSE(RESHAPE(XgeoQuad,(/3,nNodeIDs/))) )
