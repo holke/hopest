@@ -43,6 +43,7 @@ USE MOD_Output_Vars,        ONLY: Projectname
 USE MOD_Output_HDF5,        ONLY: writeMeshToHDF5
 USE MOD_Mesh_ReadIn,        ONLY: readMeshFromHDF5
 USE MOD_Mesh,               ONLY: DeformMesh
+USE MOD_Analyze,            ONLY: InitAnalyze,Analyze
 USE MOD_Basis,              ONLY: BarycentricWeights
 USE MOD_Refine,             ONLY: RefineMesh
 USE MOD_ReadInTools,        ONLY: GETINT,GETSTR,GETINTARRAY,CNTSTR
@@ -64,6 +65,7 @@ CALL InitIO()
 
 CALL readMeshFromHDF5(MeshFile) !set nElems
 
+
 CALL deformMesh()
 
 CALL RefineMesh()
@@ -72,6 +74,9 @@ CALL p4_savemesh(TRIM(p4estFile)//C_NULL_CHAR,p4est)
 CALL BuildMeshFromP4EST()
 
 CALL BuildHOMesh()
+
+CALL InitAnalyze()
+CALL Analyze()
 !output new mesh
 CALL writeMeshToHDF5(TRIM(ProjectName)//'_mesh_p4est.h5')
 ! dealloacte pointers
