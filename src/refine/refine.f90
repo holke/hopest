@@ -1,6 +1,6 @@
 #include "hopest_f.h"
 
-MODULE MOD_Refine
+MODULE MODH_Refine
 !===================================================================================================================================
 ! Add comments please!
 !===================================================================================================================================
@@ -26,12 +26,12 @@ SUBROUTINE RefineMesh()
 ! Subroutine to read the mesh from a mesh data file
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Refine_Vars
-USE MOD_Mesh_Vars,     ONLY: Ngeo
-USE MOD_Refine_Binding,ONLY: p4_refine_mesh
-USE MOD_P4EST_Vars,    ONLY: p4est,mesh,geom
-USE MOD_Readintools,   ONLY: GETINT,CNTSTR
+USE MODH_Globals
+USE MODH_Refine_Vars
+USE MODH_Mesh_Vars,     ONLY: Ngeo
+USE MODH_Refine_Binding,ONLY: p4_refine_mesh
+USE MODH_P4EST_Vars,    ONLY: p4est,mesh,geom
+USE MODH_Readintools,   ONLY: GETINT,CNTSTR
 USE, INTRINSIC :: ISO_C_BINDING
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
@@ -49,7 +49,7 @@ CHARACTER(LEN=5)            :: tmpstr
 SWRITE(UNIT_stdOut,'(A)')'BUILD P4EST MESH AND REFINE ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
 
-!ALLOCATE(RefineList(nElems))
+!ALLOCATE(RefineList(nTrees))
 !RefineList=0
 
 nRefines=CNTSTR('refineType',1)
@@ -98,10 +98,10 @@ SUBROUTINE InitRefineBoundaryElems()
 ! init the refinment list
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Refine_Vars, ONLY: TreeSidesToRefine,refineBCIndex
-USE MOD_P4EST_Vars,  ONLY: P2H_FaceMap
-USE MOD_Mesh_Vars,   ONLY: Elems,nElems
+USE MODH_Globals
+USE MODH_Refine_Vars,ONLY: TreeSidesToRefine,refineBCIndex
+USE MODH_Mesh_Vars,  ONLY: Trees,nTrees
+USE MODH_P4EST_Vars,  ONLY: P2H_FaceMap
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -110,15 +110,15 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER                     :: iElem,iSide
+INTEGER                     :: iTree,iSide
 !===================================================================================================================================
 ! These are the refinement functions which are called by p4est
-ALLOCATE(TreeSidesToRefine(0:5,1:nElems))
+ALLOCATE(TreeSidesToRefine(0:5,1:nTrees))
 TreeSidesToRefine=0
-DO iElem=1,nElems
+DO iTree=1,nTrees
   DO iSide=0,5
-    IF (Elems(iElem)%ep%Side(P2H_FaceMap(iSide))%sp%BCIndex.EQ.refineBCIndex) THEN
-      TreeSidesToRefine(iSide,iElem)=1
+    IF (Trees(iTree)%ep%Side(P2H_FaceMap(iSide))%sp%BCIndex.EQ.refineBCIndex) THEN
+      TreeSidesToRefine(iSide,iTree)=1
     END IF
   END DO
 END DO
@@ -132,10 +132,10 @@ SUBROUTINE InitRefineGeom()
 ! init the geometric refinment
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Refine_Vars, ONLY: refineGeomType,sphereCenter,sphereRadius,boxBoundary 
-USE MOD_Refine_Vars, ONLY: shellRadius_inner,shellRadius_outer,shellCenter
-USE MOD_Readintools,ONLY:GETREALARRAY,GETINT,GETREAL
+USE MODH_Globals
+USE MODH_Refine_Vars, ONLY: refineGeomType,sphereCenter,sphereRadius,boxBoundary 
+USE MODH_Refine_Vars, ONLY: shellRadius_inner,shellRadius_outer,shellCenter
+USE MODH_Readintools, ONLY:GETREALARRAY,GETINT,GETREAL
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -170,7 +170,7 @@ FUNCTION RefineAll(x,y,z,tree,level,childID) BIND(C)
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
-USE MOD_Refine_Vars, ONLY: RefineLevel
+USE MODH_Refine_Vars, ONLY: RefineLevel
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -196,7 +196,7 @@ FUNCTION RefineByList(x,y,z,tree,level,childID) BIND(C)
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
-USE MOD_Refine_Vars, ONLY: refineLevel,TreeSidesToRefine
+USE MODH_Refine_Vars, ONLY: refineLevel,TreeSidesToRefine
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -247,14 +247,14 @@ FUNCTION RefineByGeom(x,y,z,tree,level,childID) BIND(C)
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
-USE MOD_Refine_Vars, ONLY: refineGeomType,refineLevel
-USE MOD_Refine_Vars, ONLY: sphereCenter,sphereRadius,boxBoundary
-USE MOD_Refine_Vars, ONLY: shellRadius_inner,shellRadius_outer,shellCenter
-USE MOD_Refine_Vars, ONLY: Nsuper,Xi_Nsuper
-USE MOD_Mesh_Vars,   ONLY: XGeo,Ngeo
-USE MOD_Mesh_Vars,   ONLY: wBary_Ngeo,xi_Ngeo
-USE MOD_Basis,       ONLY: LagrangeInterpolationPolys 
-USE MOD_ChangeBasis, ONLY: ChangeBasis3D_XYZ
+USE MODH_Refine_Vars, ONLY: refineGeomType,refineLevel
+USE MODH_Refine_Vars, ONLY: sphereCenter,sphereRadius,boxBoundary
+USE MODH_Refine_Vars, ONLY: shellRadius_inner,shellRadius_outer,shellCenter
+USE MODH_Refine_Vars, ONLY: NSuper,Xi_Nsuper
+USE MODH_Mesh_Vars,   ONLY: XGeo,Ngeo
+USE MODH_Mesh_Vars,   ONLY: wBary_Ngeo,xi_Ngeo
+USE MODH_Basis,       ONLY: LagrangeInterpolationPolys 
+USE MODH_ChangeBasis, ONLY: ChangeBasis3D_XYZ
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -267,7 +267,9 @@ REAL                                  :: xi0(3)
 REAL                                  :: xiBary(3)
 REAL                                  :: dxi,length
 REAL,DIMENSION(0:Nsuper,0:Ngeo)       :: Vdm_xi,Vdm_eta,Vdm_zeta
-REAL                                  :: XCorner(3), XBaryQuad(3),test,IntSize,sIntSize
+REAL                                  :: XCorner(3), XBaryElem(3),test
+INTEGER                               :: IntSize
+REAL                                  :: sIntSize
 REAL                                  :: XGeoSuper(3,0:Nsuper,0:Nsuper,0:Nsuper)
 REAL                                  :: l_xi(0:NGeo),l_eta(0:NGeo),l_zeta(0:NGeo),l_etazeta
 INTEGER                               :: i,j,k
@@ -283,14 +285,14 @@ INTEGER(KIND=C_INT) :: refineByGeom
 refineByGeom = 0
 IF(level.GE.refineLevel) RETURN
 
-IntSize=2.**19 !TODO: use sIntSize from mesh_vars. not initialized at this stage yet
-sIntSize=1./IntSize
+IntSize=2**19 !TODO: use sIntSize from mesh_vars. not initialized at this stage yet
+sIntSize=1./REAL(IntSize)
 
 ! transform p4est first corner coordinates (integer from 0... intsize) to [-1,1] reference element of its tree
 xi0(1)=-1.+2.*REAL(x)*sIntSize
 xi0(2)=-1.+2.*REAL(y)*sIntSize
 xi0(3)=-1.+2.*REAL(z)*sIntSize
-! length of the quadrant in reference coordinates of its tree [-1,1]
+! length of the element / quadrant in reference coordinates of its tree [-1,1]
 length=2./REAL(2**level)
 ! Build Vandermonde matrices for each parameter range in xi, eta,zeta
 DO i=0,Nsuper 
@@ -310,15 +312,15 @@ CALL LagrangeInterpolationPolys(xiBary(1),Ngeo,xi_Ngeo,wBary_Ngeo,l_xi(:))
 CALL LagrangeInterpolationPolys(xiBary(2),Ngeo,xi_Ngeo,wBary_Ngeo,l_eta(:)) 
 CALL LagrangeInterpolationPolys(xiBary(3),Ngeo,xi_Ngeo,wBary_Ngeo,l_zeta(:)) 
 !interpolate tree HO mapping to quadrant HO mapping
-XBaryQuad(:)=0.
-  DO k=0,NGeo
-    DO j=0,NGeo
-      l_etazeta=l_eta(j)*l_zeta(k)
-      DO i=0,NGeo
-        XBaryQuad(:)=XBaryQuad(:)+XGeoSuper(:,i,j,k)*l_xi(i)*l_etazeta
-      END DO
+XBaryElem(:)=0.
+DO k=0,NGeo
+  DO j=0,NGeo
+    l_etazeta=l_eta(j)*l_zeta(k)
+    DO i=0,NGeo
+      XBaryElem(:)=XBaryElem(:)+Xgeo(:,i,j,k,tree)*l_xi(i)*l_etazeta
     END DO
   END DO
+END DO
 SELECT CASE (refineGeomType)
 CASE(1)   ! SPHERE
   ! check Nsuper Nodes
@@ -335,7 +337,7 @@ CASE(1)   ! SPHERE
     END DO ! j 
   END DO ! k
   ! check barycenter
-  test=SQRT((XBaryQuad(1)-sphereCenter(1))**2+(XBaryQuad(2)-sphereCenter(2))**2+(XBaryQuad(3)-sphereCenter(3))**2)
+  test=SQRT((XBaryElem(1)-sphereCenter(1))**2+(XBaryElem(2)-sphereCenter(2))**2+(XBaryElem(3)-sphereCenter(3))**2)
   IF (test.LE.sphereRadius) THEN
     refineByGeom = 1
   ELSE
@@ -357,7 +359,7 @@ CASE(11)   ! SPHERE SHELL
     END DO ! j 
   END DO ! k
   ! check barycenter
-  test=SQRT((XBaryQuad(1)-shellCenter(1))**2+(XBaryQuad(2)-shellCenter(2))**2+(XBaryQuad(3)-shellCenter(3))**2)
+  test=SQRT((XBaryElem(1)-shellCenter(1))**2+(XBaryElem(2)-shellCenter(2))**2+(XBaryElem(3)-shellCenter(3))**2)
   IF ((test.LE.shellRadius_outer) .AND. (test.GE.shellRadius_inner)) THEN
     refineByGeom = 1
   ELSE
@@ -380,9 +382,9 @@ CASE(2)   ! BOX
     END DO ! j 
   END DO ! k
   ! refineBoundary(xmin,xmax,ymin,ymax,zmin,zmax)
-  IF (XBaryQuad(1) .GE. boxBoundary(1) .AND. XBaryQuad(1) .LE. boxBoundary(2) .AND. & 
-      XBaryQuad(2) .GE. boxBoundary(3) .AND. XBaryQuad(2) .LE. boxBoundary(4) .AND. &
-      XBaryQuad(3) .GE. boxBoundary(5) .AND. XBaryQuad(3) .LE. boxBoundary(6)) THEN
+  IF (XBaryElem(1) .GE. boxBoundary(1) .AND. XBaryElem(1) .LE. boxBoundary(2) .AND. & 
+      XBaryElem(2) .GE. boxBoundary(3) .AND. XBaryElem(2) .LE. boxBoundary(4) .AND. &
+      XBaryElem(3) .GE. boxBoundary(5) .AND. XBaryElem(3) .LE. boxBoundary(6)) THEN
     refineByGeom = 1
   END IF
 END SELECT
@@ -395,7 +397,7 @@ FUNCTION RefineFirst(x,y,z,tree,level,childID) BIND(C)
 !===================================================================================================================================
 ! MODULES
 USE, INTRINSIC :: ISO_C_BINDING
-USE MOD_Refine_Vars, ONLY: refineLevel
+USE MODH_Refine_Vars, ONLY: refineLevel
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -419,4 +421,4 @@ ELSE
 END IF
 END FUNCTION RefineFirst
 
-END MODULE MOD_Refine
+END MODULE MODH_Refine

@@ -1,6 +1,6 @@
 #include "hopest_f.h"
 
-MODULE MOD_Analyze
+MODULE MODH_Analyze
 !===================================================================================================================================
 ! Add comments please!
 !===================================================================================================================================
@@ -32,10 +32,10 @@ SUBROUTINE InitAnalyze()
 ! Basic Analyze initialization. 
 !===================================================================================================================================
 ! MODULES
-USE MOD_Mesh_Vars,ONLY:Ngeo_out,XiCL_Ngeo_out,wBaryCL_NGeo_out
-USE MOD_Analyze_Vars
-USE MOD_ReadInTools,ONLY:GETINT,GETLOGICAL
-USE MOD_Basis,    ONLY: BarycentricWeights,InitializeVandermonde,PolynomialDerivativeMatrix
+USE MODH_Mesh_Vars,ONLY:Ngeo_out,XiCL_Ngeo_out,wBaryCL_NGeo_out
+USE MODH_Analyze_Vars
+USE MODH_ReadInTools,ONLY:GETINT,GETLOGICAL
+USE MODH_Basis,    ONLY: BarycentricWeights,InitializeVandermonde,PolynomialDerivativeMatrix
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -73,7 +73,7 @@ SUBROUTINE Analyze()
 ! Basic Analyze initialization. 
 !===================================================================================================================================
 ! MODULES
-USE MOD_Analyze_Vars,ONLY:checkJacobian
+USE MODH_Analyze_Vars,ONLY:checkJacobian
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -92,11 +92,11 @@ SUBROUTINE CheckJac()
 ! Basic Analyze initialization. 
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Mesh_Vars,   ONLY:Ngeo_out,XgeoQuad
-USE MOD_Mesh_Vars,   ONLY:nQuads
-USE MOD_Analyze_Vars,ONLY:Nanalyze,Vdm_analyze,D_Ngeo_out
-USE MOD_ChangeBasis, ONLY:ChangeBasis3D
+USE MODH_Globals
+USE MODH_Mesh_Vars,   ONLY:Ngeo_out,XgeoElem
+USE MODH_Mesh_Vars,   ONLY:nElems
+USE MODH_Analyze_Vars,ONLY:Nanalyze,Vdm_analyze,D_Ngeo_out
+USE MODH_ChangeBasis, ONLY:ChangeBasis3D
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -105,25 +105,25 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES 
-INTEGER                                            :: i,j,k,l,iQuad
+INTEGER                                            :: i,j,k,l,iElem
 REAL                                               :: scaledJacTol,Xbary(3)
-REAL                                               :: scaledJac(nQuads),minJac,maxJac
+REAL                                               :: scaledJac(nElems),minJac,maxJac
 INTEGER                                            :: scaledJacStat(0:10)
 REAL,DIMENSION(3,3,0:Ngeo_out,0:Ngeo_out,0:Ngeo_out) :: dX
 REAL,DIMENSION(3,3,0:Nanalyze,0:Nanalyze,0:Nanalyze) :: dXa
 REAL,DIMENSION(0:Nanalyze,0:Nanalyze,0:Nanalyze)   :: detJac
 !===================================================================================================================================
 SWRITE(UNIT_stdOut,'   (A)') "Checking Jacobians..."
-DO iQuad=1,nQuads
+DO iElem=1,nElems
   dX=0.
   DO k=0,Ngeo_out
     DO j=0,Ngeo_out
       DO i=0,Ngeo_out
       ! Matrix-vector multiplication
         DO l=0,Ngeo_out
-          dX(1,:,i,j,k)=dX(1,:,i,j,k) + D_Ngeo_out(i,l)*XgeoQuad(:,l,j,k,iQuad)
-          dX(2,:,i,j,k)=dX(2,:,i,j,k) + D_Ngeo_out(j,l)*XgeoQuad(:,i,l,k,iQuad)
-          dX(3,:,i,j,k)=dX(3,:,i,j,k) + D_Ngeo_out(k,l)*XgeoQuad(:,i,j,l,iQuad)
+          dX(1,:,i,j,k)=dX(1,:,i,j,k) + D_Ngeo_out(i,l)*XgeoElem(:,l,j,k,iElem)
+          dX(2,:,i,j,k)=dX(2,:,i,j,k) + D_Ngeo_out(j,l)*XgeoElem(:,i,l,k,iElem)
+          dX(3,:,i,j,k)=dX(3,:,i,j,k) + D_Ngeo_out(k,l)*XgeoElem(:,i,j,l,iElem)
         END DO !l=0,Ngeo_out
       END DO !i=0,Ngeo_out
     END DO !j=0,Ngeo_out
@@ -142,8 +142,8 @@ DO iQuad=1,nQuads
   END DO !k
   maxJac=MAXVAL(ABS(detJac))
   minJac=MINVAL(detJac)
-  scaledJac(iQuad)=minJac/maxJac
-END DO !iQuad
+  scaledJac(iElem)=minJac/maxJac
+END DO !iElem
 
 ! Error Section
 scaledJacTol=1.0E-6
@@ -154,13 +154,13 @@ IF(ANY(scaledJac.LE.scaledJacTol))THEN
   WRITE(100,*)
   WRITE(100,'(A)')'VARIABLES="xBary","yBary","zBary","scaledJac"'
   WRITE(100,*)
-  DO iQuad=1,nQuads
-    IF(scaledJac(iQuad).LT.scaledJactol) THEN
-      XBary(1)=SUM(XgeoQuad(1,:,:,:,iQuad))
-      XBary(2)=SUM(XgeoQuad(2,:,:,:,iQuad))
-      XBary(3)=SUM(XgeoQuad(3,:,:,:,iQuad))
+  DO iElem=1,nElems
+    IF(scaledJac(iElem).LT.scaledJactol) THEN
+      XBary(1)=SUM(XgeoElem(1,:,:,:,iElem))
+      XBary(2)=SUM(XgeoElem(2,:,:,:,iElem))
+      XBary(3)=SUM(XgeoElem(3,:,:,:,iElem))
       XBary=XBary/REAL((Ngeo_out+1)**3)
-      WRITE(100,'(4(4X,E12.5))') Xbary,scaledJac(iQuad)
+      WRITE(100,'(4(4X,E12.5))') Xbary,scaledJac(iElem)
     END IF
   END DO !iQaud
   CLOSE(UNIT=100)
@@ -170,8 +170,8 @@ IF(ANY(scaledJac.LE.scaledJacTol))THEN
 END IF
 scaledJacStat(:)=0
 
-DO iQuad=1,nQuads
-  i=CEILING(MAX(0.,scaledJac(iQuad)*10))
+DO iElem=1,nElems
+  i=CEILING(MAX(0.,scaledJac(iElem)*10))
   scaledJacStat(i)=scaledJacStat(i)+1 
 END DO
 WRITE(Unit_StdOut,'(A)') ' Number of element with scaled Jacobians ranging between:'
@@ -182,4 +182,4 @@ END DO
 WRITE(Unit_StdOut,'(A1)')' '
 END SUBROUTINE CheckJac
 
-END MODULE MOD_Analyze
+END MODULE MODH_Analyze

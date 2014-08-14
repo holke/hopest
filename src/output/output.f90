@@ -1,6 +1,6 @@
 #include "hopest_f.h"
 
-MODULE MOD_Output
+MODULE MODH_Output
 !===================================================================================================================================
 ! Add comments please!
 !===================================================================================================================================
@@ -30,10 +30,10 @@ SUBROUTINE InitOutput()
 ! Initialize all output (and analyze) variables.
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Preproc
-USE MOD_Output_Vars
-USE MOD_ReadInTools       ,ONLY:GETSTR,GETLOGICAL,GETINT
+USE MODH_Globals
+USE MODH_Preproc
+USE MODH_Output_Vars
+USE MODH_ReadInTools       ,ONLY:GETSTR,GETLOGICAL,GETINT
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -62,7 +62,7 @@ SUBROUTINE FinalizeOutput()
 ! Deallocate global variables
 !===================================================================================================================================
 ! MODULES
-USE MOD_Output_Vars,ONLY:OutputInitIsDone
+USE MODH_Output_Vars,ONLY:OutputInitIsDone
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -75,4 +75,4 @@ IMPLICIT NONE
 OutputInitIsDone = .FALSE.
 END SUBROUTINE FinalizeOutput
 
-END MODULE MOD_Output
+END MODULE MODH_Output

@@ -1,6 +1,6 @@
 #include "hopest_f.h"
 
-MODULE MOD_Globals
+MODULE MODH_Globals
 !===================================================================================================================================
 ! Provides parameters, used globally (please use EXTREMLY carefully!) 
 !===================================================================================================================================
@@ -254,4 +254,4 @@ PURE FUNCTION CROSS(v1,v2)
   CROSS=(/v1(2)*v2(3)-v1(3)*v2(2),v1(3)*v2(1)-v1(1)*v2(3),v1(1)*v2(2)-v1(2)*v2(1)/)
 END FUNCTION CROSS
 
-END MODULE MOD_Globals
+END MODULE MODH_Globals

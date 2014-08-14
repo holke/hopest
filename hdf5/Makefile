@@ -15,7 +15,7 @@ hdf5:
 		if [ ! -d hdf5-$(HDF5_VERSION) ] ; then \
 			tar -xvjf hdf5-$(HDF5_VERSION).tar.bz2 1>/dev/null  ; \
 		fi ; \
-		cd hdf5-$(HDF5_VERSION) && CC=$(CC) FC=$(FC) ./configure --enable-fortran && $(MAKE) && $(MAKE) install ; \
+		cd hdf5-$(HDF5_VERSION) && CC=$(CC) FC=$(FC) ./configure --enable-fortran --disable-shared && $(MAKE) && $(MAKE) install ; \
 		echo "===============================================================";\
 		echo "= H D F 5   D O N E                                           =";\
 		echo "===============================================================";\

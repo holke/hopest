@@ -1,6 +1,6 @@
 #include "hopest_f.h"
 
-MODULE MOD_Mesh
+MODULE MODH_Mesh
 !===================================================================================================================================
 ! Contains subroutines to build (curviilinear) meshes and provide metrics, etc.
 !===================================================================================================================================
@@ -47,10 +47,10 @@ SUBROUTINE InitMesh()
 ! Read Parameter from inputfile 
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Output_Vars, ONLY: Projectname
-USE MOD_Mesh_Vars,   ONLY: BoundaryName,BoundaryType,MeshFile,nUserBCs,Deform
-USE MOD_ReadInTools, ONLY: GETINT,GETSTR,GETINTARRAY,CNTSTR
+USE MODH_Globals
+USE MODH_Output_Vars, ONLY: ProjectName
+USE MODH_Mesh_Vars,   ONLY: MeshFile,Deform
+USE MODH_ReadInTools, ONLY: GETINT,GETSTR,CNTSTR
 IMPLICIT NONE
 ! INPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -62,11 +62,10 @@ IMPLICIT NONE
 INTEGER :: i
 !===================================================================================================================================
 SWRITE(UNIT_StdOut,'(132("-"))')
-SWRITE(UNIT_stdOut,'(A)') ' INIT MESH...'
+SWRITE(UNIT_stdOut,'(A)') ' INIT MESH ...'
 
-! prepare pointer structure (get nElems, etc.)
+! prepare pointer structure (get nTrees, etc.)
 MeshFile = GETSTR('MeshFile')
-
 IF(CNTSTR('ProjectName',0).EQ.0)THEN
   !default project name frommesh file
   ProjectName=TRIM(Meshfile(1:INDEX(Meshfile,'_mesh.h5')-1))
@@ -75,17 +74,6 @@ ELSE
 END IF
 
 Deform = GETINT('Deform','0')
-
-! read in boundary conditions, will overwrite BCs from meshfile!
-nUserBCs = CNTSTR('BoundaryName',0)
-IF(nUserBCs.GT.0)THEN
-  ALLOCATE(BoundaryName(1:nUserBCs))
-  ALLOCATE(BoundaryType(1:nUserBCs,2))
-  DO i=1,nUserBCs
-    BoundaryName(i)   = GETSTR('BoundaryName')
-    BoundaryType(i,:) = GETINTARRAY('BoundaryType',2) !(/Type,State/)
-  END DO
-END IF !nUserBCs>0
 
 SWRITE(UNIT_stdOut,'(A)')' INIT MESH DONE!'
 SWRITE(UNIT_StdOut,'(132("-"))')
@@ -97,13 +85,14 @@ SUBROUTINE SetCurvedInfo()
 ! Set and allocate information related to high order data
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Mesh_Vars,ONLY: NGeo,Xi_NGeo,wBary_NGeo,HexMap,HexMapInv
-USE MOD_Mesh_Vars,ONLY: NGeo_out,XiCL_NGeo_out,wBaryCL_Ngeo_out,HexMap_out
-USE MOD_Mesh_Vars,ONLY: Vdm_01,Vdm_10,Vdm_CL_EQ_out
-USE MOD_Mesh_Vars,ONLY: nCurvedNodes 
-USE MOD_Basis,    ONLY: BarycentricWeights,ChebyGaussLobNodesAndWeights,InitializeVandermonde
-USE MOD_ReadInTools, ONLY: GETINT
+USE MODH_Globals
+USE MODH_Mesh_Vars,ONLY: NGeo,Xi_NGeo,wBary_NGeo,HexMap,HexMapInv
+USE MODH_Mesh_Vars,ONLY: NGeo_out,XiCL_NGeo_out,wBaryCL_Ngeo_out,HexMap_out
+USE MODH_Mesh_Vars,ONLY: Vdm_01,Vdm_10,Vdm_CL_EQ_out
+USE MODH_Mesh_Vars,ONLY: nCurvedNodes 
+USE MODH_Basis,    ONLY: BarycentricWeights,ChebyGaussLobNodesAndWeights,InitializeVandermonde
+USE MODH_ReadInTools, ONLY: GETINT
+
 !-----------------------------------------------------------------------------------------------------------------------------------
 IMPLICIT NONE
 ! INPUT VARIABLES
@@ -179,17 +168,17 @@ SUBROUTINE BuildHOMesh()
 ! uses XGeo High order data from trees and interpolates it to the quadrants 
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Mesh_Vars,   ONLY: Ngeo,nElems,nQuads,Xgeo,XgeoQuad
-USE MOD_Mesh_Vars,   ONLY: Quads
-USE MOD_Mesh_Vars,   ONLY: wBary_Ngeo,xi_Ngeo
-USE MOD_Mesh_Vars,   ONLY: Ngeo_out,xiCL_Ngeo_out
-USE MOD_P4EST_Vars,  ONLY: TreeToQuad,QuadCoords,QuadLevel,sIntSize
-USE MOD_P4EST_Vars,  ONLY: P2H_FaceMap,P_FaceToEdge,P_EdgeToFaces
-USE MOD_Basis,       ONLY: LagrangeInterpolationPolys 
-USE MOD_ChangeBasis, ONLY: ChangeBasis3D_XYZ
-USE MOD_ChangeBasis, ONLY: ChangeBasis2D_XY
-USE MOD_Mesh_Vars,   ONLY: Vdm_01,Vdm_10
+USE MODH_Globals
+USE MODH_Mesh_Vars,   ONLY: Ngeo,nTrees,nElems,Xgeo,XgeoElem
+USE MODH_Mesh_Vars,   ONLY: wBary_Ngeo,xi_Ngeo
+USE MODH_P4EST_Vars,  ONLY: QuadToTree,QuadCoords,QuadLevel,sIntSize
+USE MODH_Basis,       ONLY: LagrangeInterpolationPolys 
+USE MODH_ChangeBasis, ONLY: ChangeBasis3D_XYZ 
+USE MODH_ChangeBasis, ONLY: ChangeBasis2D_XY
+USE MODH_Mesh_Vars,   ONLY: Vdm_01,Vdm_10
+USE MODH_Mesh_Vars,   ONLY: Elems
+USE MODH_Mesh_Vars,   ONLY: Ngeo_out,xiCL_Ngeo_out
+USE MODH_P4EST_Vars,  ONLY: P2H_FaceMap,P_FaceToEdge,P_EdgeToFaces
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -201,8 +190,7 @@ IMPLICIT NONE
 REAL                              :: xi0(3)
 REAL                              :: dxi,length
 REAL,DIMENSION(0:Ngeo_out,0:Ngeo) :: Vdm_xi,Vdm_eta,Vdm_zeta
-INTEGER                           :: StartQuad,EndQuad,nLocalQuads
-INTEGER                           :: i,iQuad,iElem 
+INTEGER                           :: i,iElem,iTree 
 !-----------------------------------------------------------------------------------------------------------------------------------
 INTEGER                           :: j,k,plus
 INTEGER                           :: dir0,dir1,dir2
@@ -219,27 +207,23 @@ REAL                              :: XGeoCLVol(3,0:Ngeo_out,0:Ngeo_out,0:Ngeo_ou
 REAL                              :: XgeoCLBigFace(3,0:Ngeo_out,0:Ngeo_out)
 REAL                              :: maxdist(0:11)
 !===================================================================================================================================
-ALLOCATE(XgeoQuad(3,0:Ngeo_out,0:Ngeo_out,0:Ngeo_out,nQuads))
+ALLOCATE(XgeoElem(3,0:Ngeo_out,0:Ngeo_out,0:Ngeo_out,nElems))
 
 DO iElem=1,nElems
-  StartQuad = TreeToQuad(1,iElem)+1
-  EndQuad   = TreeToQuad(2,iElem)
-  nLocalQuads = TreeToQuad(2,iElem)-TreeToQuad(1,iElem)
-  DO iQuad=StartQuad,EndQuad
-    ! transform p4est first corner coordinates (integer from 0... intsize) to [-1,1] reference element
-    xi0(:)=-1.+2.*REAL(QuadCoords(:,iQuad))*sIntSize
-    ! length of each quadrant in integers
-    length=2./REAL(2**QuadLevel(iQuad))
-    ! Build Vandermonde matrices for each parameter range in xi, eta,zeta
-    DO i=0,Ngeo_out
-      dxi=0.5*(xiCL_Ngeo_out(i)+1.)*Length
-      CALL LagrangeInterpolationPolys(xi0(1) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_xi(i,:)) 
-      CALL LagrangeInterpolationPolys(xi0(2) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_eta(i,:)) 
-      CALL LagrangeInterpolationPolys(xi0(3) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_zeta(i,:)) 
-    END DO
-    !interpolate tree HO mapping to quadrant HO mapping (If Ngeo_out < Ngeo: Interpolation error!)
-    CALL ChangeBasis3D_XYZ(3,Ngeo,Ngeo_out,Vdm_xi,Vdm_eta,Vdm_zeta,XGeo(:,:,:,:,iElem),XgeoQuad(:,:,:,:,iQuad))
-  END DO !iQuad=StartQuad,EndQuad
+  iTree=QuadToTree(iElem)+1
+  ! transform p4est first corner coordinates (integer from 0... intsize) to [-1,1] reference element
+  xi0(:)=-1.+2.*REAL(QuadCoords(:,iElem))*sIntSize
+  ! length of each quadrant in integers
+  length=2./REAL(2**QuadLevel(iElem))
+  ! Build Vandermonde matrices for each parameter range in xi, eta,zeta
+  DO i=0,Ngeo_out
+    dxi=0.5*(xiCL_Ngeo_out(i)+1.)*Length
+    CALL LagrangeInterpolationPolys(xi0(1) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_xi(i,:)) 
+    CALL LagrangeInterpolationPolys(xi0(2) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_eta(i,:)) 
+    CALL LagrangeInterpolationPolys(xi0(3) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_zeta(i,:)) 
+  END DO
+  !interpolate tree HO mapping to quadrant HO mapping (If Ngeo_out < Ngeo: Interpolation error!)
+  CALL ChangeBasis3D_XYZ(3,Ngeo,Ngeo_out,Vdm_xi,Vdm_eta,Vdm_zeta,XGeo(:,:,:,:,iTree),XgeoElem(:,:,:,:,iElem))
 END DO !iElem=1,nElems
 
 
@@ -253,194 +237,190 @@ END IF
 !RETURN
 
 DO iElem=1,nElems
-  StartQuad = TreeToQuad(1,iElem)+1
-  EndQuad   = TreeToQuad(2,iElem)
-  nLocalQuads = TreeToQuad(2,iElem)-TreeToQuad(1,iElem)
-  DO iQuad=StartQuad,EndQuad
-    DO PLocSide=0,5
-      MortarType(PlocSide)=Quads(iQuad)%ep%Side(P2H_FaceMap(PLocSide))%sp%MortarType
-    END DO !PlocSide
-    IF(SUM(ABS(MortarType)).EQ.0) CYCLE !no mortar sides found
-    !initialize Face Data (equidistant point distribution )
-    XGeoCLVol=XGeoQuad(:,:,:,:,iQuad)
-    XGeoCLFace(:,:,:,0)=XGeoCLVol(:,       0,:,:)     
-    XGeoCLFace(:,:,:,1)=XGeoCLVol(:,Ngeo_out,:,:)     
-    XGeoCLFace(:,:,:,2)=XGeoCLVol(:,:,       0,:)     
-    XGeoCLFace(:,:,:,3)=XGeoCLVol(:,:,Ngeo_out,:)     
-    XGeoCLFace(:,:,:,4)=XGeoCLVol(:,:,:,       0)     
-    XGeoCLFace(:,:,:,5)=XGeoCLVol(:,:,:,Ngeo_out)     
-    !Mark already sides which are big mortars
-    MarkForTrans=(MortarType.GT.0)  
-    !initialize EdgeMarker
-    EdgeMarker=0
-    DO PLocSide=0,5
-      IF(MortarType(PlocSide).LT.0)THEN  !small mortar face:
-        ! transform p4est first corner coordinates (integer from 0... intsize) to [-1,1] reference element
-        xi0(:)=-1.+2.*REAL(QuadCoords(:,iQuad))*sIntSize
-        ! length of each quadrant in integers
-        length=2./REAL(2**(QuadLevel(iQuad)))
-        PMortar=-MortarType(PlocSide)-1
-        !edgemarker<10: 1 edge: PlocSide=EdgeMarker-1, 
-        !edgemarker>10: 2edges:PlocSide1=MOD(EdgeMarker,10)-1, PlocSide2=EdgeMarker-10*PlocSide1-1
-        EdgeMarker(P_FaceToEdge(:,PlocSide))=EdgeMarker(P_FaceToEdge(:,PlocSide))*10 + PlocSide+1 
-        SELECT CASE(PlocSide)
-        CASE(0,1) !ximinus,xiplus
-          MarkForTrans(2:5)=.TRUE.
-          plus=PlocSide ! plus=0: minus side, plus=1: plus Side
-          dir0=1
-          dir1=2
-          dir2=3
-        CASE(2,3) !etaminus,etaplus
-          MarkForTrans(0:1)=.TRUE.
-          MarkForTrans(4:5)=.TRUE.
-          plus=PlocSide-2 ! plus=0: minus side, plus=1: plus Side
-          dir0=2
-          dir1=1
-          dir2=3
-        CASE(4,5) !zetaminus,zetaplus
-          MarkForTrans(0:3)=.TRUE.
-          plus=PlocSide-4 !  plus=0: minus side, plus=1: plus Side
-          dir0=3
-          dir1=1
-          dir2=2
-        END SELECT !PlocSide
-        !position of origin of mortar side in tree
-        xi0(dir0)=xi0(dir0)+plus*length
-        !position of origin of big (neighbor) mortar side in tree
-        SELECT CASE(PMortar)
-        CASE(0)! lower left
-          !xi0(dir1),xi0(dir2) same
-        CASE(1)! lower right
-          xi0(dir1)=xi0(dir1)-length
-        CASE(2)! upper left 
-          xi0(dir2)=xi0(dir2)-length
-        CASE(3)! upper right 
-          xi0(dir1)=xi0(dir1)-length
-          xi0(dir2)=xi0(dir2)-length
-        END SELECT !Pmortar
-        !extract slice from tree:
-        CALL LagrangeInterpolationPolys(xi0(dir0),Ngeo,xi_Ngeo,wBary_Ngeo,l_1D(:)) 
-        SELECT CASE(dir0)
-        CASE(1)
-          XgeoSlice=0.
-          DO i=0,Ngeo
-            XgeoSlice(:,:,:)=XgeoSlice(:,:,:)+l_1D(i)*Xgeo(:,i,:,:,iElem)
-          END DO 
-        CASE(2)
-          XgeoSlice=0.
-          DO j=0,Ngeo
-            XgeoSlice(:,:,:)=XgeoSlice(:,:,:)+l_1D(j)*Xgeo(:,:,j,:,iElem)
-          END DO 
-        CASE(3)
-          XgeoSlice=0.
-          DO k=0,Ngeo
-            XgeoSlice(:,:,:)=XgeoSlice(:,:,:)+l_1D(k)*Xgeo(:,:,:,k,iElem)
-          END DO 
-        END SELECT !dir0
-        !interpolate slice of tree to quadrant big neighbor face (length*2)  EQ (Ngeo) -> CL (Ngeo_out)
-        !   build Vdm for interpolation EQ Ngeo -> CL Ngeo_out 
-        DO i=0,Ngeo_out
-          dxi=(xiCL_Ngeo_out(i)+1.)*Length !large element side (length*2)!!
-          CALL LagrangeInterpolationPolys(xi0(dir1) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_a(i,:)) 
-          CALL LagrangeInterpolationPolys(xi0(dir2) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_b(i,:)) 
-        END DO
-        CALL ChangeBasis2D_XY(3,Ngeo,Ngeo_out,Vdm_a,Vdm_b,XGeoSlice(:,:,:),XgeoCLBigFace(:,:,:))
-        !transfinite face remap, because big mortar faces will be transfinite too!!
-        CALL TransFace(3,Ngeo_out,xiCL_Ngeo_out,XgeoCLBigFace(:,:,:)) 
-        ! interplation to small face 
-        SELECT CASE(PMortar)
-        CASE(0)! lower left [-1,1]^2 -> [-1,0]x[-1,0]
-          CALL ChangeBasis2D_XY(3,Ngeo_out,Ngeo_out,Vdm_10,Vdm_10,XgeoCLBigFace(:,:,:),XGeoCLFace(:,:,:,PlocSide))
-        CASE(1)! lower right [-1,1]^2 -> [1,0]x[-1,0]
-          CALL ChangeBasis2D_XY(3,Ngeo_out,Ngeo_out,Vdm_01,Vdm_10,XgeoCLBigFace(:,:,:),XGeoCLFace(:,:,:,PlocSide))
-        CASE(2)! upper left [-1,1]^2 -> [-1,0]x[0,1]
-          CALL ChangeBasis2D_XY(3,Ngeo_out,Ngeo_out,Vdm_10,Vdm_01,XgeoCLBigFace(:,:,:),XGeoCLFace(:,:,:,PlocSide))
-        CASE(3)! upper right [-1,1]^2 -> [0,1]x[0,1] 
-          CALL ChangeBasis2D_XY(3,Ngeo_out,Ngeo_out,Vdm_01,Vdm_01,XgeoCLBigFace(:,:,:),XGeoCLFace(:,:,:,PlocSide))
-        END SELECT !Pmortar
-        !copy modified faces into volume (produces unique edges)
-        SELECT CASE(PlocSide)
-        CASE(0)
-          XGeoCLVol(:,       0,:,:)=XGeoCLFace(:,:,:,0)     
-        CASE(1)
-          XGeoCLVol(:,Ngeo_out,:,:)=XGeoCLFace(:,:,:,1)     
-        CASE(2)
-          XGeoCLVol(:,:,       0,:)=XGeoCLFace(:,:,:,2)     
-        CASE(3)
-          XGeoCLVol(:,:,Ngeo_out,:)=XGeoCLFace(:,:,:,3)     
-        CASE(4)
-          XGeoCLVol(:,:,:,       0)=XGeoCLFace(:,:,:,4)     
-        CASE(5)
-          XGeoCLVol(:,:,:,Ngeo_out)=XGeoCLFace(:,:,:,5)     
-        END SELECT !PlocSide
-      END IF !smallmortarSide
-    END DO !PlocSide=0,5
+  iTree=QuadToTree(iElem)+1
+  DO PLocSide=0,5
+    MortarType(PlocSide)=Elems(iElem)%ep%Side(P2H_FaceMap(PLocSide))%sp%MortarType
+  END DO !PlocSide
+  IF(SUM(ABS(MortarType)).EQ.0) CYCLE !no mortar sides found
+  !initialize Face Data (equidistant point distribution )
+  XGeoCLVol=XGeoElem(:,:,:,:,iElem)
+  XGeoCLFace(:,:,:,0)=XGeoCLVol(:,       0,:,:)     
+  XGeoCLFace(:,:,:,1)=XGeoCLVol(:,Ngeo_out,:,:)     
+  XGeoCLFace(:,:,:,2)=XGeoCLVol(:,:,       0,:)     
+  XGeoCLFace(:,:,:,3)=XGeoCLVol(:,:,Ngeo_out,:)     
+  XGeoCLFace(:,:,:,4)=XGeoCLVol(:,:,:,       0)     
+  XGeoCLFace(:,:,:,5)=XGeoCLVol(:,:,:,Ngeo_out)     
+  !Mark already sides which are big mortars
+  MarkForTrans=(MortarType.GT.0)  
+  !initialize EdgeMarker
+  EdgeMarker=0
+  DO PLocSide=0,5
+    IF(MortarType(PlocSide).LT.0)THEN  !small mortar face:
+      ! transform p4est first corner coordinates (integer from 0... intsize) to [-1,1] reference element
+      xi0(:)=-1.+2.*REAL(QuadCoords(:,iElem))*sIntSize
+      ! length of each quadrant in integers
+      length=2./REAL(2**(QuadLevel(iElem)))
+      PMortar=-MortarType(PlocSide)-1
+      !edgemarker<10: 1 edge: PlocSide=EdgeMarker-1, 
+      !edgemarker>10: 2edges:PlocSide1=MOD(EdgeMarker,10)-1, PlocSide2=EdgeMarker-10*PlocSide1-1
+      EdgeMarker(P_FaceToEdge(:,PlocSide))=EdgeMarker(P_FaceToEdge(:,PlocSide))*10 + PlocSide+1 
+      SELECT CASE(PlocSide)
+      CASE(0,1) !ximinus,xiplus
+        MarkForTrans(2:5)=.TRUE.
+        plus=PlocSide ! plus=0: minus side, plus=1: plus Side
+        dir0=1
+        dir1=2
+        dir2=3
+      CASE(2,3) !etaminus,etaplus
+        MarkForTrans(0:1)=.TRUE.
+        MarkForTrans(4:5)=.TRUE.
+        plus=PlocSide-2 ! plus=0: minus side, plus=1: plus Side
+        dir0=2
+        dir1=1
+        dir2=3
+      CASE(4,5) !zetaminus,zetaplus
+        MarkForTrans(0:3)=.TRUE.
+        plus=PlocSide-4 !  plus=0: minus side, plus=1: plus Side
+        dir0=3
+        dir1=1
+        dir2=2
+      END SELECT !PlocSide
+      !position of origin of mortar side in tree
+      xi0(dir0)=xi0(dir0)+plus*length
+      !position of origin of big (neighbor) mortar side in tree
+      SELECT CASE(PMortar)
+      CASE(0)! lower left
+        !xi0(dir1),xi0(dir2) same
+      CASE(1)! lower right
+        xi0(dir1)=xi0(dir1)-length
+      CASE(2)! upper left 
+        xi0(dir2)=xi0(dir2)-length
+      CASE(3)! upper right 
+        xi0(dir1)=xi0(dir1)-length
+        xi0(dir2)=xi0(dir2)-length
+      END SELECT !Pmortar
+      !extract slice from tree:
+      CALL LagrangeInterpolationPolys(xi0(dir0),Ngeo,xi_Ngeo,wBary_Ngeo,l_1D(:)) 
+      SELECT CASE(dir0)
+      CASE(1)
+        XgeoSlice=0.
+        DO i=0,Ngeo
+          XgeoSlice(:,:,:)=XgeoSlice(:,:,:)+l_1D(i)*Xgeo(:,i,:,:,iTree)
+        END DO 
+      CASE(2)
+        XgeoSlice=0.
+        DO j=0,Ngeo
+          XgeoSlice(:,:,:)=XgeoSlice(:,:,:)+l_1D(j)*Xgeo(:,:,j,:,iTree)
+        END DO 
+      CASE(3)
+        XgeoSlice=0.
+        DO k=0,Ngeo
+          XgeoSlice(:,:,:)=XgeoSlice(:,:,:)+l_1D(k)*Xgeo(:,:,:,k,iTree)
+        END DO 
+      END SELECT !dir0
+      !interpolate slice of tree to quadrant big neighbor face (length*2)  EQ (Ngeo) -> CL (Ngeo_out)
+      !   build Vdm for interpolation EQ Ngeo -> CL Ngeo_out 
+      DO i=0,Ngeo_out
+        dxi=(xiCL_Ngeo_out(i)+1.)*Length !large element side (length*2)!!
+        CALL LagrangeInterpolationPolys(xi0(dir1) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_a(i,:)) 
+        CALL LagrangeInterpolationPolys(xi0(dir2) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_b(i,:)) 
+      END DO
+      CALL ChangeBasis2D_XY(3,Ngeo,Ngeo_out,Vdm_a,Vdm_b,XGeoSlice(:,:,:),XgeoCLBigFace(:,:,:))
+      !transfinite face remap, because big mortar faces will be transfinite too!!
+      CALL TransFace(3,Ngeo_out,xiCL_Ngeo_out,XgeoCLBigFace(:,:,:)) 
+      ! interplation to small face 
+      SELECT CASE(PMortar)
+      CASE(0)! lower left [-1,1]^2 -> [-1,0]x[-1,0]
+        CALL ChangeBasis2D_XY(3,Ngeo_out,Ngeo_out,Vdm_10,Vdm_10,XgeoCLBigFace(:,:,:),XGeoCLFace(:,:,:,PlocSide))
+      CASE(1)! lower right [-1,1]^2 -> [1,0]x[-1,0]
+        CALL ChangeBasis2D_XY(3,Ngeo_out,Ngeo_out,Vdm_01,Vdm_10,XgeoCLBigFace(:,:,:),XGeoCLFace(:,:,:,PlocSide))
+      CASE(2)! upper left [-1,1]^2 -> [-1,0]x[0,1]
+        CALL ChangeBasis2D_XY(3,Ngeo_out,Ngeo_out,Vdm_10,Vdm_01,XgeoCLBigFace(:,:,:),XGeoCLFace(:,:,:,PlocSide))
+      CASE(3)! upper right [-1,1]^2 -> [0,1]x[0,1] 
+        CALL ChangeBasis2D_XY(3,Ngeo_out,Ngeo_out,Vdm_01,Vdm_01,XgeoCLBigFace(:,:,:),XGeoCLFace(:,:,:,PlocSide))
+      END SELECT !Pmortar
+      !copy modified faces into volume (produces unique edges)
+      SELECT CASE(PlocSide)
+      CASE(0)
+        XGeoCLVol(:,       0,:,:)=XGeoCLFace(:,:,:,0)     
+      CASE(1)
+        XGeoCLVol(:,Ngeo_out,:,:)=XGeoCLFace(:,:,:,1)     
+      CASE(2)
+        XGeoCLVol(:,:,       0,:)=XGeoCLFace(:,:,:,2)     
+      CASE(3)
+        XGeoCLVol(:,:,Ngeo_out,:)=XGeoCLFace(:,:,:,3)     
+      CASE(4)
+        XGeoCLVol(:,:,:,       0)=XGeoCLFace(:,:,:,4)     
+      CASE(5)
+        XGeoCLVol(:,:,:,Ngeo_out)=XGeoCLFace(:,:,:,5)     
+      END SELECT !PlocSide
+    END IF !smallmortarSide
+  END DO !PlocSide=0,5
 
 
-    !Check if edges are really unique
-    maxdist=-1.
-    DO iEdge=0,11
-      Plocside1=P_EdgeToFaces(1,iEdge)              ! first adjacent local side
-      dirside1 =P_EdgeToFaces(2,iEdge)              ! 0: i, 1: j
-      pos1     =P_EdgeToFaces(3,iEdge)*NGeo_out     ! 0: 0, 1: N
-      Plocside2=P_EdgeToFaces(4,iEdge)              ! second adjacent local side
-      dirside2 =P_EdgeToFaces(5,iEdge)              ! 0: i, 1: j
-      pos2     =P_EdgeToFaces(6,iEdge)*NGeo_out     ! 0: 0, 1: N
-      IF(EdgeMarker(iEdge).GT.10)THEN
-        IF(dirside1.EQ.0)THEN !first side in i
-          IF(dirside2.EQ.0)THEN !second side in i
-             maxdist(iEdge)=MAXVAL( (XGeoCLFace(1,pos1,:,PlocSide1)-XGeoCLFace(1,pos2,:,PlocSide2))**2 &    
-                                   +(XGeoCLFace(2,pos1,:,PlocSide1)-XGeoCLFace(2,pos2,:,PlocSide2))**2 &
-                                   +(XGeoCLFace(3,pos1,:,PlocSide1)-XGeoCLFace(3,pos2,:,PlocSide2))**2)
-          ELSE !second side in j
-             maxdist(iEdge)=MAXVAL( (XGeoCLFace(1,pos1,:,PlocSide1)-XGeoCLFace(1,:,pos2,PlocSide2))**2 &    
-                                   +(XGeoCLFace(2,pos1,:,PlocSide1)-XGeoCLFace(2,:,pos2,PlocSide2))**2 &
-                                   +(XGeoCLFace(3,pos1,:,PlocSide1)-XGeoCLFace(3,:,pos2,PlocSide2))**2)
-          END IF
-        ELSE !dirside1=1 ->  first side in j
-          IF(dirside2.EQ.0)THEN !second side in i
-             maxdist(iEdge)=MAXVAL( (XGeoCLFace(1,:,pos1,PlocSide1)-XGeoCLFace(1,pos2,:,PlocSide2))**2 &    
-                                   +(XGeoCLFace(2,:,pos1,PlocSide1)-XGeoCLFace(2,pos2,:,PlocSide2))**2 &
-                                   +(XGeoCLFace(3,:,pos1,PlocSide1)-XGeoCLFace(3,pos2,:,PlocSide2))**2)
-          ELSE !second side in j                       
-             maxdist(iEdge)=MAXVAL( (XGeoCLFace(1,:,pos1,PlocSide1)-XGeoCLFace(1,:,pos2,PlocSide2))**2 &    
-                                   +(XGeoCLFace(2,:,pos1,PlocSide1)-XGeoCLFace(2,:,pos2,PlocSide2))**2 &
-                                   +(XGeoCLFace(3,:,pos1,PlocSide1)-XGeoCLFace(3,:,pos2,PlocSide2))**2)
-          END IF
+  !Check if edges are really unique
+  maxdist=-1.
+  DO iEdge=0,11
+    Plocside1=P_EdgeToFaces(1,iEdge)              ! first adjacent local side
+    dirside1 =P_EdgeToFaces(2,iEdge)              ! 0: i, 1: j
+    pos1     =P_EdgeToFaces(3,iEdge)*NGeo_out     ! 0: 0, 1: N
+    Plocside2=P_EdgeToFaces(4,iEdge)              ! second adjacent local side
+    dirside2 =P_EdgeToFaces(5,iEdge)              ! 0: i, 1: j
+    pos2     =P_EdgeToFaces(6,iEdge)*NGeo_out     ! 0: 0, 1: N
+    IF(EdgeMarker(iEdge).GT.10)THEN
+      IF(dirside1.EQ.0)THEN !first side in i
+        IF(dirside2.EQ.0)THEN !second side in i
+           maxdist(iEdge)=MAXVAL( (XGeoCLFace(1,pos1,:,PlocSide1)-XGeoCLFace(1,pos2,:,PlocSide2))**2 &    
+                                 +(XGeoCLFace(2,pos1,:,PlocSide1)-XGeoCLFace(2,pos2,:,PlocSide2))**2 &
+                                 +(XGeoCLFace(3,pos1,:,PlocSide1)-XGeoCLFace(3,pos2,:,PlocSide2))**2)
+        ELSE !second side in j
+           maxdist(iEdge)=MAXVAL( (XGeoCLFace(1,pos1,:,PlocSide1)-XGeoCLFace(1,:,pos2,PlocSide2))**2 &    
+                                 +(XGeoCLFace(2,pos1,:,PlocSide1)-XGeoCLFace(2,:,pos2,PlocSide2))**2 &
+                                 +(XGeoCLFace(3,pos1,:,PlocSide1)-XGeoCLFace(3,:,pos2,PlocSide2))**2)
+        END IF
+      ELSE !dirside1=1 ->  first side in j
+        IF(dirside2.EQ.0)THEN !second side in i
+           maxdist(iEdge)=MAXVAL( (XGeoCLFace(1,:,pos1,PlocSide1)-XGeoCLFace(1,pos2,:,PlocSide2))**2 &    
+                                 +(XGeoCLFace(2,:,pos1,PlocSide1)-XGeoCLFace(2,pos2,:,PlocSide2))**2 &
+                                 +(XGeoCLFace(3,:,pos1,PlocSide1)-XGeoCLFace(3,pos2,:,PlocSide2))**2)
+        ELSE !second side in j                       
+           maxdist(iEdge)=MAXVAL( (XGeoCLFace(1,:,pos1,PlocSide1)-XGeoCLFace(1,:,pos2,PlocSide2))**2 &    
+                                 +(XGeoCLFace(2,:,pos1,PlocSide1)-XGeoCLFace(2,:,pos2,PlocSide2))**2 &
+                                 +(XGeoCLFace(3,:,pos1,PlocSide1)-XGeoCLFace(3,:,pos2,PlocSide2))**2)
         END IF
       END IF
-    END DO !iEdge
-    
-    IF(ANY(maxDist(:).GT.1.0E-15))THEN
-      WRITE(*,*)'WARNING!!! PROBLEMS WITH Ngeo_out'
-      WRITE(*,'(A20,12E11.2)')'maxdist',maxdist
-      WRITE(*,'(A20,12I11)')'EdgeMarker',EdgeMarker
-      STOP
     END IF
-   
-    DO PLocSide=0,5
-      IF(MortarType(PlocSide).GE.0)THEN  !remaining faces: tranfinite mapping
-        IF(MarkForTrans(PlocSide)) THEN
-          !transfinite face remap!!
-          SELECT CASE(PlocSide)
-          CASE(0)
-            CALL TransFace(3,Ngeo_out,xiCL_Ngeo_out,XGeoCLVol(:,       0,:,:))     
-          CASE(1)
-            CALL TransFace(3,Ngeo_out,xiCL_Ngeo_out,XGeoCLVol(:,Ngeo_out,:,:))     
-          CASE(2)
-            CALL TransFace(3,Ngeo_out,xiCL_Ngeo_out,XGeoCLVol(:,:,       0,:))     
-          CASE(3)
-            CALL TransFace(3,Ngeo_out,xiCL_Ngeo_out,XGeoCLVol(:,:,Ngeo_out,:))     
-          CASE(4)
-            CALL TransFace(3,Ngeo_out,xiCL_Ngeo_out,XGeoCLVol(:,:,:,       0))     
-          CASE(5)
-            CALL TransFace(3,Ngeo_out,xiCL_Ngeo_out,XGeoCLVol(:,:,:,Ngeo_out))     
-          END SELECT !PlocSide
-        END IF
-      END IF !mortarSide
-    END DO !PlocSide=0,5
-    CALL TransVol(3,Ngeo_out,XiCL_Ngeo_out,XGeoCLVol,XgeoQuad(:,:,:,:,iQuad))
-  END DO !iQuad=StartQuad,EndQuad
+  END DO !iEdge
+  
+  IF(ANY(maxDist(:).GT.1.0E-15))THEN
+    WRITE(*,*)'WARNING!!! PROBLEMS WITH Ngeo_out'
+    WRITE(*,'(A20,12E11.2)')'maxdist',maxdist
+    WRITE(*,'(A20,12I11)')'EdgeMarker',EdgeMarker
+    STOP
+  END IF
+  
+  DO PLocSide=0,5
+    IF(MortarType(PlocSide).GE.0)THEN  !remaining faces: tranfinite mapping
+      IF(MarkForTrans(PlocSide)) THEN
+        !transfinite face remap!!
+        SELECT CASE(PlocSide)
+        CASE(0)
+          CALL TransFace(3,Ngeo_out,xiCL_Ngeo_out,XGeoCLVol(:,       0,:,:))     
+        CASE(1)
+          CALL TransFace(3,Ngeo_out,xiCL_Ngeo_out,XGeoCLVol(:,Ngeo_out,:,:))     
+        CASE(2)
+          CALL TransFace(3,Ngeo_out,xiCL_Ngeo_out,XGeoCLVol(:,:,       0,:))     
+        CASE(3)
+          CALL TransFace(3,Ngeo_out,xiCL_Ngeo_out,XGeoCLVol(:,:,Ngeo_out,:))     
+        CASE(4)
+          CALL TransFace(3,Ngeo_out,xiCL_Ngeo_out,XGeoCLVol(:,:,:,       0))     
+        CASE(5)
+          CALL TransFace(3,Ngeo_out,xiCL_Ngeo_out,XGeoCLVol(:,:,:,Ngeo_out))     
+        END SELECT !PlocSide
+      END IF
+    END IF !mortarSide
+  END DO !PlocSide=0,5
+  CALL TransVol(3,Ngeo_out,XiCL_Ngeo_out,XGeoCLVol,XgeoElem(:,:,:,:,iElem))
 END DO !iElem=1,nElems
 
 END SUBROUTINE BuildHOMesh
@@ -552,8 +532,8 @@ SUBROUTINE DeformMesh()
 ! Subroutine to read the mesh from a mesh data file
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Mesh_Vars, ONLY: nElems,XGeo,Ngeo,Deform
+USE MODH_Globals
+USE MODH_Mesh_Vars, ONLY: nTrees,XGeo,Ngeo,Deform
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -563,7 +543,7 @@ IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 INTEGER                        :: i,j,k
-INTEGER                        :: iElem
+INTEGER                        :: iTree
 REAL                           :: Pi,x(3)
 !-----------------------------------------------------------------------------------------------------------------------------------
 IF(Deform.EQ.0) RETURN
@@ -571,10 +551,10 @@ IF(Deform.EQ.0) RETURN
 SELECT CASE(Deform)
 CASE(1) !sinus -1,1 deformation
   Pi = ACOS(-1.) 
-  DO iElem=1,nElems
+  DO iTree=1,nTrees
     DO k=0,NGeo; DO j=0,NGeo; DO i=0,NGeo
-      x(:)=Xgeo(:,i,j,k,iElem)
-      Xgeo(:,i,j,k,iElem) = x+ 0.1*SIN(Pi*x(1))*SIN(Pi*x(2))*SIN(Pi*x(3))
+      x(:)=Xgeo(:,i,j,k,iTree)
+      Xgeo(:,i,j,k,iTree) = x+ 0.1*SIN(Pi*x(1))*SIN(Pi*x(2))*SIN(Pi*x(3))
     END DO; END DO; END DO;
   END DO
 CASE DEFAULT
@@ -588,8 +568,8 @@ SUBROUTINE FinalizeMesh()
 ! Deallocate all global interpolation variables.
 !============================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Mesh_Vars
+USE MODH_Globals
+USE MODH_Mesh_Vars
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !----------------------------------------------------------------------------------------------------------------------------
@@ -598,16 +578,16 @@ IMPLICIT NONE
 !output parameters
 !----------------------------------------------------------------------------------------------------------------------------
 !local variables
-INTEGER       :: iElem,iLocSide,iNode
+INTEGER       :: iTree,iLocSide,iNode
 !============================================================================================================================
 ! Deallocate global variables, needs to go somewhere else later
-DO iElem=1,nElems
+DO iTree=1,nTrees
   DO iLocSide=1,6
-    DEALLOCATE(Elems(iElem)%ep%Side(iLocSide)%sp)
+    DEALLOCATE(Trees(iTree)%ep%Side(iLocSide)%sp)
   END DO
-  DEALLOCATE(Elems(iElem)%ep)
+  DEALLOCATE(Trees(iTree)%ep)
 END DO
-DEALLOCATE(Elems)
+DEALLOCATE(Trees)
 DO iNode=1,nNodes
     DEALLOCATE(Nodes(iNode)%np)
 END DO
@@ -622,7 +602,6 @@ SDEALLOCATE(wBary_NGeo)
 SDEALLOCATE(Vdm_CL_EQ_out)
 SDEALLOCATE(BoundaryName)
 SDEALLOCATE(BoundaryType)
-MeshInitIsDone = .FALSE.
 END SUBROUTINE FinalizeMesh
 
-END MODULE MOD_Mesh
+END MODULE MODH_Mesh

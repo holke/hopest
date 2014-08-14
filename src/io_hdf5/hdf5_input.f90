@@ -1,11 +1,11 @@
 #include "hopest_f.h"
 
-MODULE MOD_HDF5_Input
+MODULE MODH_HDF5_Input
 !===================================================================================================================================
 ! Add comments please!
 !===================================================================================================================================
 ! MODULES
-USE MOD_io_hdf5
+USE MODH_io_hdf5
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 PRIVATE
@@ -17,16 +17,8 @@ INTERFACE ISVALIDHDF5FILE
   MODULE PROCEDURE ISVALIDHDF5FILE
 END INTERFACE
 
-INTERFACE GetHDF5NextFileName
-  MODULE PROCEDURE GetHDF5NextFileName
-END INTERFACE
-
 INTERFACE GetDataSize
   MODULE PROCEDURE GetHDF5DataSize
-END INTERFACE
-
-INTERFACE GetDataProps
-  MODULE PROCEDURE GetHDF5DataProps
 END INTERFACE
 
 !INTERFACE ReadArray
@@ -37,7 +29,7 @@ INTERFACE ReadAttribute
   MODULE PROCEDURE ReadAttributeFromHDF5
 END INTERFACE
 
-PUBLIC :: ISVALIDHDF5FILE,GetDataSize,GetDataProps,GetHDF5NextFileName
+PUBLIC :: ISVALIDHDF5FILE,GetDataSize
 PUBLIC :: ReadArray,ReadAttribute
 PUBLIC :: File_ID,HSize,nDims        ! Variables that need to be public
 PUBLIC :: OpenDataFile,CloseDataFile ! Subroutines that need to be public
@@ -50,7 +42,7 @@ FUNCTION ISVALIDHDF5FILE(FileName)
 ! Subroutine to check if a file is a valid Flexi HDF5 file
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
+USE MODH_Globals
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -143,74 +135,12 @@ CALL H5DCLOSE_F(DSet_ID, iError)
 END SUBROUTINE GetHDF5DataSize
 
 
-
-SUBROUTINE GetHDF5DataProps(nVar_HDF5,N_HDF5,nElems_HDF5,NodeType_HDF5)
-!===================================================================================================================================
-! Subroutine to determine HDF5 datasize
-!===================================================================================================================================
-! MODULES
-USE MOD_Globals
-! IMPLICIT VARIABLE HANDLING
-IMPLICIT NONE
-!-----------------------------------------------------------------------------------------------------------------------------------
-! INPUT VARIABLES
-!-----------------------------------------------------------------------------------------------------------------------------------
-! OUTPUT VARIABLES
-INTEGER,INTENT(OUT)                     :: nVar_HDF5,N_HDF5,nElems_HDF5
-CHARACTER(LEN=255),OPTIONAL,INTENT(OUT) :: NodeType_HDF5
-!-----------------------------------------------------------------------------------------------------------------------------------
-! LOCAL VARIABLES
-INTEGER                                 :: Rank
-INTEGER(HID_T)                          :: Dset_ID,FileSpace
-INTEGER(HSIZE_T), DIMENSION(7)          :: Dims,DimsMax
-!===================================================================================================================================
-SWRITE(UNIT_stdOut,'(132("-"))')
-SWRITE(UNIT_stdOut,'(A,A)')' GET SIZE OF DATA IN HDF5 FILE... '
-
-! Read in attributes
-! Open the dataset with default properties.
-CALL H5DOPEN_F(File_ID, 'DG_Solution', Dset_ID, iError)
-! Get the data space of the dataset. 
-CALL H5DGET_SPACE_F(Dset_ID, FileSpace, iError)
-! Get number of dimensions of data space
-CALL H5SGET_SIMPLE_EXTENT_NDIMS_F(FileSpace, Rank, iError)
-SWRITE(UNIT_stdOut,'(A3,A30,A3,I33,A13)')' | ','Rank of database',' | ',Rank,' | HDF5    | '
-! Get size and max size of data space
-Dims   =0
-DimsMax=0
-CALL H5SGET_SIMPLE_EXTENT_DIMS_F(FileSpace, Dims(1:Rank), DimsMax(1:Rank), iError)
-CALL H5SCLOSE_F(FileSpace, iError)
-CALL H5DCLOSE_F(Dset_ID, iError)
-IF(PRESENT(NodeType_HDF5)) THEN
-  ! Read in NodeType
-  CALL ReadAttributeFromHDF5(File_ID,'NodeType',1,StrScalar=NodeType_HDF5)
-END IF
-
-! Display data
-! nVar = first array index
-nVar_HDF5 = Dims(1)
-SWRITE(UNIT_stdOut,'(A3,A30,A3,I33,A13)')' | ','Number of variables nVar',' | ',nVar_HDF5,' | HDF5    | '
-! N = index 2-4 of array, is expected to have the same value for each direction
-N_HDF5 = Dims(2)-1
-SWRITE(UNIT_stdOut,'(A3,A30,A3,I33,A13)')' | ','Polynomial degree N',' | ',N_HDF5,' | HDF5    | '
-IF(PRESENT(NodeType_HDF5)) THEN
-  SWRITE(UNIT_stdOut,'(A3,A30,A3,A33,A13)')' | ','          Node type',' | ',TRIM(NodeType_HDF5),' | HDF5    | '
-END IF
-! nElems = index 5 of array
-nElems_HDF5 = Dims(5)
-SWRITE(UNIT_stdOut,'(A3,A30,A3,I33,A13)')' | ','GeometricnElems',' | ',nElems_HDF5,' | HDF5    | '
-
-SWRITE(UNIT_stdOut,'(A)')' DONE!'
-SWRITE(UNIT_stdOut,'(132("-"))')
-END SUBROUTINE GetHDF5DataProps
-
-
 SUBROUTINE ReadArray(ArrayName,Rank,nVal,Offset_in,Offset_dim,RealArray,IntegerArray,StrArray)
 !===================================================================================================================================
 ! Subroutine to read arrays of rank "Rank" with dimensions "Dimsf(1:Rank)".
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
+USE MODH_Globals
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -283,7 +213,7 @@ SUBROUTINE ReadAttributeFromHDF5(Loc_ID_in,AttribName,nVal,DatasetName,RealScala
 ! Subroutine to read attributes from HDF5 file.
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
+USE MODH_Globals
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -366,62 +296,4 @@ END IF
 LOGWRITE(*,*)'...DONE!'
 END SUBROUTINE ReadAttributeFromHDF5
 
-
-
-SUBROUTINE GetHDF5NextFileName(FileName,NextFileName_HDF5,single)
-!===================================================================================================================================
-! Subroutine to determine filename of next HDF5 file for FlushHDF5
-!===================================================================================================================================
-! MODULES
-USE MOD_globals
-! IMPLICIT VARIABLE HANDLING
-IMPLICIT NONE
-!-----------------------------------------------------------------------------------------------------------------------------------
-! INPUT VARIABLES
-CHARACTER(LEN=*),INTENT(IN)    :: FileName
-LOGICAL,INTENT(IN)             :: single
-!-----------------------------------------------------------------------------------------------------------------------------------
-! OUTPUT VARIABLES
-CHARACTER(LEN=255),INTENT(OUT) :: NextFileName_HDF5
-!-----------------------------------------------------------------------------------------------------------------------------------
-! LOCAL VARIABLES
-INTEGER                        :: ReadError
-INTEGER(HID_T)                 :: File_ID_loc,Plist_ID
-!===================================================================================================================================
-LOGWRITE(*,*)' GET NEXT FILE NAME FROM HDF5 FILE ', TRIM (FileName),' ...'
-ReadError=0
-NextFileName_HDF5=''
-! Disable error messages
-CALL H5ESET_AUTO_F(0, iError)
-! Initialize FORTRAN predefined datatypes
-CALL H5OPEN_F(iError)
-! Setup file access property list
-CALL H5PCREATE_F(H5P_FILE_ACCESS_F, Plist_ID, iError)
-#ifdef MPI
-IF(.NOT.single)THEN
-  ! Set property list to MPI IO
-  CALL H5PSET_FAPL_MPIO_F(Plist_ID, MPI_COMM_WORLD, MPI_INFO_NULL, iError)
-END IF
-#endif /* MPI */
-! Open file
-CALL H5FOPEN_F(TRIM(FileName), H5F_ACC_RDONLY_F, File_ID_loc, iError,access_prp = Plist_ID)
-ReadError=iError
-CALL H5PCLOSE_F(Plist_ID, iError)
-iError=ReadError
-IF (iError .EQ. 0) THEN
-  ! Get Name of the mesh file, stored as third atrribute with name "NextFile"
-  ! Open the attribute "NextFile" of opened file
-  CALL ReadAttributeFromHDF5(File_ID_loc,'NextFile',1,StrScalar=NextFileName_HDF5)
-  ! Close the file.
-  CALL H5FCLOSE_F(File_ID_loc, iError)
-  ! Close FORTRAN predefined datatypes
-  CALL H5CLOSE_F(iError)
-ELSE
-  ! Close FORTRAN predefined datatypes
-  CALL H5CLOSE_F(iError)
-  iError=-1
-END IF
-LOGWRITE(*,*)'...DONE!'
-END SUBROUTINE GetHDF5NextFileName
-
-END MODULE MOD_HDF5_Input
+END MODULE MODH_HDF5_Input

@@ -40,7 +40,7 @@ if test "x$$1_WITH_HDF5" != xno ; then
       LDFLAGS="$LDFLAGS -L$$1_HDF5_LIB"
     fi
     save_LIBS="$LIBS"
-    LIBS="-lhdf5_hl -lhdf5 -lhdf5_fortran $LIBS"
+    LIBS="-lhdf5_hl -lhdf5 -lhdf5_fortran -ldl $LIBS"
     HOPEST_COMPILE_LINK_HDF5($1)
   AC_MSG_RESULT([successful])
 else

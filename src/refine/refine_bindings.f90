@@ -1,11 +1,11 @@
 #include "hopest_f.h"
 
-MODULE MOD_Refine_Binding
+MODULE MODH_Refine_Binding
 !===================================================================================================================================
 ! Fortran <-> C++ wrapper routine for the P4est Routines
 !===================================================================================================================================
 ! MODULES
-!USE MOD_P4estBindingTypes
+!USE MODH_P4estBindingTypes
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 
@@ -35,4 +35,4 @@ INTERFACE
 END INTERFACE
 
 
-END MODULE MOD_Refine_Binding
+END MODULE MODH_Refine_Binding

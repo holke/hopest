@@ -1,6 +1,6 @@
 #include "hopest_f.h"
 
-MODULE MOD_HopestMesh
+MODULE MODH_HopestMesh
 !===================================================================================================================================
 ! Contains subroutines to build (curviilinear) meshes and provide metrics, etc.
 !===================================================================================================================================
@@ -32,21 +32,20 @@ SUBROUTINE HopestMesh()
 ! Read Parameter from inputfile 
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_IO_HDF5
-USE MOD_P4EST_Vars,         ONLY: p4est,p4estFile
-USE MOD_P4EST,              ONLY: InitP4EST,BuildMeshFromP4EST,BuildBCs,testHOabc,FinalizeP4EST
-USE MOD_P4EST_Binding,      ONLY: p4_savemesh
-USE MOD_Mesh_Vars
-USE MOD_Mesh,               ONLY: InitMesh,BuildHOMesh,FinalizeMesh
-USE MOD_Output_Vars,        ONLY: Projectname
-USE MOD_Output_HDF5,        ONLY: writeMeshToHDF5
-USE MOD_Mesh_ReadIn,        ONLY: readMeshFromHDF5
-USE MOD_Mesh,               ONLY: DeformMesh
-USE MOD_Analyze,            ONLY: InitAnalyze,Analyze
-USE MOD_Basis,              ONLY: BarycentricWeights
-USE MOD_Refine,             ONLY: RefineMesh
-USE MOD_ReadInTools,        ONLY: GETINT,GETSTR,GETINTARRAY,CNTSTR
+USE, INTRINSIC :: ISO_C_BINDING
+USE MODH_Globals
+USE MODH_IO_HDF5,            ONLY: InitIO
+USE MODH_P4EST_Vars,         ONLY: connectivity,p4est,geom,p4estFile
+USE MODH_P4EST,              ONLY: InitP4EST,BuildMeshFromP4EST,BuildBCs,FinalizeP4EST
+USE MODH_P4EST_Binding,      ONLY: p4_savemesh,p4_build_p4est
+USE MODH_Mesh_Vars,          ONLY: MeshFile
+USE MODH_Mesh,               ONLY: InitMesh,BuildHOMesh,FinalizeMesh
+USE MODH_Analyze,            ONLY: InitAnalyze,Analyze
+USE MODH_Output_Vars,        ONLY: Projectname
+USE MODH_Output_HDF5,        ONLY: writeMeshToHDF5
+USE MODH_Mesh_ReadIn,        ONLY: ReadMeshFromHDF5,ReadMeshHeader
+USE MODH_Mesh,               ONLY: DeformMesh
+USE MODH_Refine,             ONLY: RefineMesh
 IMPLICIT NONE
 ! INPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -59,19 +58,24 @@ IMPLICIT NONE
 SWRITE(UNIT_StdOut,'(132("-"))')
 SWRITE(UNIT_stdOut,'(A)') ' START HOPEST MESH...'
 
+! If this routine is called then hopest is run in solver mode
+hopestMode = 1
+
 CALL InitMesh()
 CALL InitP4EST()
 CALL InitIO()
 
-CALL readMeshFromHDF5(MeshFile) !set nElems
+CALL ReadMeshHeader(MeshFile)   ! read mesh header file including BCs
+CALL ReadMeshFromHDF5(MeshFile) ! read tree connectivity and geometry
+CALL p4_build_p4est(connectivity,p4est,geom)
 
 
 CALL deformMesh()
 
-CALL RefineMesh()
-CALL BuildBCs()
+CALL RefineMesh()               ! perform mesh refinement using p4est
+CALL BuildBCs()                 ! store BCs in p4est file
 CALL p4_savemesh(TRIM(p4estFile)//C_NULL_CHAR,p4est)
-CALL BuildMeshFromP4EST()
+CALL BuildMeshFromP4EST()       ! build p4est mesh in flexi datastructure
 
 CALL BuildHOMesh()
 
@@ -80,7 +84,6 @@ CALL Analyze()
 !output new mesh
 CALL writeMeshToHDF5(TRIM(ProjectName)//'_mesh_p4est.h5')
 ! dealloacte pointers
-!CALL testHOabc()
 SWRITE(UNIT_stdOut,'(A)') "NOW CALLING deleteMeshPointer..."
 !CALL deleteMeshPointer()
 
@@ -98,8 +101,8 @@ SUBROUTINE FinalizeHopestMesh()
 ! Deallocate all global interpolation variables.
 !============================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Mesh_Vars
+USE MODH_Globals
+USE MODH_Mesh_Vars
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !----------------------------------------------------------------------------------------------------------------------------
@@ -113,7 +116,6 @@ IMPLICIT NONE
 SDEALLOCATE(Xi_NGeo)
 SDEALLOCATE(BoundaryName)
 SDEALLOCATE(BoundaryType)
-MeshInitIsDone = .FALSE.
 END SUBROUTINE FinalizeHopestMesh
 
-END MODULE MOD_HopestMesh
+END MODULE MODH_HopestMesh

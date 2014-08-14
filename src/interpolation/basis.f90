@@ -1,6 +1,6 @@
 #include "hopest_f.h"
 
-MODULE MOD_Basis
+MODULE MODH_Basis
 !===================================================================================================================================
 ! Add comments please!
 !===================================================================================================================================
@@ -91,8 +91,8 @@ SUBROUTINE buildLegendreVdm(N_In,xi_In,Vdm_Leg,sVdm_Leg)
 ! N_In, evaluated at the interpolation points xi_Out
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals,ONLY:abort
-USE MOD_PreProc
+USE MODH_Globals,ONLY:abort
+USE MODH_PreProc
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -282,7 +282,7 @@ SUBROUTINE LegendreGaussNodesAndWeights(N_in,xGP,wGP)
 ! uses LegendrePolynomialAndDerivative subroutine
 !===================================================================================================================================
 !MODULES
-USE MOD_Globals
+USE MODH_Globals
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 !input parameters
@@ -400,7 +400,7 @@ SUBROUTINE LegGaussLobNodesAndWeights(N_in,xGP,wGP)
 ! uses qAndLEvaluation subroutine
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
+USE MODH_Globals
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 !input parameters
@@ -535,7 +535,7 @@ FUNCTION ALMOSTEQUAL(x,y)
 ! Depends on PP_RealTolerance
 ! Takes into account that x,y is located in-between [-1;1]
 !===================================================================================================================================
-USE MOD_PreProc
+USE MODH_PreProc
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 !input parameters
@@ -605,7 +605,7 @@ SUBROUTINE GetNodesAndWeights(N_in,NodeType_in,xIP,wIP,wIPBary)
 ! Compute 1D nodes and weights and build the Vandermonde-Matrix
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
+USE MODH_Globals
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -743,5 +743,5 @@ ELSE
 END IF
 END SUBROUTINE GetVandermonde
 
-END MODULE MOD_Basis
+END MODULE MODH_Basis
 

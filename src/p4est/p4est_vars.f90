@@ -1,5 +1,5 @@
 #include "hopest_f.h"
-MODULE MOD_P4EST_Vars
+MODULE MODH_P4EST_Vars
 !===================================================================================================================================
 ! Contains global variables provided by the mesh routines
 !===================================================================================================================================
@@ -23,12 +23,12 @@ INTEGER(KIND=4)             :: nHalfFaces         ! number of mortar sides
 INTEGER(KIND=4)             :: IntSize            ! used to transform INT coords/levels to REAL coords/levels: REAL=1/inssize*INT  [0. ; 1.]
 REAL                        :: sIntSize           ! 1./REAL(intsize)
 INTEGER(KIND=4),POINTER     :: QuadToTree(:)      ! from quadrant to tree ( ~ new element ID to old element ID) 
-INTEGER(KIND=4),ALLOCATABLE :: TreeToQuad(:,:)    ! from tree to quad range (2,nElems), entry 1: firstInd-1, entry2:lastInd 
-INTEGER(KIND=4),POINTER     :: QuadToQuad(:,:)    ! p4est quadrant connectivity (1:6,1:nQuads) => neighbor quadrant
-INTEGER(KIND=1),POINTER     :: QuadToFace(:,:)    ! p4est face connectivity (1:6,1:nQuads) => neighbor faceId + orientation + non-conform info
+INTEGER(KIND=4),POINTER     :: QuadToQuad(:,:)    ! p4est quadrant connectivity (1:6,1:nElems) => neighbor quadrant
+INTEGER(KIND=1),POINTER     :: QuadToFace(:,:)    ! p4est face connectivity (1:6,1:nElems) => neighbor faceId + orientation + non-conform info
 INTEGER(KIND=4),POINTER     :: QuadToHalf(:,:)    ! p4est face connectivity for mortars (1:4,1:nHalfFaces), ( ~small sides)
-INTEGER(KIND=4),ALLOCATABLE :: QuadCoords(:,:)    ! p4est Integer coordinates of first quadrant node (xyz,nQuads)
+INTEGER(KIND=4),ALLOCATABLE :: QuadCoords(:,:)    ! p4est Integer coordinates of first quadrant node (xyz,nElems)
 INTEGER(KIND=1),ALLOCATABLE :: QuadLevel(:)       ! p4est Integer Level of quadrant (use to compute quadrant size
+INTEGER(KIND=C_INT32_T),POINTER :: TreeToBC(:,:)  ! (1...6,1,nTrees) first index is p4est local side ID +1!!
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 INTEGER,PARAMETER   :: EdgeToElemNode(1:2,1:12) = RESHAPE((/ 1, 2,&  ! CGNS corner nodes mapped 
@@ -126,4 +126,4 @@ INTEGER,PARAMETER   :: P_EdgeToFaces(1:6,0:11) = & !mapping from element edges  
 !===================================================================================================================================
 
 
-END MODULE MOD_P4EST_Vars
+END MODULE MODH_P4EST_Vars

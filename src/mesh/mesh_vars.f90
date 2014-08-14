@@ -1,5 +1,5 @@
 #include "hopest_f.h"
-MODULE MOD_Mesh_Vars
+MODULE MODH_Mesh_Vars
 !===================================================================================================================================
 ! Contains global variables provided by the mesh routines
 !===================================================================================================================================
@@ -23,9 +23,10 @@ REAL,ALLOCATABLE  :: Vdm_10(:,:)                 ! change from  interval [-1,1] 
 REAL,ALLOCATABLE  :: Vdm_01(:,:)                 ! change from  interval [-1,1] -> [ 0,1]
 
 REAL,ALLOCATABLE  :: wBary_NGeo(:)               ! barycentric weights from xi_Ngeo
-REAL,ALLOCATABLE  :: XGeo(:,:,:,:,:)              ! High order geometry nodes, per element (1:3,0:Ngeo,0:Ngeo,0:Ngeo,nElems)
-REAL,ALLOCATABLE  :: XGeoQuad(:,:,:,:,:)              ! High order geometry nodes, per element (1:3,0:Ngeo_out,0:Ngeo_out,0:Ngeo_out,nElems)
-INTEGER           :: Deform                       ! used for mesh deformations
+REAL,ALLOCATABLE  :: XGeo(:,:,:,:,:)             ! High order geometry nodes, per element (1:3,0:Ngeo,0:Ngeo,0:Ngeo,nTrees)
+REAL,ALLOCATABLE  :: XGeoElem(:,:,:,:,:)         ! High order geometry nodes, per element (1:3,0:Ngeo,0:Ngeo,0:Ngeo,nElems)
+INTEGER           :: Deform                      ! used for mesh deformations
+LOGICAL           :: setUserBCs=.FALSE.          ! replace HDF5 BCs by those defined in parameter file (only in solver mode)
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! GLOBAL VARIABLES 
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -36,26 +37,26 @@ INTEGER,ALLOCATABLE              :: AnalyzeSide(:)
 INTEGER,ALLOCATABLE              :: BoundaryType(:,:)
 CHARACTER(LEN=255),ALLOCATABLE   :: BoundaryName(:)
 !-----------------------------------------------------------------------------------------------------------------------------------
-INTEGER          :: nGlobalElems=0      ! number of elements in mesh
-INTEGER          :: nElems=0            ! number of local elements
-INTEGER(KIND=8)  :: offsetQuad=0
-INTEGER(KIND=8)  :: nGlobalQuads=0      ! number of quadrants in mesh
-INTEGER          :: nQuads=0            ! local number of quadrants
-INTEGER          :: nSides=0            ! =nInnerSides+nBCSides
-INTEGER          :: nInnerSides=0
+INTEGER          :: nGlobalTrees=0      ! number of elements in mesh
+INTEGER          :: nTrees=0            ! number of local elements
+INTEGER          :: offsetElem=0
+INTEGER          :: nGlobalElems=0      ! number of elements / quadrants in mesh
+INTEGER          :: nElems=0            ! local number of elements/ quadrants
+INTEGER          :: nSides=0            ! =nInnerSides+nBCSides+nMPISides
+INTEGER          :: nInnerSides=0       ! InnerSide index range: sideID \in [nBCSides+1:nBCSides+nInnerSides]
 INTEGER          :: nBCSides=0          ! BCSide index range: sideID \in [1:nBCSides]
 INTEGER          :: nMPISides=0
 INTEGER          :: nMPISides_MINE=0
 INTEGER          :: nMPISides_YOUR=0
-
-INTEGER          :: nNodes=0            ! SIZE of Nodes pointer array, number of unique nodes
-INTEGER          :: nBCs=0              ! number of BCs in mesh
-INTEGER          :: nUserBCs=0     
-INTEGER          :: nCurvedNodes=0      ! number of curved nodes per element = (Ngeo+1)^3
 INTEGER          :: SideID_minus_lower  ! lower side ID of array U_minus/GradUx_minus...
 INTEGER          :: SideID_minus_upper  ! upper side ID of array U_minus/GradUx_minus...
 INTEGER          :: SideID_plus_lower   ! lower side ID of array U_plus/GradUx_plus...
 INTEGER          :: SideID_plus_upper   ! upper side ID of array U_plus/GradUx_plus...
+INTEGER          :: nBCs=0              ! number of BCs in mesh
+INTEGER          :: nUserBCs=0          ! number of BC in inifile
+
+INTEGER          :: nNodes=0            ! SIZE of Nodes pointer array, number of unique nodes
+INTEGER          :: nCurvedNodes=0      ! number of curved nodes per element = (Ngeo+1)^3
 !-----------------------------------------------------------------------------------------------------------------------------------
 INTEGER             :: nMortarSides=0      ! 
 INTEGER             :: firstMortarSideID=0  !Set by mesh during initialization
@@ -85,7 +86,6 @@ TYPE tElem
   INTEGER                      :: Type            ! element type (linear/bilinear/curved)
   INTEGER                      :: Zone
   INTEGER                      :: treeID
-  !INTEGER                      :: quadrant_id
   TYPE(tNodePtr)               :: Node(8)
   TYPE(tSidePtr)               :: Side(6)
 END TYPE tElem
@@ -93,6 +93,7 @@ END TYPE tElem
 TYPE tSide
   INTEGER                      :: ind             ! global side ID 
   INTEGER                      :: sideID          ! local side ID on Proc 
+  INTEGER                      :: locSide         ! local side in element [1..6]
   INTEGER                      :: tmp 
   INTEGER                      :: NbProc 
   INTEGER                      :: BCindex         ! index in BoundaryType array! 
@@ -112,15 +113,13 @@ TYPE tNode
   !REAL                         :: x(3)=0.
 END TYPE tNode
 !-----------------------------------------------------------------------------------------------------------------------------------
-TYPE(tElemPtr),POINTER         :: Elems(:)
+TYPE(tElemPtr),POINTER         :: Trees(:)        ! list of tree elements (coarsest level)
 TYPE(tNodePtr),POINTER         :: Nodes(:)
 INTEGER,ALLOCATABLE            :: HexMap(:,:,:)   ! for input: 0:Ngeo,0:Ngeo,0:Ngeo -> i [0;(Ngeo+1)^3]
 INTEGER,ALLOCATABLE            :: HexMapInv(:,:)
 INTEGER,ALLOCATABLE            :: HexMap_out(:,:,:) ! for output 0:Ngeo_out,0:Ngeo_out,0:Ngeo_out -> i [0;(Ngeo_out+1)^3]
 ! DATA STRUCTURES BUILT USING P4EST CONNECTIVITY
-TYPE(tElemPtr),POINTER         :: Quads(:)        ! new element list elements are "quadrants/octants"        
-!-----------------------------------------------------------------------------------------------------------------------------------
-LOGICAL          :: MeshInitIsDone =.FALSE.
+TYPE(tElemPtr),POINTER         :: Elems(:)        ! new element list elements are "quadrants/octants"        
 !===================================================================================================================================
 INTERFACE GETNEWSIDE
   MODULE PROCEDURE GETNEWSIDE
@@ -267,10 +266,29 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER             :: iElem,iQuad,iLocSide,iNode,nAssocNodes
-TYPE(tElem),POINTER :: aElem,aQuad
+INTEGER             :: iTree,iElem,iLocSide,iNode,nAssocNodes
+TYPE(tElem),POINTER :: aTree,aElem
 TYPE(tSide),POINTER :: aSide
 !===================================================================================================================================
+IF(ASSOCIATED(Trees))THEN
+  DO iTree=1,nTrees
+    aTree=>Trees(iTree)%ep
+    DO iLocSide=1,6
+      aSide=>aTree%Side(iLocSide)%sp
+      DEALLOCATE(aSide)
+    END DO
+    DEALLOCATE(aTree)
+  END DO
+  DEALLOCATE(Trees)
+  nAssocNodes=0
+  DO iNode=1,nNodes
+    IF(ASSOCIATED(Nodes(iNode)%np))THEN
+      DEALLOCATE(Nodes(iNode)%np)
+      nAssocNodes=nAssocNodes+1
+    END IF
+  END DO
+  DEALLOCATE(Nodes)
+END IF
 IF(ASSOCIATED(Elems))THEN
   DO iElem=1,nElems
     aElem=>Elems(iElem)%ep
@@ -281,27 +299,8 @@ IF(ASSOCIATED(Elems))THEN
     DEALLOCATE(aElem)
   END DO
   DEALLOCATE(Elems)
-  nAssocNodes=0
-  DO iNode=1,nNodes
-    IF(ASSOCIATED(Nodes(iNode)%np))THEN
-      DEALLOCATE(Nodes(iNode)%np)
-      nAssocNodes=nAssocNodes+1
-    END IF
-  END DO
-  DEALLOCATE(Nodes)
-END IF
-IF(ASSOCIATED(Quads))THEN
-  DO iQuad=1,nQuads
-    aQuad=>Quads(iQuad)%ep
-    DO iLocSide=1,6
-      aSide=>aQuad%Side(iLocSide)%sp
-      DEALLOCATE(aSide)
-    END DO
-    DEALLOCATE(aQuad)
-  END DO
-  DEALLOCATE(Quads)
 END IF
 END SUBROUTINE deleteMeshPointer
 
 
-END MODULE MOD_Mesh_Vars
+END MODULE MODH_Mesh_Vars

@@ -1,12 +1,12 @@
 #include "hopest_f.h"
 
-MODULE MOD_IO_HDF5
+MODULE MODH_IO_HDF5
 !===================================================================================================================================
 ! Add comments please!
 !===================================================================================================================================
 ! MODULES
 USE HDF5
-USE MOD_Globals,ONLY: iError
+USE MODH_Globals,ONLY: iError
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -38,8 +38,8 @@ SUBROUTINE InitIO_HDF5()
 ! Initialize HDF5 IO
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_ReadInTools,        ONLY:GETLOGICAL,CNTSTR
+USE MODH_Globals
+USE MODH_ReadInTools,        ONLY:GETLOGICAL,CNTSTR
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -64,7 +64,7 @@ SUBROUTINE OpenHDF5File(FileString,create,single,communicatorOpt)
 ! Open HDF5 file and groups
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
+USE MODH_Globals
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -116,7 +116,7 @@ SUBROUTINE CloseHDF5File()
 ! Close HDF5 file and groups
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals,ONLY:UNIT_stdOut,UNIT_logOut,Logging
+USE MODH_Globals,ONLY:UNIT_stdOut,UNIT_logOut,Logging
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -135,4 +135,4 @@ File_ID=0
 LOGWRITE(*,*)'...DONE!'
 END SUBROUTINE CloseHDF5File
 
-END MODULE MOD_io_HDF5
+END MODULE MODH_io_HDF5

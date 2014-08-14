@@ -1,11 +1,11 @@
 #include "hopest_f.h"
 
-MODULE MOD_HDF5_output
+MODULE MODH_HDF5_output
 !===================================================================================================================================
 ! Add comments please!
 !===================================================================================================================================
 ! MODULES
-USE MOD_IO_HDF5
+USE MODH_IO_HDF5
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 PRIVATE
@@ -38,7 +38,7 @@ SUBROUTINE WriteHDF5Header(FileType_in,File_ID)
 ! Subroutine to write a distinct file header to each HDF5 file
 !===================================================================================================================================
 ! MODULES
-USE MOD_Output_Vars,ONLY:ProgramName,FileVersion,ProjectName
+USE MODH_Output_Vars,ONLY:ProgramName,FileVersion,ProjectName
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -239,4 +239,4 @@ END IF
 END SUBROUTINE WriteAttributeToHDF5
 
 
-END MODULE MOD_HDF5_output
+END MODULE MODH_HDF5_output

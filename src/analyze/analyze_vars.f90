@@ -1,5 +1,5 @@
 #include "hopest_f.h"
-MODULE MOD_Analyze_Vars
+MODULE MODH_Analyze_Vars
 !===================================================================================================================================
 ! Contains global variables provided by the analyze routines
 !===================================================================================================================================
@@ -15,4 +15,4 @@ INTEGER          :: Nanalyze
 REAL,ALLOCATABLE :: Vdm_analyze(:,:)
 REAL,ALLOCATABLE :: D_Ngeo_out(:,:)
 
-END MODULE MOD_Analyze_Vars
+END MODULE MODH_Analyze_Vars

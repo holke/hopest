@@ -1,6 +1,6 @@
 #include "hopest_f.h"
 
-MODULE MOD_Prepare_Mesh
+MODULE MODH_Prepare_Mesh
 !===================================================================================================================================
 ! Contains subroutines to build (curviilinear) meshes and provide metrics, etc.
 !===================================================================================================================================
@@ -13,10 +13,6 @@ PRIVATE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! Public Part ----------------------------------------------------------------------------------------------------------------------
 
-INTERFACE countSides
-  MODULE PROCEDURE countSides
-END INTERFACE
-
 INTERFACE setLocalSideIDs
   MODULE PROCEDURE setLocalSideIDs
 END INTERFACE
@@ -25,7 +21,7 @@ INTERFACE fillMeshInfo
   MODULE PROCEDURE fillMeshInfo
 END INTERFACE
 
-PUBLIC::countSides,setLocalSideIDs,fillMeshInfo
+PUBLIC::setLocalSideIDs,fillMeshInfo
 
 #ifdef MPI
 INTERFACE exchangeFlip
@@ -39,83 +35,21 @@ PUBLIC::exchangeFlip
 CONTAINS
 
 
-SUBROUTINE countSides()
-!===================================================================================================================================
-! 
-!===================================================================================================================================
-! MODULES
-USE MOD_Globals
-USE MOD_Mesh_Vars,  ONLY: tElem,tSide,Quads
-USE MOD_Mesh_Vars,  ONLY: nQuads,nInnerSides,nSides,nBCSides
-#ifdef MPI
-USE MOD_Mesh_Vars,  ONLY: nMPISides
-#endif /*MPI*/
-IMPLICIT NONE
-! INPUT VARIABLES
-!-----------------------------------------------------------------------------------------------------------------------------------
-! INPUT/OUTPUT VARIABLES
-!-----------------------------------------------------------------------------------------------------------------------------------
-! OUTPUT VARIABLES
-!-----------------------------------------------------------------------------------------------------------------------------------
-! LOCAL VARIABLES
-TYPE(tElem),POINTER :: Quad
-TYPE(tSide),POINTER :: Side
-INTEGER             :: iQuad,iSide
-!-----------------------------------------------------------------------------------------------------------------------------------
-
-DO iQuad=1,nQuads
-  Quad=>Quads(iQuad)%ep
-  DO iSide=1,6
-    Side=>Quad%Side(iSide)%sp
-    Side%tmp=0
-    IF(ASSOCIATED(Side%Connection))THEN
-      Side%connection%tmp=0
-    END IF
-  END DO
-END DO
-
-nSides=0
-nInnerSides=0
-nBCSides=0
-DO iQuad=1,nQuads
-  Quad=>Quads(iQuad)%ep
-  DO iSide=1,6
-    Side=>Quad%Side(iSide)%sp
-    IF(Side%tmp.NE.0) CYCLE
-    Side%tmp=-1
-    IF(ASSOCIATED(Side%Connection))THEN
-      nInnerSides=nInnerSides+1
-      Side%connection%tmp=-1
-    ELSE
-      nBCSides=nBCSides+1
-    END IF
-#ifdef MPI
-    IF(Side%NbProc.NE.-1) THEN
-      nMPISides=nMPISides+1
-      MPISideCount(Side%NbProc)=MPISideCount(Side%NbProc)+1
-    END IF
-#endif /*MPI*/
-    nSides=nSides+1
-  END DO
-END DO
-
-END SUBROUTINE
-
 SUBROUTINE setLocalSideIDs()
 !===================================================================================================================================
 ! 
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Mesh_Vars,  ONLY: tElem,tSide
-USE MOD_Mesh_Vars,  ONLY: nQuads,nInnerSides,nSides,nBCSides,offsetQuad
-USE MOD_Mesh_Vars,  ONLY: Quads,nMPISides_MINE,nMPISides_YOUR,BoundaryType,nBCs
-USE MOD_Mesh_Vars,  ONLY: nMortarSides 
+USE MODH_Globals
+USE MODH_Mesh_Vars,  ONLY: tElem,tSide
+USE MODH_Mesh_Vars,  ONLY: nElems,nInnerSides,nSides,nBCSides,offsetElem
+USE MODH_Mesh_Vars,  ONLY: Elems,nMPISides_MINE,nMPISides_YOUR,BoundaryType,nBCs
+USE MODH_Mesh_Vars,  ONLY: nMortarSides 
 #ifdef MPI
-USE MOD_ReadInTools,ONLY: GETLOGICAL
-USE MOD_MPI_Vars,   ONLY: nNbProcs,NbProc,nMPISides_Proc,nMPISides_MINE_Proc,nMPISides_YOUR_Proc
-USE MOD_MPI_Vars,   ONLY: offsetQuadMPI,offsetMPISides_MINE,offsetMPISides_YOUR
-USE MOD_Mesh_ReadIn,ONLY: Qsort1Int,INVMAP
+USE MODH_ReadInTools,ONLY: GETLOGICAL
+USE MODH_MPI_Vars,   ONLY: nNbProcs,NbProc,nMPISides_Proc,nMPISides_MINE_Proc,nMPISides_YOUR_Proc
+USE MODH_MPI_Vars,   ONLY: offsetElemMPI,offsetMPISides_MINE,offsetMPISides_YOUR
+USE MODH_Mesh_ReadIn,ONLY: Qsort1Int,INVMAP
 #endif
 IMPLICIT NONE
 ! INPUT VARIABLES
@@ -125,12 +59,12 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER   :: iQuad,FirstQuadInd,LastQuadInd
+INTEGER   :: iElem,FirstElemInd,LastElemInd
 INTEGER   :: iLocSide,iSide,iInnerSide,iBCSide
 INTEGER   :: iMortar,iMortarSide,nMortars
 INTEGER   :: i,j
 INTEGER   :: PeriodicBCMap(nBCs)       !connected periodic BCs
-TYPE(tElem),POINTER :: aQuad
+TYPE(tElem),POINTER :: aElem
 TYPE(tSide),POINTER :: aSide
 #ifdef MPI
 INTEGER               :: iNbProc,ioUnit
@@ -142,10 +76,10 @@ CHARACTER(LEN=10)     :: formatstr
 LOGICAL               :: writePartitionInfo
 #endif
 !===================================================================================================================================
-!FirstQuadInd= offsetQuad+1
-!LastQuadInd = offsetQuad+nQuads
-FirstQuadInd= 1
-LastQuadInd = nQuads
+!FirstElemInd= offsetElem+1
+!LastElemInd = offsetElem+nElems
+FirstElemInd= 1
+LastElemInd = nElems
 ! ----------------------------------------
 ! Set side IDs to arrange sides:
 ! 1. BC sides
@@ -168,15 +102,16 @@ END DO
 IF(ANY(PeriodicBCMap.EQ.-2))&
   CALL abort(__STAMP__,'Periodic connection not found.')
 
-DO iQuad=FirstQuadInd,LastQuadInd
-  aQuad=>Quads(iQuad)%ep
+DO iElem=FirstElemInd,LastElemInd
+  aElem=>Elems(iElem)%ep
   DO iLocSide=1,6
-    aSide=>aQuad%Side(iLocSide)%sp
+    aSide=>aElem%Side(iLocSide)%sp
     nMortars=aSide%nMortars 
     DO iMortar=0,nMortars
-      IF(iMortar.GT.0) aSide=>aQuad%Side(iLocSide)%sp%mortarSide(iMortar)%sp
+      IF(iMortar.GT.0) aSide=>aElem%Side(iLocSide)%sp%mortarSide(iMortar)%sp
 
       aSide%sideID=-1
+      aSide%tmp=0
       ! periodics have two bcs: set to (positive) master bc (e.g. from -1 to 1)
       IF(aSide%BCIndex.GE.1)THEN
         IF(PeriodicBCMap(aSide%BCIndex).NE.-1)&
@@ -186,17 +121,18 @@ DO iQuad=FirstQuadInd,LastQuadInd
   END DO
 END DO
 
+
 iSide=0
 iBCSide=0
 iMortarSide=nBCSides
 iInnerSide=nBCSides+nMortarSides
-DO iQuad=FirstQuadInd,LastQuadInd
-  aQuad=>Quads(iQuad)%ep
+DO iElem=FirstElemInd,LastElemInd
+  aElem=>Elems(iElem)%ep
   DO iLocSide=1,6
-    aSide=>aQuad%Side(iLocSide)%sp
+    aSide=>aElem%Side(iLocSide)%sp
     nMortars=aSide%nMortars 
     DO iMortar=0,nMortars
-      IF(iMortar.GT.0) aSide=>aQuad%Side(iLocSide)%sp%mortarSide(iMortar)%sp
+      IF(iMortar.GT.0) aSide=>aElem%Side(iLocSide)%sp%mortarSide(iMortar)%sp
 
       IF(aSide%sideID.EQ.-1)THEN
         IF(aSide%NbProc.EQ.-1)THEN ! no MPI Sides
@@ -204,6 +140,7 @@ DO iQuad=FirstQuadInd,LastQuadInd
             iInnerSide=iInnerSide+1
             iSide=iSide+1
             aSide%SideID=iInnerSide
+            IF(aSide%connection%SideID.NE.-1) STOP 'ERROR: SideID of connection already set!'
             aSide%connection%SideID=iInnerSide
           ELSE
             IF(aSide%MortarType.GT.0) THEN
@@ -220,12 +157,13 @@ DO iQuad=FirstQuadInd,LastQuadInd
       END IF !sideID NE -1
     END DO !iMortar
   END DO ! iLocSide=1,6
-END DO !iQuad
+END DO !iElem
 IF(iSide.NE.nInnerSides+nBCSides+nMortarSides) STOP'not all SideIDs are set!'
 
 nMPISides_MINE=0
 nMPISides_YOUR=0
 #ifdef MPI
+STOP 'no mpi yet'
 ! SPLITTING MPISides in MINE and YOURS
 ALLOCATE(nMPISides_MINE_Proc(1:nNbProcs),nMPISides_YOUR_Proc(1:nNbProcs))
 nMPISides_MINE_Proc=0
@@ -257,27 +195,27 @@ IF(nProcessors.EQ.1) RETURN
 DO iNbProc=1,nNbProcs
   ALLOCATE(SideIDMap(nMPISides_Proc(iNbProc)))
   iSide=0
-  DO iQuad=FirstQuadInd,LastQuadInd
-    aQuad=>Quads(iQuad)%ep
+  DO iElem=FirstElemInd,LastElemInd
+    aElem=>Elems(iElem)%ep
     DO iLocSide=1,6
-      aSide=>aQuad%Side(iLocSide)%sp
+      aSide=>aElem%Side(iLocSide)%sp
       nMortars=aSide%nMortars 
       DO iMortar=0,nMortars
-        IF(iMortar.GT.0) aSide=>aQuad%Side(iLocSide)%sp%mortarSide(iMortar)%sp
+        IF(iMortar.GT.0) aSide=>aElem%Side(iLocSide)%sp%mortarSide(iMortar)%sp
         IF(aSide%NbProc.NE.NbProc(iNbProc))CYCLE
         iSide=iSide+1
         SideIDMap(iSide)=aSide%ind !global Side Index 
       END DO !iMortar
     END DO !iLocSide
-  END DO !iQuad
+  END DO !iElem
   CALL Qsort1Int(SideIDMap) !sort by global side index
-  DO iQuad=FirstQuadInd,LastQuadInd
-    aQuad=>Quads(iQuad)%ep
+  DO iElem=FirstElemInd,LastElemInd
+    aElem=>Elems(iElem)%ep
     DO iLocSide=1,6
-      aSide=>aQuad%Side(iLocSide)%sp
+      aSide=>aElem%Side(iLocSide)%sp
       nMortars=aSide%nMortars 
       DO iMortar=0,nMortars
-        IF(iMortar.GT.0) aSide=>aQuad%Side(iLocSide)%sp%mortarSide(iMortar)%sp
+        IF(iMortar.GT.0) aSide=>aElem%Side(iLocSide)%sp%mortarSide(iMortar)%sp
         IF(aSide%NbProc.NE.NbProc(iNbProc))CYCLE
         aSide%SideID=INVMAP(aSide%ind,nMPISides_Proc(iNbProc),SideIDMap) ! get sorted iSide
         IF(myRank.LT.aSide%NbProc)THEN
@@ -295,7 +233,7 @@ DO iNbProc=1,nNbProcs
         END IF !myrank<NbProc
       END DO !iMortar
     END DO !iLocSide
-  END DO !iQuad
+  END DO !iElem
   DEALLOCATE(SideIDMap)
 END DO !nbProc(i)
 
@@ -318,7 +256,7 @@ LOGWRITE(*,*)'-------------------------------------------------------'
 writePartitionInfo = GETLOGICAL('writePartitionInfo','.FALSE.')
 IF(.NOT.writePartitionInfo) RETURN
 !output partitioning info
-ProcInfo(1)=nQuads
+ProcInfo(1)=nElems
 ProcInfo(2)=nSides
 ProcInfo(3)=nInnerSides
 ProcInfo(4)=nBCSides
@@ -356,9 +294,9 @@ IF(MPIroot)THEN
   OPEN(UNIT=ioUnit,FILE='partitionInfo.out',STATUS='REPLACE')
   WRITE(ioUnit,*)'Partition Information:'
   WRITE(ioUnit,*)'total number of Procs,',nProcessors
-  WRITE(ioUnit,*)'total number of Quads,',SUM(Procinfo_glob(1,:))
+  WRITE(ioUnit,*)'total number of Elems,',SUM(Procinfo_glob(1,:))
 
-  WRITE(ioUnit,'(8(A15))')'Rank','nQuads','nSides','nInnerSides','nBCSides','nMPISides','nMPISides_MINE','nNBProcs'
+  WRITE(ioUnit,'(8(A15))')'Rank','nElems','nSides','nInnerSides','nBCSides','nMPISides','nMPISides_MINE','nNBProcs'
   WRITE(ioUnit,'(A120)')&
       '======================================================================================================================='
   !statistics
@@ -445,15 +383,15 @@ SUBROUTINE fillMeshInfo()
 ! 
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Mesh_Vars,  ONLY: tElem,tSide
-USE MOD_Mesh_Vars,ONLY:nQuads,offsetQuad,nSides,nInnerSides,nBCSides,nMPISides,nMortarSides
-USE MOD_Mesh_Vars,ONLY:nMPISides_MINE
-USE MOD_Mesh_Vars,ONLY:ElemToSide,SideToElem,BC,AnalyzeSide
-USE MOD_Mesh_Vars,ONLY:Quads
-USE MOD_Mesh_Vars,ONLY:MortarType,Mortar_nbSideID,Mortar_Flip
+USE MODH_Globals
+USE MODH_Mesh_Vars,ONLY:tElem,tSide,BoundaryType
+USE MODH_Mesh_Vars,ONLY:nElems,offsetElem,nSides,nInnerSides,nBCSides,nMPISides,nMortarSides
+USE MODH_Mesh_Vars,ONLY:nMPISides_MINE
+USE MODH_Mesh_Vars,ONLY:ElemToSide,SideToElem,BC,AnalyzeSide
+USE MODH_Mesh_Vars,ONLY:Elems
+USE MODH_Mesh_Vars,ONLY:MortarType,Mortar_nbSideID,Mortar_Flip
 #ifdef MPI
-USE MOD_MPI_vars
+USE MODH_MPI_vars
 #endif
 IMPLICIT NONE
 ! INPUT VARIABLES
@@ -463,49 +401,52 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER             :: iQuad,iSide,LocSideID,nSides_flip(0:4)
+INTEGER             :: iElem,iSide,LocSideID,nSides_flip(0:4)
 INTEGER             :: nSides_MortarType(1:3)
 INTEGER             :: iMortar,nMortars
-TYPE(tElem),POINTER :: aQuad
+TYPE(tElem),POINTER :: aElem
 TYPE(tSide),POINTER :: aSide
 !===================================================================================================================================
 ! ELement to Side mapping
 nSides_flip=0
-DO iQuad=1,nQuads
-  aQuad=>Quads(iQuad+offsetQuad)%ep
+DO iElem=1,nElems
+  aElem=>Elems(iElem+offsetElem)%ep
   DO LocSideID=1,6
-    aSide=>aQuad%Side(LocSideID)%sp
-    ElemToSide(E2S_SIDE_ID,LocSideID,iQuad)=aSide%SideID
-    ElemToSide(E2S_FLIP,LocSideID,iQuad)   =aSide%Flip
+    aSide=>aElem%Side(LocSideID)%sp
+    ElemToSide(E2S_SIDE_ID,LocSideID,iElem)=aSide%SideID
+    ElemToSide(E2S_FLIP,LocSideID,iElem)   =aSide%Flip
     nSides_flip(aSide%flip)=nSides_flip(aSide%flip)+1
   END DO ! LocSideID
-END DO ! iQuad
+END DO ! iElem
 
-! Side to Quadent mapping, sorted by SideID
-DO iQuad=1,nQuads
-  aQuad=>Quads(iQuad+offsetQuad)%ep
+! Side to Element mapping, sorted by SideID
+SideToElem=0
+DO iElem=1,nElems
+  aElem=>Elems(iElem+offsetElem)%ep
   DO LocSideID=1,6
-    aSide=>aQuad%Side(LocSideID)%sp
+    aSide=>aElem%Side(LocSideID)%sp
     IF(aSide%Flip.EQ.0)THEN !root side
-      SideToElem(S2E_ELEM_ID,aSide%SideID)         = iQuad !root Quadent
+      SideToElem(S2E_ELEM_ID,aSide%SideID)         = iElem !root Element
       SideToElem(S2E_LOC_SIDE_ID,aSide%SideID)     = LocSideID
     ELSE
-      SideToElem(S2E_NB_ELEM_ID,aSide%SideID)      = iQuad ! element with flipped side
+      SideToElem(S2E_NB_ELEM_ID,aSide%SideID)      = iElem ! element with flipped side
       SideToElem(S2E_NB_LOC_SIDE_ID,aSide%SideID)  = LocSideID
       SideToElem(S2E_FLIP,aSide%SideID)            = aSide%Flip
     END IF
-    IF(aSide%sideID .LE. nBCSides) BC(aSide%sideID)=aSide%BCIndex
+    IF(aSide%sideID .LE. nBCSides)THEN
+      BC(aSide%sideID)=aSide%BCIndex
+    ENDIF
     AnalyzeSide(aSide%sideID)=aSide%BCIndex
   END DO ! LocSideID
-END DO ! iQuad
+END DO ! iElem
+
 
 ! Mapping of Mortar Master Side to Mortar Slave Side
 nSides_MortarType=0
-
-DO iQuad=1,nQuads
-  aQuad=>Quads(iQuad+offsetQuad)%ep
+DO iElem=1,nElems
+  aElem=>Elems(iElem+offsetElem)%ep
   DO LocSideID=1,6
-    aSide=>aQuad%Side(LocSideID)%sp
+    aSide=>aElem%Side(LocSideID)%sp
     IF(aSide%nMortars.GT.0)THEN !mortar side
       MortarType(aSide%SideID)=aSide%MortarType
       DO iMortar=1,aSide%nMortars
@@ -515,7 +456,7 @@ DO iQuad=1,nQuads
       nSides_MortarType(aSide%MortarType)=nSides_MortarType(aSide%MortarType)+1
     END IF !mortarSide
   END DO ! LocSideID
-END DO ! iQuad
+END DO ! iElem
 
 #ifdef MPI
 IF(MPIroot)THEN
@@ -549,11 +490,11 @@ SUBROUTINE exchangeFlip()
 ! set flip of MINE sides to zero, therefore send flip of MINE to other processor, so that YOUR sides get their corresponding flip>0
 !===================================================================================================================================
 ! MODULES
-USE MOD_Globals
-USE MOD_Mesh_Vars,  ONLY: tQuad,tSide
-USE MOD_Mesh_Vars,ONLY:nQuads,offsetQuad
-USE MOD_Mesh_Vars,ONLY:Quads
-USE MOD_MPI_vars
+USE MODH_Globals
+USE MODH_Mesh_Vars,  ONLY: tElem,tSide
+USE MODH_Mesh_Vars,ONLY:nElems,offsetElem
+USE MODH_Mesh_Vars,ONLY:Elems
+USE MODH_MPI_vars
 IMPLICIT NONE
 ! INPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -562,30 +503,30 @@ IMPLICIT NONE
 ! OUTPUT VARIABLES
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
-INTEGER             :: iQuad,LocSideID
+INTEGER             :: iElem,LocSideID
 INTEGER             :: iMortar,nMortars
 INTEGER             :: Flip_MINE(offsetMPISides_MINE(0)+1:offsetMPISides_MINE(nNBProcs))
 INTEGER             :: Flip_YOUR(offsetMPISides_YOUR(0)+1:offsetMPISides_YOUR(nNBProcs))
 INTEGER             :: SendRequest(nNbProcs),RecRequest(nNbProcs)
-TYPE(tQuad),POINTER :: aQuad
+TYPE(tElem),POINTER :: aElem
 TYPE(tSide),POINTER :: aSide
 !===================================================================================================================================
 IF(nProcessors.EQ.1) RETURN
 !fill MINE flip info
-DO iQuad=1,nQuads
-  aQuad=>Quads(iQuad+offsetQuad)%ep
+DO iElem=1,nElems
+  aElem=>Elems(iElem+offsetElem)%ep
   DO LocSideID=1,6
-    aSide=>aQuad%Side(LocSideID)%sp
+    aSide=>aElem%Side(LocSideID)%sp
     nMortars=aSide%nMortars 
     DO iMortar=0,nMortars
-      IF(iMortar.GT.0) aSide=>aQuad%Side(LocSideID)%sp%mortarSide(iMortar)%sp
+      IF(iMortar.GT.0) aSide=>aElem%Side(LocSideID)%sp%mortarSide(iMortar)%sp
       IF((aSide%SideID.GT.offsetMPISides_MINE(0)       ).AND.&
          (aSide%SideID.LE.offsetMPISides_MINE(nNBProcs)))THEN
         Flip_MINE(aSide%sideID)=aSide%flip
       END IF
     END DO ! iMortar
   END DO ! LocSideID
-END DO ! iQuad
+END DO ! iElem
 DO iNbProc=1,nNbProcs
   ! Start send flip from MINE 
   IF(nMPISides_MINE_Proc(iNbProc).GT.0)THEN
@@ -608,13 +549,13 @@ DO iNbProc=1,nNbProcs
   IF(nMPISides_YOUR_Proc(iNbProc).GT.0)CALL MPI_WAIT(RecRequest(iNbProc) ,MPIStatus,iError)
   IF(nMPISides_MINE_Proc(iNBProc).GT.0)CALL MPI_WAIT(SendRequest(iNbProc),MPIStatus,iError)
 END DO !iProc=1,nNBProcs
-DO iQuad=1,nQuads
-  aQuad=>Quads(iQuad+offsetQuad)%ep
+DO iElem=1,nElems
+  aElem=>Elems(iElem+offsetElem)%ep
   DO LocSideID=1,6
-    aSide=>aQuad%Side(LocSideID)%sp
+    aSide=>aElem%Side(LocSideID)%sp
     nMortars=aSide%nMortars 
     DO iMortar=0,nMortars
-      IF(iMortar.GT.0) aSide=>aQuad%Side(LocSideID)%sp%mortarSide(iMortar)%sp
+      IF(iMortar.GT.0) aSide=>aElem%Side(LocSideID)%sp%mortarSide(iMortar)%sp
       IF(aSide%NbProc.EQ.-1) CYCLE !no MPISide
       IF(aSide%SideID.GT.offsetMPISides_YOUR(0))THEN
         IF(aSide%flip.EQ.0)THEN
@@ -626,10 +567,10 @@ DO iQuad=1,nQuads
       END IF
     END DO ! iMortar
   END DO ! LocSideID
-END DO ! iQuad
+END DO ! iElem
   
 END SUBROUTINE exchangeFlip
 #endif
 
 
-END MODULE MOD_Prepare_Mesh
+END MODULE MODH_Prepare_Mesh

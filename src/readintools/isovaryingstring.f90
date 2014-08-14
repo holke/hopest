@@ -1,4 +1,4 @@
-module MOD_ISO_VARYING_STRING
+module MODH_ISO_VARYING_STRING
 ! Modified version of Rich Townsend's iso_varying_string.f90, minimal
 ! modifications have been made in order to make the internal string
 ! storage compatible with a null-terminated C string; the original API
@@ -2614,5 +2614,5 @@ contains
   END FUNCTION c_ptr_new_VS
 
 
-end module MOD_ISO_VARYING_STRING
+end module MODH_ISO_VARYING_STRING
 
