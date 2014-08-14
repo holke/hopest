@@ -14,6 +14,7 @@ libhopest_compiled_sources = \
 	src/globals/preprocessing.f90 \
 	src/globals/globals.f90 \
 	src/mesh/mesh_vars.f90 \
+	src/analyze/analyze_vars.f90 \
 	src/p4est/p4est_vars.f90 \
 	src/output/output_vars.f90 \
 	src/refine/refine_vars.f90 \
@@ -26,6 +27,7 @@ libhopest_compiled_sources = \
 	src/p4est/p4est_wrapper.c \
 	src/p4est/p4est.f90 \
 	src/mesh/prepare_mesh.f90 \
+	src/analyze/analyze.f90 \
 	src/output/output.f90 \
 	src/refine/refine_bindings.f90 \
 	src/refine/refine_wrapper.c \

@@ -101,7 +101,6 @@ INTEGER                     :: PMortar,PFlip,HFlip,QHInd
 INTEGER                     :: iLocSide
 INTEGER                     :: StartElem,EndElem
 INTEGER                     :: BClocSide,BCindex
-INTEGER(KIND=C_INT32_T),POINTER :: TreeToBC(:,:)
 INTEGER(KIND=8)             :: offsetElemTmp,nGlobalElemsTmp
 LOGICAL                     :: doConnection
 !===================================================================================================================================
@@ -192,38 +191,44 @@ DO iElem=1,nElems
       nbElem=>Elems(nbElemInd)%ep
       nbSide=P2H_FaceMap(PnbSide)
 
-      aSide%BCIndex=0
-      doConnection=.TRUE.
-      IF((nbElemInd.EQ.iElem).AND.(nbSide.EQ.iLocSide))&
-        aSide%BCindex=TreeToBC(PSide+1,QuadToTree(iElem)+1)
-      IF(aSide%BCIndex.GT.0)THEN
-        IF(BoundaryType(aSide%BCindex,BC_TYPE).GT.1)&
-          doConnection=.FALSE.
-      END IF
-
-      IF(doConnection)THEN
+      IF((nbElemInd.EQ.iElem).AND.(nbSide.EQ.iLocSide))THEN  !p4est BC side
+        ! this is a boundary side (periodic sides are not p4est BCsides!): 
+        NULLIFY(aSide%connection)
+        aSide%Flip=0
+      ELSE
         !this is an inner side (either no mortar or small side mortar)
         aSide%connection=>nbElem%side(nbSide)%sp
         aSide%flip=HFlip
-      ELSE
-        ! this is a boundary side: 
-        NULLIFY(aSide%connection)
-        aSide%Flip=0
-      END IF !BC side
+      END IF
+
       IF(PMortar.NE.-1) aSide%MortarType= - (PMortar+1)  ! Pmortar 0...3, small side belonging to  mortar group -> -1..-4
     END IF ! PMortar
   END DO !iLocSide
 END DO !iElem
 
+! set BC from tree to Quad
+DO iElem=1,nElems
+  aElem=>Elems(iElem)%ep
+  iTree=QuadToTree(iElem)+1
+  DO iLocSide=1,6
+    aSide=>aElem%Side(iLocSide)%sp
+    ! Get P4est local side
+    PSide=H2P_FaceMap(iLocSide)
+    aSide%BCindex=GET_BCINDEX_FROM_TREE(iTree,iElem,Pside)
+    IF((aSide%BCindex.GT.0).AND.(ASSOCIATED(aSide%connection)))THEN !check if still periodic side (could be set to another BC!)
+      IF(BoundaryType(aSide%BCindex,BC_TYPE).GT.1)THEN !if BCtype=0 & 1 should keep their connections!
+        NULLIFY(aSide%connection)
+        aSide%flip=0
+      END IF
+    END IF !check periodic
+  END DO !iLocSide
+END DO !iElem
+
+
 nBCSides=0
 nMortarSides=0
 DO iElem=1,nElems
   aElem=>Elems(iElem)%ep
-  IF(useCurveds)THEN
-    aElem%type=208 ! fully curved
-  ELSE
-    aElem%type=118 ! trilinear
-  END IF
   DO iLocSide=1,6
     aSide=>aElem%Side(iLocSide)%sp
     IF(aSide%tmp.NE.0) CYCLE
@@ -243,7 +248,6 @@ DO iElem=1,nElems
   END DO
 END DO
 nInnerSides=nSides-nBCSides-nMortarSides
-IF(nMortarSides.NE.0) STOP 'Bisher noch keine Mortars erlaubt'
 
 ! set master slave,  element with lower element ID is master (flip=0)
 DO iElem=1,nElems
@@ -343,6 +347,43 @@ CASE DEFAULT
 END SELECT
 
 END SUBROUTINE EvalP4ESTConnectivity
+
+
+FUNCTION GET_BCINDEX_FROM_TREE(iTree,iElem,PSide)
+!===================================================================================================================================
+! assign either BCindex 0 if side is an inner side, or if the side is on a tree side,
+! assign the tree BC index (can be 0 for inner tree sides) 
+!===================================================================================================================================
+! MODULES
+USE MODH_p4est_vars,ONLY:QuadCoords,QuadLevel,TreeToBC,IntSize
+! IMPLICIT VARIABLE HANDLING
+IMPLICIT NONE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+INTEGER,INTENT(IN) :: iTree 
+INTEGER,INTENT(IN) :: iElem 
+INTEGER,INTENT(IN) :: Pside   !p4est local side ID 0...5
+!-----------------------------------------------------------------------------------------------------------------------------------
+! OUTPUT VARIABLES
+INTEGER :: GET_BCINDEX_FROM_TREE
+!-----------------------------------------------------------------------------------------------------------------------------------
+! LOCAL VARIABLES
+INTEGER :: pos
+!-----------------------------------------------------------------------------------------------------------------------------------
+GET_BCINDEX_FROM_TREE=0
+SELECT CASE(PSide)
+CASE(0,2,4) !0: x(1)=0?, 2: x(2)=0?, 4: x(3)=0?
+  pos=QuadCoords((PSide+2)/2,iElem)
+  IF(pos.EQ.0)THEN
+    GET_BCINDEX_FROM_TREE=TreeToBC(Pside+1,iTree)
+  END IF
+CASE(1,3,5) !1: x(1)+2^l=IntSize?, 3: x(2)+2^l=IntSize?, 5: x(3)+2^l=IntSize?
+  pos=QuadCoords((PSide+1)/2,iElem) + IntSize/(2**QuadLevel(iElem))
+  IF(pos.EQ.IntSize)THEN
+    GET_BCINDEX_FROM_TREE=TreeToBC(Pside+1,iTree)
+  END IF
+END SELECT
+END FUNCTION GET_BCINDEX_FROM_TREE
 
 
 FUNCTION GetHFlip(PSide0,PSide1,PFlip)

@@ -33,6 +33,7 @@ SUBROUTINE WriteMeshToHDF5(FileString)
 USE MODH_Mesh_Vars
 USE MODH_IO_HDF5
 USE MODH_HDF5_output
+USE MODH_ChangeBasis, ONLY:ChangeBasis3D
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -153,9 +154,15 @@ CALL OpenHDF5File(FileString,create=.TRUE.,single=.TRUE.)
 !-----------------------------------------------------------------
 !attributes 
 !-----------------------------------------------------------------
+IF(Ngeo_out.EQ.1) THEN
+  useCurveds=.FALSE.
+  nCurvedNodes=0
+ELSE
+  nCurvedNodes=(Ngeo_out+1)**3
+END IF
 
-CALL WriteAttributeToHDF5(File_ID,'BoundaryOrder',1,IntegerScalar=Ngeo+1)
 CALL WriteAttributeToHDF5(File_ID,'CurvedFound',1,LogicalScalar=useCurveds)
+CALL WriteAttributeToHDF5(File_ID,'BoundaryOrder',1,IntegerScalar=Ngeo_out+1)
 
 !-----------------------------------------------------------------
 ! WRITE BC 
@@ -174,7 +181,7 @@ DO iElem=1,nElems
   ElemBary(iElem,2)=SUM(XGeoElem(2,:,:,:,iElem))
   ElemBary(iElem,3)=SUM(XGeoElem(3,:,:,:,iElem))
 END DO !iElem=1,nElem
-ElemBary(:,:)=ElemBary(:,:)*(1./(Ngeo+1)**3)
+ElemBary(:,:)=ElemBary(:,:)*(1./(Ngeo_out+1)**3)
 
 CALL WriteArrayToHDF5(File_ID,'ElemBarycenters',nElems,2,(/nElems,3/),0,RealArray=ElemBary)
 DEALLOCATE(ElemBary)
@@ -182,7 +189,11 @@ DEALLOCATE(ElemBary)
 !-----------------------------------------------------------------
 ! WRITE NodeCoords  for each element !!!! (multiple nodes!!!)
 !-----------------------------------------------------------------
-nNodeIDs=(Ngeo+1)**3*nElems
+!transform to equidistant nodes (overwrite!!!):
+DO iElem=1,nElems
+  CALL ChangeBasis3D(3,Ngeo_out,Ngeo_out,Vdm_CL_EQ_out,XgeoElem(:,:,:,:,iElem),XgeoElem(:,:,:,:,iElem))
+END DO
+nNodeIDs=(Ngeo_out+1)**3*nElems
 CALL WriteArrayToHDF5(File_ID,'NodeCoords',nNodeIDs,2,(/nNodeIDs,3/),0,  &
           RealArray=TRANSPOSE(RESHAPE(XGeoElem,(/3,nNodeIDs/))) )
 DEALLOCATE(XGeoElem)
@@ -270,7 +281,7 @@ DO iElem=1,nElems
     Side=>Elem%Side(iLocSide)%sp
     iSide=iSide+1
     !Side Tpye
-    IF(Ngeo.GT.1)THEN
+    IF(Ngeo_out.GT.1)THEN
       SideInfo(iSide,SIDE_Type)=7            ! Side Type: NL quad
     ELSE
       SideInfo(iSide,SIDE_Type)=5            ! Side Type: bilinear
@@ -286,7 +297,7 @@ DO iElem=1,nElems
       DO iMortar=1,Side%nMortars
         iSide=iSide+1
         !Side Tpye
-        IF(Ngeo.GT.1)THEN
+        IF(Ngeo_out.GT.1)THEN
           SideInfo(iSide,SIDE_Type)=7            ! Side Type: NL quad
         ELSE
           SideInfo(iSide,SIDE_Type)=5            ! Side Type: bilinear
@@ -326,14 +337,14 @@ master=>GETNEWELEM()
 DO iNode=1,8
   ALLOCATE(master%Node(iNode)%np)
 END DO
-master%Node(1)%np%ind=HexMap(   0,   0,   0)
-master%Node(2)%np%ind=HexMap(Ngeo,   0,   0)
-master%Node(3)%np%ind=HexMap(Ngeo,Ngeo,   0)
-master%Node(4)%np%ind=HexMap(   0,Ngeo,   0)
-master%Node(5)%np%ind=HexMap(   0,   0,Ngeo)
-master%Node(6)%np%ind=HexMap(Ngeo,   0,Ngeo)
-master%Node(7)%np%ind=HexMap(Ngeo,Ngeo,Ngeo)
-master%Node(8)%np%ind=HexMap(   0,Ngeo,Ngeo)
+master%Node(1)%np%ind=HexMap_Out(       0,       0,       0)
+master%Node(2)%np%ind=HexMap_Out(Ngeo_out,       0,       0)
+master%Node(3)%np%ind=HexMap_Out(Ngeo_out,Ngeo_out,       0)
+master%Node(4)%np%ind=HexMap_Out(       0,Ngeo_out,       0)
+master%Node(5)%np%ind=HexMap_Out(       0,       0,Ngeo_out)
+master%Node(6)%np%ind=HexMap_Out(Ngeo_out,       0,Ngeo_out)
+master%Node(7)%np%ind=HexMap_Out(Ngeo_out,Ngeo_out,Ngeo_out)
+master%Node(8)%np%ind=HexMap_Out(       0,Ngeo_out,Ngeo_out)
 CALL createSides(master)
 
 IF(nTotalNodes.NE.locnNodes*nElems) &
@@ -348,7 +359,7 @@ NodeID=0
 
 
 offsetID=0
-locnNodes=(Ngeo+1)**3
+locnNodes=(Ngeo_out+1)**3
 DO iElem=1,nElems
   Elem=>Elems(iElem)%ep
   DO iNode=1,8

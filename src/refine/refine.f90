@@ -28,6 +28,7 @@ SUBROUTINE RefineMesh()
 ! MODULES
 USE MODH_Globals
 USE MODH_Refine_Vars
+USE MODH_Mesh_Vars,     ONLY: Ngeo
 USE MODH_Refine_Binding,ONLY: p4_refine_mesh
 USE MODH_P4EST_Vars,    ONLY: p4est,mesh,geom
 USE MODH_Readintools,   ONLY: GETINT,CNTSTR
@@ -41,8 +42,9 @@ IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! LOCAL VARIABLES
 TYPE(C_FUNPTR)              :: refineFunc
-INTEGER                     :: iRefine,nRefines
+INTEGER                     :: iRefine,nRefines,i
 INTEGER,ALLOCATABLE         :: refineType(:)
+CHARACTER(LEN=5)            :: tmpstr
 !===================================================================================================================================
 SWRITE(UNIT_stdOut,'(A)')'BUILD P4EST MESH AND REFINE ...'
 SWRITE(UNIT_StdOut,'(132("-"))')
@@ -54,6 +56,13 @@ nRefines=CNTSTR('refineType',1)
 SWRITE(UNIT_stdOut,'(A,I0)')'Number of refines : ',nRefines
 ALLOCATE(refineType(nRefines))
 
+WRITE(tmpstr,'(I5)')2*Ngeo
+NSuper =GETINT('Nsuper',tmpstr) ! default conform refinement
+ALLOCATE(Xi_Nsuper(0:Nsuper))
+DO i=0,Nsuper
+  Xi_Nsuper(i)=-1.+2.*REAL(i)/REAL(Nsuper)
+END DO
+  
 
 DO iRefine=1,nRefines
   refineType =GETINT('refineType','1') ! default conform refinement
@@ -241,6 +250,7 @@ USE, INTRINSIC :: ISO_C_BINDING
 USE MODH_Refine_Vars, ONLY: refineGeomType,refineLevel
 USE MODH_Refine_Vars, ONLY: sphereCenter,sphereRadius,boxBoundary
 USE MODH_Refine_Vars, ONLY: shellRadius_inner,shellRadius_outer,shellCenter
+USE MODH_Refine_Vars, ONLY: NSuper,Xi_Nsuper
 USE MODH_Mesh_Vars,   ONLY: XGeo,Ngeo
 USE MODH_Mesh_Vars,   ONLY: wBary_Ngeo,xi_Ngeo
 USE MODH_Basis,       ONLY: LagrangeInterpolationPolys 
@@ -256,9 +266,11 @@ INTEGER(KIND=C_INT ),INTENT(IN),VALUE :: childID
 REAL                                  :: xi0(3)
 REAL                                  :: xiBary(3)
 REAL                                  :: dxi,length
-REAL,DIMENSION(0:Ngeo,0:Ngeo)         :: Vdm_xi,Vdm_eta,Vdm_zeta
-REAL                                  :: XCorner(3), XBaryElem(3),test,IntSize,sIntSize
-REAL                                  :: XGeoElem(3,0:NGeo,0:NGeo,0:NGeo)
+REAL,DIMENSION(0:Nsuper,0:Ngeo)       :: Vdm_xi,Vdm_eta,Vdm_zeta
+REAL                                  :: XCorner(3), XBaryElem(3),test
+INTEGER                               :: IntSize
+REAL                                  :: sIntSize
+REAL                                  :: XGeoSuper(3,0:Nsuper,0:Nsuper,0:Nsuper)
 REAL                                  :: l_xi(0:NGeo),l_eta(0:NGeo),l_zeta(0:NGeo),l_etazeta
 INTEGER                               :: i,j,k
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -273,8 +285,8 @@ INTEGER(KIND=C_INT) :: refineByGeom
 refineByGeom = 0
 IF(level.GE.refineLevel) RETURN
 
-IntSize=2.**19 !TODO: use sIntSize from mesh_vars. not initialized at this stage yet
-sIntSize=1./IntSize
+IntSize=2**19 !TODO: use sIntSize from mesh_vars. not initialized at this stage yet
+sIntSize=1./REAL(IntSize)
 
 ! transform p4est first corner coordinates (integer from 0... intsize) to [-1,1] reference element of its tree
 xi0(1)=-1.+2.*REAL(x)*sIntSize
@@ -283,14 +295,14 @@ xi0(3)=-1.+2.*REAL(z)*sIntSize
 ! length of the element / quadrant in reference coordinates of its tree [-1,1]
 length=2./REAL(2**level)
 ! Build Vandermonde matrices for each parameter range in xi, eta,zeta
-DO i=0,Ngeo  
-  dxi=0.5*(xi_Ngeo(i)+1.)*Length
+DO i=0,Nsuper 
+  dxi=0.5*(xi_Nsuper(i)+1.)*Length
   CALL LagrangeInterpolationPolys(xi0(1) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_xi(i,:)) 
   CALL LagrangeInterpolationPolys(xi0(2) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_eta(i,:)) 
   CALL LagrangeInterpolationPolys(xi0(3) + dxi,Ngeo,xi_Ngeo,wBary_Ngeo,Vdm_zeta(i,:)) 
 END DO
-!interpolate tree HO mapping to element / quadrant HO mapping
-CALL ChangeBasis3D_XYZ(3,Ngeo,Ngeo,Vdm_xi,Vdm_eta,Vdm_zeta,XGeo(:,:,:,:,tree),XgeoElem(:,:,:,:))
+!interpolate tree HO mapping to quadrant HO mapping
+CALL ChangeBasis3D_XYZ(3,Ngeo,Nsuper,Vdm_xi,Vdm_eta,Vdm_zeta,XGeo(:,:,:,:,tree),XGeoSuper(:,:,:,:))
 
 
 ! Barycenter
@@ -301,21 +313,21 @@ CALL LagrangeInterpolationPolys(xiBary(2),Ngeo,xi_Ngeo,wBary_Ngeo,l_eta(:))
 CALL LagrangeInterpolationPolys(xiBary(3),Ngeo,xi_Ngeo,wBary_Ngeo,l_zeta(:)) 
 !interpolate tree HO mapping to quadrant HO mapping
 XBaryElem(:)=0.
-  DO k=0,NGeo
-    DO j=0,NGeo
-      l_etazeta=l_eta(j)*l_zeta(k)
-      DO i=0,NGeo
-        XBaryElem(:)=XBaryElem(:)+XgeoElem(:,i,j,k)*l_xi(i)*l_etazeta
-      END DO
+DO k=0,NGeo
+  DO j=0,NGeo
+    l_etazeta=l_eta(j)*l_zeta(k)
+    DO i=0,NGeo
+      XBaryElem(:)=XBaryElem(:)+Xgeo(:,i,j,k,tree)*l_xi(i)*l_etazeta
     END DO
   END DO
+END DO
 SELECT CASE (refineGeomType)
 CASE(1)   ! SPHERE
-  ! check NGeo Nodes (TODO: supersampling to NSuper for this check)
-  DO k=0,Ngeo
-    DO j=0,Ngeo
-      DO i=0,Ngeo
-        XCorner(:)=XgeoElem(:,i,j,k)
+  ! check Nsuper Nodes
+  DO k=0,Nsuper
+    DO j=0,Nsuper
+      DO i=0,Nsuper
+        XCorner(:)=XGeoSuper(:,i,j,k)
         test=SQRT((XCorner(1)-sphereCenter(1))**2+(XCorner(2)-sphereCenter(2))**2+(XCorner(3)-sphereCenter(3))**2)
         IF (test.LE.sphereRadius) THEN
           refineByGeom = 1
@@ -333,11 +345,11 @@ CASE(1)   ! SPHERE
   END IF
 
 CASE(11)   ! SPHERE SHELL
-  ! check NGeo Nodes (TODO: supersampling to NSuper for this check)
-  DO k=0,Ngeo
-    DO j=0,Ngeo
-      DO i=0,Ngeo
-        XCorner(:)=XgeoElem(:,i,j,k)
+  ! check Nsuper Nodes
+  DO k=0,Nsuper
+    DO j=0,Nsuper
+      DO i=0,Nsuper
+        XCorner(:)=XGeoSuper(:,i,j,k)
         test=SQRT((XCorner(1)-shellCenter(1))**2+(XCorner(2)-shellCenter(2))**2+(XCorner(3)-shellCenter(3))**2)
         IF ((test.LE.shellRadius_outer) .AND. (test.GE.shellRadius_inner)) THEN
           refineByGeom = 1
@@ -355,11 +367,11 @@ CASE(11)   ! SPHERE SHELL
   END IF
    
 CASE(2)   ! BOX
-  ! check NGeo Nodes (TODO: supersampling to NSuper for this check)
-  DO k=0,NGeo
-    DO j=0,NGeo
-      DO i=0,NGeo
-        XCorner(:)=XgeoElem(:,i,j,k)
+  ! check Nsuper Nodes
+  DO k=0,Nsuper
+    DO j=0,Nsuper
+      DO i=0,Nsuper
+        XCorner(:)=XGeoSuper(:,i,j,k)
         IF (XCorner(1) .GE. boxBoundary(1) .AND. XCorner(1) .LE. boxBoundary(2) .AND. & 
             XCorner(2) .GE. boxBoundary(3) .AND. XCorner(2) .LE. boxBoundary(4) .AND. &
             XCorner(3) .GE. boxBoundary(5) .AND. XCorner(3) .LE. boxBoundary(6)) THEN

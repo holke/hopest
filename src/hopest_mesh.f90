@@ -40,6 +40,7 @@ USE MODH_P4EST,              ONLY: InitP4EST,BuildMeshFromP4EST,BuildBCs,Finaliz
 USE MODH_P4EST_Binding,      ONLY: p4_savemesh,p4_build_p4est
 USE MODH_Mesh_Vars,          ONLY: MeshFile
 USE MODH_Mesh,               ONLY: InitMesh,BuildHOMesh,FinalizeMesh
+USE MODH_Analyze,            ONLY: InitAnalyze,Analyze
 USE MODH_Output_Vars,        ONLY: Projectname
 USE MODH_Output_HDF5,        ONLY: writeMeshToHDF5
 USE MODH_Mesh_ReadIn,        ONLY: ReadMeshFromHDF5,ReadMeshHeader
@@ -68,6 +69,7 @@ CALL ReadMeshHeader(MeshFile)   ! read mesh header file including BCs
 CALL ReadMeshFromHDF5(MeshFile) ! read tree connectivity and geometry
 CALL p4_build_p4est(connectivity,p4est,geom)
 
+
 CALL deformMesh()
 
 CALL RefineMesh()               ! perform mesh refinement using p4est
@@ -76,6 +78,9 @@ CALL p4_savemesh(TRIM(p4estFile)//C_NULL_CHAR,p4est)
 CALL BuildMeshFromP4EST()       ! build p4est mesh in flexi datastructure
 
 CALL BuildHOMesh()
+
+CALL InitAnalyze()
+CALL Analyze()
 !output new mesh
 CALL writeMeshToHDF5(TRIM(ProjectName)//'_mesh_p4est.h5')
 ! dealloacte pointers
