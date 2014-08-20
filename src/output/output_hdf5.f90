@@ -312,6 +312,7 @@ DO iElem=1,nElems
         SideInfo(iSide,SIDE_nbElemID)=Side%Connection%Elem%ind                   ! Element ID of neighbor Element
       END IF
       SideInfo(iSide,SIDE_BCID)=Side%BCIndex                            
+      IF(Side%MortarType.LT.0) SideInfo(iSide,SIDE_Type)=-SideInfo(iSide,SIDE_Type) !mark sides as belonging to a mortar
     END IF
   END DO !iLocSide=1,6
 END DO !iElem=1,nElems
