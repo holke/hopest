@@ -75,7 +75,7 @@ INTEGER   :: P4Q(0:2,0:3) = 0
 
 INTEGER   :: P4P(0:7,0:3) = 0
 
-INTEGER,PARAMETER   :: H_MortarCase(1:4,1:4) = 0
+INTEGER		    :: H_MortarCase(1:4,1:4) = 0
 
 INTEGER,PARAMETER   :: P2H_MortarMap(0:3,1:8) = &                 !p4est mortar ID, MortarCase -> iMortar CGNS
                                       RESHAPE((/ 1,2,3,4,&        ! iMortar = P2H_MortarMap(iPMortar, H_MortarCase( node1, node2) ) 
