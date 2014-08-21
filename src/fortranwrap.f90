@@ -29,7 +29,7 @@ SUBROUTINE wrapReadMeshFromHDF5nobuildp4est(hdf5file,hdf5file_len,conn)
 !===================================================================================================================================
 ! MODULES
 USE MODH_IO_HDF5,       ONLY: InitIO
-USE MODH_Mesh_ReadIn,   ONLY: ReadMeshFromHDF5
+USE MODH_Mesh_ReadIn,   ONLY: ReadMeshHeader,ReadMeshFromHDF5
 USE MODH_P4EST_Vars,    ONLY: connectivity
 USE, INTRINSIC :: ISO_C_BINDING
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -43,6 +43,7 @@ TYPE(C_PTR),INTENT(OUT)                         :: conn
 ! To pass strings from C to Fortran 2003 we pass the string as char* and its
 ! length as an integer
 CALL InitIO()
+CALL ReadMeshHeader(hdf5file)
 CALL ReadMeshFromHDF5(hdf5file)
 conn=connectivity
 END SUBROUTINE wrapReadMeshFromHDF5nobuildp4est
