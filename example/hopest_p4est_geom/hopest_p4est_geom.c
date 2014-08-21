@@ -44,30 +44,41 @@ int main(int argc,char *argv[]){
     sc_MPI_Comm           comm;
     char *vtkfilename,*vtkfilename_temp;
     int mpiret,mpirank;
+    const char *usage;
+
+    usage =
+      "Arguments: <hdf5-file> \n";
 
     mpiret = sc_MPI_Init (&argc, &argv);
     SC_CHECK_MPI (mpiret);
     comm = sc_MPI_COMM_WORLD;
     mpiret = sc_MPI_Comm_rank (comm, &mpirank);
-    if(argc>1 && mpirank==0) {
+    if(argc==2){
         HDF5File=argv[1];
         HDF5file_len=strlen(HDF5File);
-        ReadMeshFromHDF5_FC(HDF5File,HDF5file_len,&conn);
+        if(mpirank==0) {
+            ReadMeshFromHDF5_FC(HDF5File,HDF5file_len,&conn);
+            P4EST_ASSERT(p4est_connectivity_is_valid(conn));
+        }
+        conn=p4est_connectivity_bcast(conn,0,sc_MPI_COMM_WORLD);
         P4EST_ASSERT(p4est_connectivity_is_valid(conn));
-        p4est=p4est_new_ext(sc_MPI_COMM_SELF,conn,0,2,1,0,NULL,NULL);
+        p4est=p4est_new_ext(sc_MPI_COMM_WORLD,conn,0,2,1,0,NULL,NULL);
         geom = P4EST_ALLOC_ZERO (p4est_geometry_t, 1);
         geom->name = "hopest_readfromhdf5";
         geom->X = p4_geometry_X;
         vtkfilename_temp=P4EST_STRDUP(HDF5File);
         vtkfilename=basename(vtkfilename_temp);
-        printf("%s\n",vtkfilename);
-        p4est_vtk_write_file (p4est,geom,vtkfilename);
+        p4est_vtk_write_file (p4est,NULL,vtkfilename);
+
         P4EST_FREE(vtkfilename_temp);
         p4est_geometry_destroy(geom);
         p4est_destroy(p4est);
         p4est_connectivity_destroy(conn);
     }
-    else printf("%i no input file given.\n",mpirank);
+    else {
+        P4EST_GLOBAL_LERROR (usage);
+        sc_abort_collective ("Usage error");
+      }
     mpiret = sc_MPI_Finalize ();
     SC_CHECK_MPI (mpiret);
     return 0;
