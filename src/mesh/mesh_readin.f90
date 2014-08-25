@@ -500,7 +500,7 @@ IF(num_periodics.GT.0) THEN
           IF(HFlip_test.EQ.HFlip) EXIT
         END DO
         JoinFaces(5,iPeriodic)=PFlip
-        WRITE(*,*)'DEBUG,JoinFaces,iPeriodic',iPeriodic,JoinFaces(:,iPeriodic)
+        !WRITE(*,*)'DEBUG,JoinFaces,iPeriodic',iPeriodic,JoinFaces(:,iPeriodic)
       END IF
     END DO !iLocSide
   END DO !iTree
