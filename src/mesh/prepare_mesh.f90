@@ -100,7 +100,8 @@ DO i=1,nBCs
   END IF
 END DO
 IF(ANY(PeriodicBCMap.EQ.-2))&
-  CALL abort(__STAMP__,'Periodic connection not found.')
+  CALL abort(__STAMP__, &
+  'Periodic connection not found.')
 
 DO iElem=FirstElemInd,LastElemInd
   aElem=>Elems(iElem)%ep
