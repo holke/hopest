@@ -67,3 +67,58 @@ REAL(KIND=C_DOUBLE),INTENT(OUT)         :: x,y,z
 CALL buildHOp4GeometryX(a,b,c,x,y,z,tree)
 END SUBROUTINE wrapbuildHOp4GeometryX
 
+SUBROUTINE wrapInitRefineGeom()
+!===================================================================================================================================
+! Subroutine to wrap the ReadMeshFromHDF5nobuildp4est routine
+!===================================================================================================================================
+! MODULES
+    USE MODH_Refine,     ONLY: InitRefineGeom
+!-----------------------------------------------------------------------------------------------------------------------------------
+    call InitRefineGeom()
+END SUBROUTINE wrapInitRefineGeom
+
+SUBROUTINE wrapInitRefineBoundaryElems()
+!===================================================================================================================================
+! Subroutine to wrap the InitRefineBoundaryElems routine
+!===================================================================================================================================
+! MODULES
+    USE MODH_Refine,     ONLY: InitRefineBoundaryElems
+    USE MODH_Refine_Vars, ONLY: TreeSidesToRefine,refineBCIndex
+!-----------------------------------------------------------------------------------------------------------------------------------
+    refineBCIndex=1
+    call InitRefineBoundaryElems
+END SUBROUTINE wrapInitRefineBoundaryElems
+
+FUNCTION wrapRefineByList(x,y,z,tree,level,childID)
+!===================================================================================================================================
+! Subroutine to wrap the RefineByList routine
+!===================================================================================================================================
+! MODULES
+    USE MODH_Refine,     ONLY: RefineByList
+    USE MODH_Refine_Vars, ONLY: refineLevel
+    USE, INTRINSIC :: ISO_C_BINDING
+!-----------------------------------------------------------------------------------------------------------------------------------
+    P4EST_F90_QCOORD,INTENT(IN),VALUE :: x,y,z
+    P4EST_F90_TOPIDX,INTENT(IN),VALUE :: tree
+    P4EST_F90_QLEVEL,INTENT(IN),VALUE :: level
+    INTEGER(KIND=C_INT ),INTENT(IN),VALUE    :: childID
+    INTEGER :: wrapRefineByList
+    refineLevel=5
+    wrapRefineByList=RefineByList(x,y,z,tree,level,childID)
+END FUNCTION wrapRefineByList
+
+FUNCTION wrapRefineByGeom(x,y,z,tree,level,childID)
+!===================================================================================================================================
+! Subroutine to wrap the RefineByGeom routine
+!===================================================================================================================================
+! MODULES
+    USE MODH_Refine,     ONLY: RefineByGeom
+    USE, INTRINSIC :: ISO_C_BINDING
+!-----------------------------------------------------------------------------------------------------------------------------------
+    P4EST_F90_QCOORD,INTENT(IN),VALUE :: x,y,z
+    P4EST_F90_TOPIDX,INTENT(IN),VALUE :: tree
+    P4EST_F90_QLEVEL,INTENT(IN),VALUE :: level
+    INTEGER(KIND=C_INT ),INTENT(IN),VALUE    :: childID
+    INTEGER :: wrapRefineByGeom
+    wrapRefineByGeom=RefineByGeom(x,y,z,tree,level,childID)
+END FUNCTION wrapRefineByGeom
