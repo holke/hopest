@@ -29,6 +29,7 @@
 #include <string.h>
 #include <p8est_extended.h>
 #include <p8est_vtk.h>
+#include <p8est_bits.h>
 #include <p4est/p4est_HO_geometry.h>
 #include "hopest_p4est_geom.h"
 
