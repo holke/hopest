@@ -48,7 +48,7 @@ void                FillStrings_FC (char *inifile, int inifile_len);
 void                ReadMeshFromHDF5_FC (char *hdf5file, int hdf5file_len,
                                          p8est_connectivity_t ** conn);
 void                InitRefineGeom_FC (void);
-void                InitRefineBoundaryElems_FC(void);
+void                InitRefineBoundaryElems_FC (void);
 int                 RefineByGeom_FC (p4est_qcoord_t, p4est_qcoord_t,
                                      p4est_qcoord_t, p4est_topidx_t, int8_t,
                                      int);
