@@ -65,6 +65,7 @@ SUBROUTINE OpenHDF5File(FileString,create,single,communicatorOpt)
 !===================================================================================================================================
 ! MODULES
 USE MODH_Globals
+USE MPI
 ! IMPLICIT VARIABLE HANDLING
 IMPLICIT NONE
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -86,17 +87,18 @@ CALL H5OPEN_F(iError)
 
 ! Setup file access property list with parallel I/O access (MPI) or with default property list.
 CALL H5PCREATE_F(H5P_FILE_ACCESS_F, Plist_ID, iError)
-#ifdef MPI
-IF(PRESENT(communicatorOpt))THEN
-  comm=communicatorOpt
-ELSE
-  comm=MPI_COMM_WORLD
-END IF
+!#ifdef MPI
+!IF(PRESENT(communicatorOpt))THEN
+!  comm=communicatorOpt
+!ELSE
+!  comm=MPI_COMM_WORLD
+!END IF
+
 
 IF(.NOT.single)THEN
-  CALL H5PSET_FAPL_MPIO_F    (Plist_ID, comm, MPIInfo,       iError)
+  CALL H5PSET_FAPL_MPIO_F    (Plist_ID, MPI_COMM_WORLD, MPI_INFO_NULL,       iError)
 END IF
-#endif /* MPI */
+!#endif /* MPI */
 
 ! Open the file collectively.
 IF(create)THEN
