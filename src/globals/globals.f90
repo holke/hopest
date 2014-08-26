@@ -24,6 +24,7 @@ REAL              ::StartTime
 INTEGER           ::myRank
 INTEGER           ::nProcessors
 LOGICAL           ::MPIRoot
+INTEGER           ::comm
 #ifdef MPI
 #include "mpif.h"
 INTEGER           :: MPIStatus(MPI_STATUS_SIZE)

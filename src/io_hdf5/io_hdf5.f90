@@ -96,7 +96,7 @@ CALL H5PCREATE_F(H5P_FILE_ACCESS_F, Plist_ID, iError)
 
 
 IF(.NOT.single)THEN
-  CALL H5PSET_FAPL_MPIO_F    (Plist_ID, MPI_COMM_WORLD, MPI_INFO_NULL,       iError)
+  CALL H5PSET_FAPL_MPIO_F    (Plist_ID, comm, MPI_INFO_NULL,       iError)
 END IF
 !#endif /* MPI */
 

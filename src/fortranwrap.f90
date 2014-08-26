@@ -23,11 +23,13 @@
 
 #include <hopest_f.h>
 
-SUBROUTINE wrapReadMeshFromHDF5nobuildp4est(hdf5file,hdf5file_len,conn)
+SUBROUTINE wrapReadMeshFromHDF5nobuildp4est(hdf5file,hdf5file_len,conn,communicator)
 !===================================================================================================================================
 ! Subroutine to wrap the ReadMeshFromHDF5nobuildp4est routine
 !===================================================================================================================================
 ! MODULES
+USE MPI
+USE MODH_Globals,       ONLY: comm
 USE MODH_IO_HDF5,       ONLY: InitIO
 USE MODH_Mesh_ReadIn,   ONLY: ReadMeshHeader,ReadMeshFromHDF5
 USE MODH_P4EST_Vars,    ONLY: connectivity
@@ -36,12 +38,18 @@ USE, INTRINSIC :: ISO_C_BINDING
 ! INPUT VARIABLES
 INTEGER(C_INT), INTENT(IN), VALUE               :: hdf5file_len
 CHARACTER(HDF5FILE_LEN,KIND=C_CHAR), INTENT(IN) :: hdf5file
+INTEGER(C_INT), INTENT(IN), VALUE               :: communicator
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! OUTPUT VARIABLES
 TYPE(C_PTR),INTENT(OUT)                         :: conn
 !===================================================================================================================================
 ! To pass strings from C to Fortran 2003 we pass the string as char* and its
 ! length as an integer
+IF(communicator.EQ.0) THEN
+    comm=MPI_COMM_WORLD
+ELSE
+    comm=MPI_COMM_SELF
+END IF
 CALL InitIO()
 CALL ReadMeshHeader(hdf5file)
 CALL ReadMeshFromHDF5(hdf5file)
@@ -77,15 +85,20 @@ SUBROUTINE wrapInitRefineGeom()
     call InitRefineGeom()
 END SUBROUTINE wrapInitRefineGeom
 
-SUBROUTINE wrapInitRefineBoundaryElems()
+SUBROUTINE wrapInitRefineBoundaryElems(level)
 !===================================================================================================================================
 ! Subroutine to wrap the InitRefineBoundaryElems routine
 !===================================================================================================================================
 ! MODULES
     USE MODH_Refine,     ONLY: InitRefineBoundaryElems
-    USE MODH_Refine_Vars, ONLY: TreeSidesToRefine,refineBCIndex
+    USE MODH_Refine_Vars, ONLY: TreeSidesToRefine,refineBCIndex,refineLevel
+    USE, INTRINSIC :: ISO_C_BINDING
+!-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
+    INTEGER(KIND=C_INT),INTENT(IN),VALUE :: level
 !-----------------------------------------------------------------------------------------------------------------------------------
     refineBCIndex=1
+    refineLevel=level
     call InitRefineBoundaryElems
 END SUBROUTINE wrapInitRefineBoundaryElems
 
@@ -95,7 +108,6 @@ FUNCTION wrapRefineByList(x,y,z,tree,level,childID)
 !===================================================================================================================================
 ! MODULES
     USE MODH_Refine,     ONLY: RefineByList
-    USE MODH_Refine_Vars, ONLY: refineLevel
     USE, INTRINSIC :: ISO_C_BINDING
 !-----------------------------------------------------------------------------------------------------------------------------------
     P4EST_F90_QCOORD,INTENT(IN),VALUE :: x,y,z
@@ -103,7 +115,6 @@ FUNCTION wrapRefineByList(x,y,z,tree,level,childID)
     P4EST_F90_QLEVEL,INTENT(IN),VALUE :: level
     INTEGER(KIND=C_INT ),INTENT(IN),VALUE    :: childID
     INTEGER :: wrapRefineByList
-    refineLevel=5
     wrapRefineByList=RefineByList(x,y,z,tree,level,childID)
 END FUNCTION wrapRefineByList
 
@@ -115,10 +126,12 @@ FUNCTION wrapRefineByGeom(x,y,z,tree,level,childID)
     USE MODH_Refine,     ONLY: RefineByGeom
     USE, INTRINSIC :: ISO_C_BINDING
 !-----------------------------------------------------------------------------------------------------------------------------------
+! INPUT VARIABLES
     P4EST_F90_QCOORD,INTENT(IN),VALUE :: x,y,z
     P4EST_F90_TOPIDX,INTENT(IN),VALUE :: tree
     P4EST_F90_QLEVEL,INTENT(IN),VALUE :: level
     INTEGER(KIND=C_INT ),INTENT(IN),VALUE    :: childID
     INTEGER :: wrapRefineByGeom
+!-----------------------------------------------------------------------------------------------------------------------------------
     wrapRefineByGeom=RefineByGeom(x,y,z,tree,level,childID)
 END FUNCTION wrapRefineByGeom
