@@ -96,7 +96,7 @@ CALL H5PCREATE_F(H5P_FILE_ACCESS_F, Plist_ID, iError)
 
 
 IF(.NOT.single)THEN
-  CALL H5PSET_FAPL_MPIO_F    (Plist_ID, comm, MPI_INFO_NULL,       iError)
+  !CALL H5PSET_FAPL_MPIO_F    (Plist_ID, comm, MPI_INFO_NULL,       iError)
 END IF
 !#endif /* MPI */
 
@@ -105,7 +105,8 @@ IF(create)THEN
   CALL H5FCREATE_F(TRIM(FileString), H5F_ACC_TRUNC_F, File_ID, iError, access_prp = Plist_ID)
 ELSE
   write(*,*) FileString
-  CALL H5FOPEN_F(  TRIM(FileString), H5F_ACC_RDWR_F,  File_ID, iError, access_prp = Plist_ID)
+
+  CALL H5FOPEN_F(  TRIM(FileString), H5F_ACC_RDONLY_F,  File_ID, iError, access_prp = Plist_ID)
 END IF
 CALL H5PCLOSE_F(Plist_ID, iError)
 LOGWRITE(*,*)'...DONE!'
