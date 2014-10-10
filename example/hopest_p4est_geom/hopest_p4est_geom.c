@@ -44,6 +44,7 @@ enum
   TIME_BUILD_P4EST,
   TIME_REFINE,
   TIME_BALANCE,
+  QUADS_PER_PROC,
   NUM_STATS
 };
 
@@ -84,18 +85,21 @@ main (int argc, char *argv[])
   sc_options_add_string (opt, 'f', "file", (const char **) &HDF5File, NULL,
                          "hdf5-file");
   sc_options_add_int (opt, 'l', "level", &refine_level, 5,
-                      "maximum refine level");
+                      "maximum refine level (must be >= 4)");
   sc_options_add_switch (opt, 'c', "connbcast", &use_connectivity_bcast,
                          "only process zero reads connectivity and broadcasts it to the other processes");
   sc_options_add_switch (opt, 'v', "vtk", &write_vtk, "write vtk file");
 
   first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
                                  opt, argc, argv);
-  if (first_argc < 0 || first_argc != argc || HDF5File == NULL) {
+  if (first_argc < 0 || first_argc != argc || HDF5File == NULL
+      || refine_level < 4) {
     sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
     return 1;
   }
- /* start overall timing */
+
+  level = refine_level - 4;
+  /* start overall timing */
   mpiret = sc_MPI_Barrier (comm);
   SC_CHECK_MPI (mpiret);
   sc_flops_start (&fi);
@@ -108,21 +112,22 @@ main (int argc, char *argv[])
       ReadMeshFromHDF5_FC (HDF5File, HDF5file_len, &conn, 1);
     conn = p4est_connectivity_bcast (conn, 0, comm);
   }
-  else
+  else {
     ReadMeshFromHDF5_FC (HDF5File, HDF5file_len, &conn, 0);
+  }
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TIME_READ_CONNECTIVITY], snapshot.iwtime,
                  "Read connectivity");
 
   sc_flops_snap (&fi, &snapshot);
-  p4est = p4est_new_ext (comm, conn, 0, 0, 1, 0, NULL, NULL);
+  p4est = p4est_new_ext (comm, conn, 0, level, 1, 0, NULL, NULL);
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TIME_BUILD_P4EST], snapshot.iwtime, "build p4est");
 
   sc_flops_snap (&fi, &snapshot);
   if (!use_connectivity_bcast) {
     InitRefineBoundaryElems_FC (refine_level);
-    for (level = 0; level < refine_level; ++level) {
+    for (; level < refine_level; ++level) {
       p4est_refine (p4est, 0, refine, NULL);
       /* Refinement has lead to up to 8x more elements; redistribute them. */
       p4est_partition (p4est, 0, NULL);
@@ -138,18 +143,23 @@ main (int argc, char *argv[])
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TIME_BALANCE], snapshot.iwtime, "balance p4est");
 
+  sc_stats_set1 (&stats[QUADS_PER_PROC], p4est->local_num_quadrants,
+                 "quads per proc");
+
   if (write_vtk) {
-    if(use_connectivity_bcast) geom=NULL;
+    if (use_connectivity_bcast)
+      geom = NULL;
     else {
-        geom = P4EST_ALLOC_ZERO (p4est_geometry_t, 1);
-        geom->name = "hopest_readfromhdf5";
-        geom->X = p4_geometry_X;
+      geom = P4EST_ALLOC_ZERO (p4est_geometry_t, 1);
+      geom->name = "hopest_readfromhdf5";
+      geom->X = p4_geometry_X;
     }
     vtkfilename_temp = P4EST_STRDUP (HDF5File);
     vtkfilename = basename (vtkfilename_temp);
     p4est_vtk_write_file (p4est, geom, vtkfilename);
     P4EST_FREE (vtkfilename_temp);
-    if(geom!=NULL)p4est_geometry_destroy (geom);
+    if (geom != NULL)
+      p4est_geometry_destroy (geom);
   }
 
   sc_stats_compute (comm, NUM_STATS, stats);
